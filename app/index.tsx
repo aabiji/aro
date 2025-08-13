@@ -1,6 +1,12 @@
 import { useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
+
+import { increment } from "@/lib/state";
+
 import { FlatList, Pressable, Text, TextInput, View } from "react-native";
 import { Dropdown } from 'react-native-element-dropdown';
+import { LineGraph, Heatmap } from "@/components/graph";
+
 import Feather from "@expo/vector-icons/Feather";
 
 function NumInput({ num, setNum, label }) {
@@ -47,7 +53,7 @@ function Template({ template }) {
   const [exerciseType, setExerciseType] = useState(null);
 
   return (
-    <View className="w-[60%] m-auto border border-gray-200 p-2 bg-white mt-5">
+    <View className="w-[100%] m-auto border border-gray-200 p-2 bg-white mt-5">
       <Text className="text-xl">{template.name}</Text>
 
       {template.exercises.map(e =>
@@ -96,7 +102,7 @@ function Exercise({ exercise }) {
 
 function Workout({ entry }) {
   return (
-    <View className="w-[60%] m-auto border border-gray-200 p-2 bg-white mt-5">
+    <View className="w-[100%] m-auto border border-gray-200 p-2 bg-white mt-5">
       <Text className="text-xl">{entry.date}</Text>
       {entry.exercises.map(e =>
         <View className="py-2 px-1 border-t border-gray-100">
@@ -108,7 +114,7 @@ function Workout({ entry }) {
 }
 
 export default function Index() {
-  const entries = [
+  const [entries, setEntries] = useState([
     {
       date: "June 26, 2025",
       exercises: [
@@ -128,9 +134,9 @@ export default function Index() {
         { name: "Romanian deadlift", weight: 50, reps: [11, 11, 9, 10] },
       ]
     },
-  ];
+  ]);
 
-  const templates = [
+  const [templates, setTemplates] = ([
     {
       name: "Template A",
       exercises: [
@@ -149,10 +155,22 @@ export default function Index() {
         { name: "Romanian deadlift", weight: 50, type: "strength" },
       ],
     },
-  ];
+  ]);
+
+  const now = new Date();
+  const lastYear = new Date(new Date().setFullYear(new Date().getFullYear() - 1));
+  const data = [];
+  for (let d = new Date(lastYear); d <= now; d.setDate(d.getDate() + 1)) {
+    data.push({ date: new Date(d), value: Math.floor(Math.random() * 100) });
+  }
+
+  const dispatch = useDispatch();
+  const count = useSelector(state => state.counter);
 
   return (
-    <View>
+    <View className="w-[60%] m-auto">
+      <Pressable onPress={() => dispatch(increment())}>{count.value}</Pressable>
+
       <FlatList
         data={templates}
         renderItem={({ item }) => <Template template={item} />}
@@ -163,6 +181,10 @@ export default function Index() {
         renderItem={({ item }) => <Workout entry={item} />}
         keyExtractor={item => item.date}
       />
+      <View className="gap-4">
+        <Heatmap data={data} height={150} />
+        <LineGraph data={data} height={400} />
+      </View>
     </View>
   );
 }
