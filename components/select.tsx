@@ -3,7 +3,7 @@ import { Pressable, Text, View } from "react-native";
 import { Dropdown } from "react-native-element-dropdown";
 import Feather from "@expo/vector-icons/Feather";
 
-export default function OptButton({ choices, defaultChoice, message, handlePress, icon }) {
+export default function SelectButton({ choices, defaultChoice, message, handlePress, icon }) {
   const [choice, setChoice] = useState(defaultChoice);
 
   return (

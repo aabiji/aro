@@ -3,13 +3,14 @@ import { Exercise, Workout, workoutActions } from "@/lib/state";
 
 import { Pressable, Text, TextInput, View } from "react-native";
 import NumInput from "@/components/input";
-import OptButton from "@/components/optbutton";
+import SelectButton from "@/components/select";
+import { Section } from "@/components/container";
 
 import Feather from "@expo/vector-icons/Feather";
 
 interface ViewProps { workout: Workout, index: number };
 
-export function EditableWorkoutView({ workout, index }: ViewProps) {
+export function WorkoutTemplate({ workout, index }: ViewProps) {
   const dispatch = useDispatch();
 
   const buttonChoices = [
@@ -29,7 +30,7 @@ export function EditableWorkoutView({ workout, index }: ViewProps) {
   }
 
   return (
-    <View className="w-[100%] m-auto border border-gray-200 p-2 bg-white mb-5">
+    <Section>
       <TextInput
         className="text-xl bg-gray-100 rounded-sm px-3 py-1 outline-none"
         value={workout.name}
@@ -64,15 +65,15 @@ export function EditableWorkoutView({ workout, index }: ViewProps) {
         </View>
       ))}
 
-      <OptButton
+      <SelectButton
         choices={buttonChoices} icon="plus"
         defaultChoice="strength" message=""
         handlePress={(choice: string) => addExercise(choice)} />
-    </View>
+    </Section>
   );
 }
 
-export function WorkoutView({ workout, index }: ViewProps) {
+export function WorkoutRecord({ workout, index }: ViewProps) {
   const dispatch = useDispatch();
 
   const changeRep = (n: number, i: number, eIndex: number) => {
@@ -84,8 +85,7 @@ export function WorkoutView({ workout, index }: ViewProps) {
   }
 
   return (
-    <View className="w-[100%] m-auto border border-gray-200 p-2 bg-white mt-5">
-      <Text className="text-xl">{workout.date}</Text>
+    <Section>
       {workout.exercises.map((e: Exercise, eIndex: number) => {
         const str = `${e.name} (${e.weight} lbs)`;
 
@@ -116,6 +116,6 @@ export function WorkoutView({ workout, index }: ViewProps) {
           </View>
         );
       })}
-    </View>
+    </Section>
   );
 }

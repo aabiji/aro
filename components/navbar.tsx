@@ -3,11 +3,7 @@ import { useRouter } from 'expo-router';
 import { Pressable, Text, View } from "react-native";
 import Feather from "@expo/vector-icons/Feather";
 
-export default function ExerciseNavbar({ route }: { route: string }) {
-  const icons = ["list", "book", "pie-chart"];
-  const panes = ["Log", "Templates", "Progress"];
-
-  const routes = ["index", "templates", "progress"];
+export default function Navbar({ routes, panes, icons, route }) {
   const router = useRouter();
 
   return (

@@ -3,8 +3,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { workoutActions } from "@/lib/state";
 
 import { FlatList, Pressable, Text, TextInput, View } from "react-native";
-import { EditableWorkoutView } from "@/components/workout_views";
-import ScrollContainer from "@/components/container";
+import { WorkoutTemplate } from "@/components/workouts";
+import { ScrollContainer, Empty } from "@/components/container";
 import Feather from "@expo/vector-icons/Feather";
 
 export default function TemplatesPage() {
@@ -35,7 +35,7 @@ export default function TemplatesPage() {
       <View className="flex-row mb-5">
         <TextInput
           value={templateName} placeholder="Template name"
-          className="bg-white p-3 grow outline-none"
+          className="bg-white p-3 grow outline-none placeholder-gray-500"
           onChangeText={(value) => setWorkoutName(value)} />
         <Pressable
           disabled={templateName.trim().length == 0}
@@ -46,12 +46,14 @@ export default function TemplatesPage() {
         </Pressable>
       </View>
 
+      {templates.length == 0 && <Empty messages={["You have no workout templates"]} />}
+
       <FlatList
         data={templates}
         className="w-[100%]"
         keyExtractor={item => item.index}
         renderItem={({ item }) =>
-          <EditableWorkoutView workout={item.workout} index={item.index} />}
+          <WorkoutTemplate workout={item.workout} index={item.index} />}
       />
     </ScrollContainer>
   );

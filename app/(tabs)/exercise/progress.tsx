@@ -1,8 +1,8 @@
 import { View } from "react-native";
 import { LineGraph, Heatmap } from "@/components/graph";
-import ScrollContainer from "@/components/container";
+import { ScrollContainer } from "@/components/container";
 
-export default function Index() {
+export default function ProgressPage() {
   const now = new Date();
   const lastYear = new Date(new Date().setFullYear(new Date().getFullYear() - 1));
   const data = [];

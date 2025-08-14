@@ -60,7 +60,7 @@ export function LineGraph({ data, height }) {
           <Pressable className={unselected}> Reps </Pressable>
         </View>
       </View>
-      <svg ref={ref} width="100%" height={h} className="bg-white m-auto mt-2" />
+      <svg ref={ref} width="100%" height={h} />
     </View>
   );
 }
@@ -135,7 +135,7 @@ export function Heatmap({ data, height }) {
         </View>
       </View>
 
-      <svg ref={ref} width="100%" height={h} className="bg-white m-auto mt-2" />
+      <svg ref={ref} width="100%" height={h} />
     </View>
   );
 }
