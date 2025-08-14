@@ -32,32 +32,26 @@ const workoutsSlice = createSlice({
   initialState: { workouts: [] as Workout[] },
   reducers: {
     setWorkoutName: (state, a: PayloadAction<Action<string>>) => {
-      console.log("name...");
       state.workouts[a.payload.workoutIndex!].name = a.payload.value;
     },
 
     addWorkout: (state, a: PayloadAction<Action<Workout>>) => {
-      console.log("add workout...");
       state.workouts.push(a.payload.value);
     },
 
     removeWorkout: (state, a: PayloadAction<Action<null>>) => {
       console.log("del workout...");
-      state.workouts.splice(a.payload.workoutIndex!, 1);
     },
 
     addExercise: (state, a: PayloadAction<Action<Exercise>>) => {
-      console.log("add exercise...");
       state.workouts[a.payload.workoutIndex!].exercises.push(a.payload.value);
     },
 
     removeExercise: (state, a: PayloadAction<Action<null>>) => {
-      console.log("del exercise...");
       state.workouts[a.payload.workoutIndex!].exercises.splice(a.payload.exerciseIndex!, 1);
     },
 
     updateExercise: (state, a: PayloadAction<Action<object>>) => {
-      console.log("update exercise...");
       Object.assign(
         state.workouts[a.payload.workoutIndex!].exercises[a.payload.exerciseIndex!],
         a.payload.value,

@@ -1,6 +1,7 @@
 import { useDispatch } from "react-redux";
 import { Exercise, Workout, workoutActions } from "@/lib/state";
 
+import React from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import NumInput from "@/components/input";
 import SelectButton from "@/components/select";
@@ -10,7 +11,7 @@ import Feather from "@expo/vector-icons/Feather";
 
 interface ViewProps { workout: Workout, index: number };
 
-export function WorkoutTemplate({ workout, index }: ViewProps) {
+function WorkoutTemplate({ workout, index }: ViewProps) {
   const dispatch = useDispatch();
 
   const buttonChoices = [
@@ -73,14 +74,14 @@ export function WorkoutTemplate({ workout, index }: ViewProps) {
   );
 }
 
-export function WorkoutRecord({ workout, index }: ViewProps) {
+function WorkoutRecord({ workout, index }: ViewProps) {
   const dispatch = useDispatch();
 
   const changeRep = (n: number, i: number, eIndex: number) => {
-    let reps = workout.exercises[eIndex].reps!;
+    let reps = [...workout.exercises[eIndex].reps!];
     reps[i] = n;
     dispatch(workoutActions.updateExercise({
-      workoutIndex: index, exerciseIndex: i, value: { reps: reps }
+      workoutIndex: index, exerciseIndex: eIndex, value: { reps: reps }
     }));
   }
 
@@ -119,3 +120,6 @@ export function WorkoutRecord({ workout, index }: ViewProps) {
     </Section>
   );
 }
+
+export const WorkoutTemplateMemo = React.memo(WorkoutTemplate);
+export const WorkoutRecordMemo = React.memo(WorkoutRecord);

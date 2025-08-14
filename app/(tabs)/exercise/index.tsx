@@ -1,57 +1,46 @@
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { workoutActions } from "@/lib/state";
 
 import { FlatList, Text, View } from "react-native";
 import { Section, ScrollContainer, Empty } from "@/components/container";
-import { WorkoutRecord } from "@/components/workouts";
+import { WorkoutRecordMemo } from "@/components/workouts";
 import SelectButton from "@/components/select";
 
 export default function Index() {
-  const dispatch = useDispatch();
-  const workoutsState = useSelector(state => state.workouts);
-
-  const [archived, setArchived] = useState([]);
-  const [current, setCurrent] = useState([]);
-  const [choices, setChoices] = useState([]);
-
-  useEffect(() => {
-    setArchived(
-      workoutsState.workouts
-        .map((w, i) => ({ workout: w, index: i }))
-        .filter(w => !w.workout.isTemplate && w.workout.date != today)
-    );
-
-    setCurrent(
-      workoutsState.workouts
-        .map((w, i) => ({ workout: w, index: i }))
-        .filter(w => !w.workout.isTemplate && w.workout.date == today)
-    );
-
-    setChoices(
-      workoutsState.workouts
-        .filter(w => w.isTemplate && w.exercises.length > 0)
-        .map(w => ({ label: w.name, value: w.name }))
-    );
-  }, [workoutsState]);
-
   const opts = { year: 'numeric', month: 'long', day: 'numeric' };
   const today = new Intl.DateTimeFormat('en-US', opts).format(new Date());
 
+  const dispatch = useDispatch();
+  const workoutsState = useSelector(state => state.workouts);
+
+  const workouts = useMemo(() => {
+    return workoutsState.workouts
+      .map((w, i) => ({ workout: w, index: i }))
+      .filter(w => !w.workout.isTemplate)
+  }, [workoutsState]);
+
+  const choices = useMemo(() => {
+    return workoutsState.workouts
+      .filter(w => w.isTemplate && w.exercises.length > 0)
+      .map(w => ({ label: w.name, value: w.name }));
+  }, [workoutsState]);
+
   const addWorkout = (templateName: string) => {
     const template = workoutsState.workouts.find(w => w.name == templateName);
+    let workout = { isTemplate: false, date: today, name: template.name };
 
-    let workout = { ...template, isTemplate: false, date: today };
-    if (workout.exercises === undefined)
-      workout.exercises = [];
-    else {
-      for (const e of workout.exercises) {
-        e.weight = e.weight ?? 0;
-        w.reps = e.reps ?? [];
-        e.duration = e.duration ?? 0;
-        e.distance = e.distance ?? 0;
-      }
+    let exercises = [];
+    for (const e of template.exercises) {
+      exercises.push({
+        name: e.name,
+        exerciseType: e.exerciseType,
+        reps: [], duration: 0, distance: 0,
+        weight: e.weight ?? 0
+      });
     }
+    workout.exercises = exercises;
+
     dispatch(workoutActions.addWorkout({ value: workout }));
   };
 
@@ -62,44 +51,36 @@ export default function Index() {
       }
 
       {choices.length > 0 &&
-        <View>
-          <Text className="font-bold text-xl mb-2">{today}</Text>
+        <FlatList
+          data={[...workouts].reverse()}
+          keyExtractor={item => item.index.toString()}
+          ListHeaderComponent={
+            <View>
+              <Text className="font-bold text-xl mb-2">{today}</Text>
+              <Section>
+                <SelectButton
+                  choices={choices}
+                  defaultChoice={choices[0].value}
+                  message="Add workout"
+                  handlePress={(choice: string) => addWorkout(choice)} />
+              </Section>
+              <View className="border-b-2 border-gray-200"></View>
+            </View>
+          }
+          renderItem={({ item, index }) => {
+            const prev = workouts[workouts.length - 1 - index].workout.date;
+            const showDate = index > 0 &&
+              prev !== workouts[workouts.length - index].workout.date;
 
-          <Section>
-            <SelectButton
-              choices={choices}
-              defaultChoice={choices[0]} message="Add workout"
-              handlePress={(choice: string) => addWorkout(choice)} />
-          </Section>
-
-          <FlatList
-            data={current}
-            keyExtractor={item => item.index}
-            renderItem={({ item }) =>
-              <WorkoutRecord workout={item.workout} index={item.index} />
-            }
-          />
-
-          <View className="border-b-2 border-gray-200"></View>
-
-          {archived.length == 0 &&
-            <Empty messages={["You have no workouts logged"]} />}
-
-          <FlatList
-            data={[...archived].reverse()}
-            keyExtractor={item => item.index}
-            renderItem={({ item, index }) => {
-              const sameDay = archived[index].workout.date == item.workout.date;
-              return (
-                <View>
-                  {!sameDay &&
-                    <Text className="font-bold text-xl mb-2">{item.workout.date}</Text>}
-                  <WorkoutRecord workout={item.workout} index={item.index} />
-                </View>
-              );
-            }}
-          />
-        </View>}
+            return (
+              <View>
+                {showDate &&
+                  <Text className="font-bold text-xl mb-2">{item.workout.date}</Text>}
+                <WorkoutRecordMemo workout={item.workout} index={item.index} />
+              </View>
+            );
+          }}
+        />}
     </ScrollContainer>
   );
 }

@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { workoutActions } from "@/lib/state";
 
 import { FlatList, Pressable, Text, TextInput, View } from "react-native";
-import { WorkoutTemplate } from "@/components/workouts";
+import { WorkoutTemplateMemo } from "@/components/workouts";
 import { ScrollContainer, Empty } from "@/components/container";
 import Feather from "@expo/vector-icons/Feather";
 
@@ -12,14 +12,10 @@ export default function TemplatesPage() {
   const workoutsState = useSelector(state => state.workouts);
 
   const [templateName, setWorkoutName] = useState("");
-  const [templates, setTemplates] = useState([]);
-
-  useEffect(() => {
-    setTemplates(
-      workoutsState.workouts
-        .map((w, i) => ({ workout: w, index: i }))
-        .filter(w => w.workout.isTemplate)
-    );
+  const templates = useMemo(() => {
+    return workoutsState.workouts
+      .map((w, i) => ({ workout: w, index: i }))
+      .filter(w => w.workout.isTemplate);
   }, [workoutsState]);
 
   const addTemplate = () => {
@@ -53,7 +49,7 @@ export default function TemplatesPage() {
         className="w-[100%]"
         keyExtractor={item => item.index}
         renderItem={({ item }) =>
-          <WorkoutTemplate workout={item.workout} index={item.index} />}
+          <WorkoutTemplateMemo workout={item.workout} index={item.index} />}
       />
     </ScrollContainer>
   );

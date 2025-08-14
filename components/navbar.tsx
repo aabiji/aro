@@ -19,7 +19,7 @@ export default function Navbar({ routes, panes, icons, route }) {
                 router.push(`exercise/${routes[i].replace('index', '')}`);
               }}>
               <Feather name={icons[i]} color="black" size={18} />
-              <Text className="ml-2">{panes[i]}</Text>
+              <Text className="font-bold ml-2">{panes[i]}</Text>
             </Pressable>
           </View>
         );
