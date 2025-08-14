@@ -1,10 +1,9 @@
-import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { Exercise, Workout, workoutActions } from "@/lib/state";
 
 import { Pressable, Text, TextInput, View } from "react-native";
-import { Dropdown } from 'react-native-element-dropdown';
 import NumInput from "@/components/input";
+import OptButton from "@/components/optbutton";
 
 import Feather from "@expo/vector-icons/Feather";
 
@@ -17,7 +16,6 @@ export function EditableWorkoutView({ workout, index }: ViewProps) {
     { label: "Strength exercise", value: "strength" },
     { label: "Cardio exercise", value: "cardio" },
   ];
-  const [exerciseType, setExerciseType] = useState("strength");
 
   return (
     <View className="w-[100%] m-auto border border-gray-200 p-2 bg-white mt-5">
@@ -54,27 +52,13 @@ export function EditableWorkoutView({ workout, index }: ViewProps) {
         </View>
       ))}
 
-      <View className="flex-row items-center justify-between mt-5 bg-blue-50 rounded">
-        <Dropdown
-          data={buttonChoices}
-          value={exerciseType}
-          placeholder="Exercise type"
-          labelField="label"
-          valueField="value"
-          style={{ flex: 1 }}
-          onChange={item => setExerciseType(item.value)}
-          renderItem={item => <Text className="p-2">{item.label}</Text>}
-        />
-        <Pressable
-          onPress={() => dispatch(workoutActions.addExercise({
-            workoutIndex: index, value: { name: "", exerciseType }
-          }))}
-          className="ml-2 p-4"
-        >
-          <Feather name="plus" color="black" size={20} />
-        </Pressable>
-      </View>
-    </View >
+      <OptButton
+        choices={buttonChoices}
+        defaultChoice="strength" message="Add exercise"
+        handlePress={(choice: string) => dispatch(workoutActions.addExercise({
+          workoutIndex: index, value: { name: "", exerciseType: choice }
+        }))} />
+    </View>
   );
 }
 

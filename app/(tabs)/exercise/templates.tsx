@@ -4,6 +4,7 @@ import { workoutActions } from "@/lib/state";
 
 import { FlatList, Pressable, Text, TextInput, View } from "react-native";
 import { EditableWorkoutView } from "@/components/workout_views";
+import Feather from "@expo/vector-icons/Feather";
 
 export default function TemplatesPage() {
   const dispatch = useDispatch();
@@ -25,23 +26,24 @@ export default function TemplatesPage() {
       <View className="flex-row">
         <TextInput
           value={templateName}
-          className="bg-white p-3 grow"
+          className="bg-white p-3 grow outline-none"
           onChangeText={(value) => setWorkoutName(value)} />
         <Pressable
           disabled={templateName.trim().length == 0}
           onPress={() => dispatch(workoutActions.addWorkout({
             value: { isTemplate: true, name: templateName, exercises: [] }
           }))}
-          className="bg-blue-100 p-2 items-center">
-          <Text> Add Workout</Text>
+          className="flex-row gap-1 bg-blue-500 p-2 items-center">
+          <Feather name="plus" color="white" size={20} />
+          <Text className="text-white"> New template </Text>
         </Pressable>
       </View>
 
       <FlatList
-        data={templates}
+        data={templates} inverted={true} keyExtractor={item => item.index}
         renderItem={({ item }) =>
           <EditableWorkoutView workout={item.workout} index={item.index} />}
-        keyExtractor={item => item.index} />
+      />
     </View>
   );
 }
