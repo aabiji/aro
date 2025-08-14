@@ -1,4 +1,6 @@
-import { useWindowDimensions, Image, Text, View } from "react-native";
+import { useWindowDimensions, Text, View } from "react-native";
+
+import DumbellsIcon from '@/assets/dumbells.svg';
 
 export function ScrollContainer({ children }) {
   const { width } = useWindowDimensions();
@@ -22,7 +24,7 @@ export function Section({ children }) {
 export function Empty({ messages }) {
   return (
     <View className="items-center">
-      <Image source={require("@/assets/icons/dumbell.svg")} />
+      <DumbellsIcon width={125} height={125} />
       {messages.map((_, i) =>
         <Text className="text-xl text-gray-500" key={i}>{messages[i]}</Text>)}
     </View>

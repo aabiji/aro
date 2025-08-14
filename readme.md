@@ -7,6 +7,7 @@ tech stack:
 
 icons:
 - https://thenounproject.com/icon/dumbbells-44534/
+- https://thenounproject.com/icon/dumbbell-157388/
 - https://thenounproject.com/icon/settings-1337547/
 - https://thenounproject.com/icon/food-7742389/
 - https://thenounproject.com/icon/drop-7952657/
