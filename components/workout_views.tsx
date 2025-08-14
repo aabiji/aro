@@ -13,21 +13,33 @@ export function EditableWorkoutView({ workout, index }: ViewProps) {
   const dispatch = useDispatch();
 
   const buttonChoices = [
-    { label: "Strength exercise", value: "strength" },
-    { label: "Cardio exercise", value: "cardio" },
+    { label: "Strength", value: "strength" },
+    { label: "Cardio", value: "cardio" },
   ];
 
+  const addExercise = (choice: string) => {
+    let [defaultName, count] = ["New exercise", 0];
+    for (const e of workout.exercises) {
+      if (e.name.includes(defaultName)) count++;
+    }
+    defaultName = `${defaultName} ${count + 1}`;
+    dispatch(workoutActions.addExercise({
+      workoutIndex: index, value: { name: defaultName, exerciseType: choice }
+    }));
+  }
+
   return (
-    <View className="w-[100%] m-auto border border-gray-200 p-2 bg-white mt-5">
+    <View className="w-[100%] m-auto border border-gray-200 p-2 bg-white mb-5">
       <TextInput
-        className="text-xl"
+        className="text-xl bg-gray-100 rounded-sm px-3 py-1 outline-none"
         value={workout.name}
         onChangeText={(value) => dispatch(workoutActions.setWorkoutName({
           workoutIndex: index, value
         }))} />
 
       {workout.exercises.map((e, i) => (
-        <View key={i} className="flex-row justify-between border-t border-gray-100 p-2">
+        <View key={i}
+          className="flex-row w-[100%] justify-between border-t border-gray-100 p-2">
           <TextInput
             value={e.name}
             placeholder="Exercise name"
@@ -53,11 +65,9 @@ export function EditableWorkoutView({ workout, index }: ViewProps) {
       ))}
 
       <OptButton
-        choices={buttonChoices}
-        defaultChoice="strength" message="Add exercise"
-        handlePress={(choice: string) => dispatch(workoutActions.addExercise({
-          workoutIndex: index, value: { name: "", exerciseType: choice }
-        }))} />
+        choices={buttonChoices} icon="plus"
+        defaultChoice="strength" message=""
+        handlePress={(choice: string) => addExercise(choice)} />
     </View>
   );
 }

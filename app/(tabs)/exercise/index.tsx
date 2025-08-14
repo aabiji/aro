@@ -4,6 +4,7 @@ import { workoutActions } from "@/lib/state";
 
 import { FlatList, View } from "react-native";
 import OptButton from "@/components/optbutton";
+import ScrollContainer from "@/components/container";
 import { WorkoutView } from "@/components/workout_views";
 
 export default function Index() {
@@ -48,7 +49,7 @@ export default function Index() {
   };
 
   return (
-    <View className="w-[60%] m-auto h-[100%]">
+    <ScrollContainer>
       {templateChoices.length > 0 &&
         <OptButton
           choices={templateChoices}
@@ -57,11 +58,11 @@ export default function Index() {
       }
 
       <FlatList
-        data={workouts} inverted={true}
+        data={[...workouts].reverse()}
         keyExtractor={item => item.index}
         renderItem={({ item }) =>
           <WorkoutView workout={item.workout} index={item.index} />}
       />
-    </View>
+    </ScrollContainer>
   );
 }

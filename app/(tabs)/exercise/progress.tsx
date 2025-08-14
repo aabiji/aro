@@ -1,5 +1,6 @@
 import { View } from "react-native";
 import { LineGraph, Heatmap } from "@/components/graph";
+import ScrollContainer from "@/components/container";
 
 export default function Index() {
   const now = new Date();
@@ -10,11 +11,11 @@ export default function Index() {
   }
 
   return (
-    <View className="w-[60%] m-auto h-[100%]">
+    <ScrollContainer>
       <View className="gap-4">
         <Heatmap data={data} height={150} />
         <LineGraph data={data} height={400} />
       </View>
-    </View>
+    </ScrollContainer>
   );
 }
