@@ -7,6 +7,13 @@ import { Section, ScrollContainer, Empty } from "@/components/container";
 import { WorkoutRecordMemo } from "@/components/workouts";
 import SelectButton from "@/components/select";
 
+/*
+save triggers:
+
+mobile -> AppState (react-native)
+web -> beforeunload, visibilitychange
+*/
+
 export default function Index() {
   const opts = { year: 'numeric', month: 'long', day: 'numeric' };
   const today = new Intl.DateTimeFormat('en-US', opts).format(new Date());

@@ -28,7 +28,6 @@ class User(Base):
   name = Column(String, nullable=False)
   email = Column(String, nullable=False)
   password = Column(String, nullable=False)
-  is_female = Column(Boolean, nullable=False)
 
 
 class Workout(Base):
@@ -54,7 +53,8 @@ class Exercise(Base):
 class Preference(Base):
   __tablename__ = "Preferences"
   user_id = Column(Integer, primary_key=True)
-  use_metric_system = Column(Boolean, nullable=False)
+  use_imperial = Column(Boolean, nullable=False)
+  is_female = Column(Boolean, nullable=False)
 
 
 Base.metadata.create_all(engine)
