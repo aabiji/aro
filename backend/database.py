@@ -14,12 +14,18 @@ def get_session():
   session = SessionLocal()
   try:
     yield session
-    session.commit()
   except:
     session.rollback()
     raise
   finally:
     session.close()
+
+
+def row_to_json(column, exclude=[]):
+  data = column.__dict__
+  for column in exclude:
+    del data[column]
+  return data
 
 
 class User(Base):

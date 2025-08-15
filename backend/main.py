@@ -99,6 +99,7 @@ def handle_signup(request: SignupRequest):
       user_id=new_user.id, is_female=request.is_female, use_imperial=True
     )
     session.add(pref)
+    session.commit()
 
     return {"jwt": create_jwt(new_user.id)}
 
@@ -107,19 +108,22 @@ def handle_signup(request: SignupRequest):
 def get_user_data(user_id: int = Depends(get_user_id)):
   with db.get_session() as session:
     workouts = []
-    rows = session.query(db.Workout).filter(db.Workout.user_id == user_id).all()
-    for row in rows:
-      data = row.__dict__
-      data["exercises"] = (
-        session.query(db.Exercise).filter(db.Exercise.workout_id == row.id).all()
+    workout_rows = session.query(db.Workout).filter(db.Workout.user_id == user_id).all()
+
+    for wrow in workout_rows:
+      exercises = (
+        session.query(db.Exercise).filter(db.Exercise.workout_id == wrow.id).all()
       )
-      workouts.append(data)
+      obj = db.row_to_json(wrow, ["user_id"])
+      obj["exercises"] = [db.row_to_json(row, ["workout_id"]) for row in exercises]
+      workouts.append(obj)
 
     pref = session.query(db.Preference).filter(db.Preference.user_id == user_id).first()
-    return {"workouts": workouts, "preferences": pref}
+    return {"workouts": workouts, "preferences": db.row_to_json(pref, ["user_id"])}
 
 
-class CreateExerciseRequest(BaseModel):
+class ExerciseInfo(BaseModel):
+  id: int | None
   name: str
   exercise_type: str
   reps: List[int] | None
@@ -129,7 +133,7 @@ class CreateExerciseRequest(BaseModel):
 
 
 class CreateWorkoutRequest(BaseModel):
-  exercises: List[CreateExerciseRequest]
+  exercises: List[ExerciseInfo]
   is_template: bool
   name: str
 
@@ -139,20 +143,26 @@ def create_workout(request: CreateWorkoutRequest, user_id: int = Depends(get_use
   with db.get_session() as session:
     w = db.Workout(user_id=user_id, is_template=request.is_template, name=request.name)
     session.add(w)
+    session.commit()
 
-    for e_info in request.exercises:
+    exercises = []
+    for e in request.exercises:
       exercise = db.Exercise(
         workout_id=w.id,
-        name=e_info.name,
-        exercise_type=e_info.exercise_type,
-        reps=e_info.reps,
-        weight=e_info.weight,
-        duration=e_info.duration,
-        distance=e_info.distance,
+        name=e.name,
+        exercise_type=e.exercise_type,
+        reps=e.reps,
+        weight=e.weight,
+        duration=e.duration,
+        distance=e.distance,
       )
       session.add(exercise)
+      session.commit()
+      exercises.append(exercise)
 
-    return {"workout_id": w.id}
+      obj = db.row_to_json(w, ["user_id"])
+      obj["exercises"] = [db.row_to_json(row, ["workout_id"]) for row in exercises]
+      return {"workout": obj}
 
 
 # get the workout and the associated exercises
@@ -184,20 +194,61 @@ def delete_workout(request: DeleteWorkoutRequest, user_id: int = Depends(get_use
     for exercise in exercises:
       session.delete(exercise)
     session.delete(workout)
+    session.commit()
   return {}
 
 
-"""
-TODO:
-update workout ->
-just pass in the new workout and we'll figure out what to create/update/delete
+class UpdateWorkoutRequest(BaseModel):
+  exercises: List[ExerciseInfo]
+  name: str
+  workout_id: int
 
-auto saving input data:
 
-# option 1
-- save changes in local storage
-- call api in the cleanup of the page's useEffect(), when the page visibility changes, app is closed, etc
-"""
+@app.put("/workout")
+def update_workout(request: UpdateWorkoutRequest, user_id: int = Depends(get_user_id)):
+  with db.get_session() as session:
+    workout, existing_exercises = get_workout(user_id, request.workout_id)
+    if workout is None:
+      raise HTTPException(status_code=404, detail="Workout not found")
+
+    if request.name != workout.name:
+      workout.name = request.name
+
+    updated_exercises = {e.id: e for e in request.exercises if e.id is not None}
+    for exercise in existing_exercises:
+      # delete exercises
+      if exercise.id not in updated_exercises:
+        session.delete(exercise)
+        continue
+
+      # set the columns of the exiting exercises to those of the new exercises
+      for attr in db.Exercise.__mapper__.column_attrs:
+        new_value = getattr(updated_exercises[exercise.id], attr.key)
+        setattr(exercise, attr.key, new_value)
+
+    # add new exercises
+    for e in request.exercises:
+      if e.id is None:
+        new_exercise = db.Exercise(
+          workout_id=workout.id,
+          name=e.name,
+          exercise_type=e.exercise_type,
+          reps=e.reps,
+          weight=e.weight,
+          duration=e.duration,
+          distance=e.distance,
+        )
+        session.add(new_exercise)
+
+    # respond with new workout
+    session.commit()
+    obj = db.row_to_json(workout, ["user_id"])
+    final = (
+      session.query(db.Exercise).filter(db.Exercise.workout_id == workout.id).all()
+    )
+    obj["exercises"] = [db.row_to_json(row, ["workout_id"]) for row in final]
+    return {"workout": obj}
+
 
 if __name__ == "__main__":
   uvicorn.run(app, host="127.0.0.1", port=8080)
