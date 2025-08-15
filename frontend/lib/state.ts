@@ -1,4 +1,4 @@
-import { configureStore, createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { combineReducers, createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 export interface Exercise {
   exerciseType: string;
@@ -60,10 +60,18 @@ const workoutsSlice = createSlice({
   }
 });
 
-export const workoutActions = workoutsSlice.actions;
-
-export const store = configureStore({
-  reducer: {
-    workouts: workoutsSlice.reducer,
+const userData = createSlice({
+  name: "user-data",
+  initialState: { jwt: "" },
+  reducers: {
+    setJwt: (state, a: PayloadAction<string>) => { state.jwt = a.payload },
   }
+});
+
+export const workoutActions = workoutsSlice.actions;
+export const userDataActions = userData.actions;
+
+export const rootReducer = combineReducers({
+  workouts: workoutsSlice.reducer,
+  userData: userData.reducer,
 });

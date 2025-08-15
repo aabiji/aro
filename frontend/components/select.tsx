@@ -52,7 +52,7 @@ export function Selection({ choices, icons, handleChoice, className }) {
         const Icon = icons ? icons[index] : undefined;
         return (
           <Pressable
-            onPress={() => select(index)}
+            onPress={() => select(index)} key={index}
             className={`items-center flex-1 flex-column ${style} ${extra}`}>
             {Icon && <Icon fill={color} stroke={color} width={25} height={25} />}
             <Text className={textColor}>{choices[index]}</Text>
