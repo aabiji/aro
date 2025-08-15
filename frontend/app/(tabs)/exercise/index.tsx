@@ -5,7 +5,7 @@ import { workoutActions } from "@/lib/state";
 import { FlatList, Text, View } from "react-native";
 import { Section, ScrollContainer, Empty } from "@/components/container";
 import { WorkoutRecordMemo } from "@/components/workouts";
-import SelectButton from "@/components/select";
+import { SelectButton } from "@/components/select";
 
 /*
 save triggers:

@@ -4,7 +4,7 @@ import { Exercise, Workout, workoutActions } from "@/lib/state";
 import React from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import NumInput from "@/components/input";
-import SelectButton from "@/components/select";
+import { SelectButton } from "@/components/select";
 import { Section } from "@/components/container";
 
 import Feather from "@expo/vector-icons/Feather";

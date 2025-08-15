@@ -1,6 +1,8 @@
-import { View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { LineGraph, Heatmap } from "@/components/graph";
 import { ScrollContainer } from "@/components/container";
+import { Selection } from "@/components/select";
+import Feather from "@expo/vector-icons/Feather";
 
 export default function ProgressPage() {
   const now = new Date();
@@ -13,7 +15,26 @@ export default function ProgressPage() {
   return (
     <ScrollContainer>
       <View className="gap-4">
+        <View className="flex-row justify-between items-center">
+          <Text className="text-xl"> Exercise name </Text>
+          <View className="flex-row gap-2 items-center">
+            <Pressable>
+              <Feather name="arrow-left" color="black" size={18} />
+            </Pressable>
+            <Text> Year </Text>
+            <Pressable>
+              <Feather name="arrow-right" color="black" size={18} />
+            </Pressable>
+          </View>
+        </View>
         <Heatmap data={data} height={150} />
+      </View>
+
+      <View>
+        <View className="items-center">
+          <Text className="text-xl"> Exercise name </Text>
+          <Selection choices={["Weight", "Reps"]} handleChoice={(index) => { }} />
+        </View>
         <LineGraph data={data} height={400} />
       </View>
     </ScrollContainer>

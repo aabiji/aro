@@ -1,6 +1,4 @@
 import { useRef, useEffect } from "react";
-import { Pressable, Text, View } from "react-native";
-import Feather from "@expo/vector-icons/Feather";
 import * as d3 from "d3";
 
 export function LineGraph({ data, height }) {
@@ -48,21 +46,7 @@ export function LineGraph({ data, height }) {
       .attr("fill", "steelblue");
   }, []);
 
-  const [selected, unselected] =
-    ["bg-blue-500 text-white p-1", "bg-transparent p-1"];
-
-  return (
-    <View>
-      <View className="flex-row justify-between items-center">
-        <Text className="text-xl"> Exercise name </Text>
-        <View className="flex-row gap-2 bg-white rounded">
-          <Pressable className={selected}> Weight </Pressable>
-          <Pressable className={unselected}> Reps </Pressable>
-        </View>
-      </View>
-      <svg ref={ref} width="100%" height={h} />
-    </View>
-  );
+  return <svg ref={ref} width="100%" height={h} />;
 }
 
 export function Heatmap({ data, height }) {
@@ -120,22 +104,5 @@ export function Heatmap({ data, height }) {
       .attr("fill", d => colorScale(d.value));
   }, []);
 
-  return (
-    <View>
-      <View className="flex-row justify-between items-center">
-        <Text className="text-xl"> Exercise name </Text>
-        <View className="flex-row gap-2 items-center">
-          <Pressable>
-            <Feather name="arrow-left" color="black" size={18} />
-          </Pressable>
-          <Text> Year </Text>
-          <Pressable>
-            <Feather name="arrow-right" color="black" size={18} />
-          </Pressable>
-        </View>
-      </View>
-
-      <svg ref={ref} width="100%" height={h} />
-    </View>
-  );
+  return <svg ref={ref} width="100%" height={h} />;
 }

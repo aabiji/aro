@@ -3,7 +3,7 @@ import { Pressable, Text, View } from "react-native";
 import { Dropdown } from "react-native-element-dropdown";
 import Feather from "@expo/vector-icons/Feather";
 
-export default function SelectButton({ choices, defaultChoice, message, handlePress, icon }) {
+export function SelectButton({ choices, defaultChoice, message, handlePress, icon }) {
   const [choice, setChoice] = useState(defaultChoice);
 
   return (
@@ -31,6 +31,34 @@ export default function SelectButton({ choices, defaultChoice, message, handlePr
         {icon && <Feather name={icon} size={20} color="white" />}
         <Text className="text-white font-bold text-base ml-2">{message}</Text>
       </Pressable>
+    </View>
+  );
+}
+
+export function Selection({ choices, icons, handleChoice, className }) {
+  const [selected, setSelected] = useState(0);
+  const select = (index: number) => {
+    setSelected(index);
+    handleChoice(index);
+  }
+  const extra = className ?? "";
+
+  return (
+    <View className="flex-row justify-between bg-white border-gray-100 border-2">
+      {choices.map((_, index) => {
+        const color = index == selected ? "white" : "blue";
+        const textColor = index == selected ? "text-white" : "text-black";
+        const style = index == selected ? "bg-blue-400 text-white p-1" : "bg-transparent p-1";
+        const Icon = icons ? icons[index] : undefined;
+        return (
+          <Pressable
+            onPress={() => select(index)}
+            className={`items-center flex-1 flex-column ${style} ${extra}`}>
+            {Icon && <Icon fill={color} stroke={color} width={25} height={25} />}
+            <Text className={textColor}>{choices[index]}</Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
