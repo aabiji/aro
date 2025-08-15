@@ -40,7 +40,7 @@ const workoutsSlice = createSlice({
     },
 
     removeWorkout: (state, a: PayloadAction<Action<null>>) => {
-      console.log("del workout...");
+      state.workouts.splice(a.payload.workoutIndex!, 1);
     },
 
     addExercise: (state, a: PayloadAction<Action<Exercise>>) => {

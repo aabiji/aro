@@ -1,2 +1,5 @@
 .venv
 uv.lock
+*.db
+*.env
+__pycache__
