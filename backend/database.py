@@ -21,11 +21,12 @@ def get_session():
     session.close()
 
 
-def row_to_json(column, exclude=[]):
-  data = column.__dict__
-  for column in exclude:
-    del data[column]
-  return data
+def row_to_json(row, exclude=[]):
+  return {
+    col.name: getattr(row, col.name)
+    for col in row.__table__.columns
+    if col.name not in exclude
+  }
 
 
 class User(Base):
@@ -41,7 +42,7 @@ class Workout(Base):
   id = Column(Integer, primary_key=True)
   user_id = Column(Integer, nullable=False)
   is_template = Column(Boolean, nullable=False)
-  name = Column(String, nullable=False)
+  tag = Column(String, nullable=False)  # name or date
 
 
 class Exercise(Base):
@@ -49,7 +50,7 @@ class Exercise(Base):
   id = Column(Integer, primary_key=True)
   workout_id = Column(Integer, nullable=False)
   name = Column(String, nullable=False)
-  exercise_type = Column(String, nullable=False)
+  exercise_type = Column(Integer, nullable=False)
   reps = Column(JSON)
   weight = Column(Integer)
   duration = Column(Integer)

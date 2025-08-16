@@ -1,24 +1,23 @@
 import { combineReducers, createSlice, PayloadAction } from "@reduxjs/toolkit";
 
-export interface Exercise {
-  exerciseType: string;
+export enum ExerciseType { Resistance, Cardio };
+
+// NOTE: see the corresponding backend api request types
+export interface ExerciseInfo {
+  id: number | null;
+  exercise_type: ExerciseType;
   name: string;
-  // strength exercises
-  weight?: number;
-  reps?: number[];
-  // cardio exercises
-  duration?: number;
-  distance?: number;
+  weight: number | null;
+  reps: number[] | null;
+  duration: number | null;
+  distance: number | null;
 }
 
-export interface Workout {
-  // if it's a template, it simply defines what
-  // a workout consists of, so it won't include
-  // reps or duration or anything like that
-  isTemplate: boolean;
-  exercises: Exercise[];
-  name: string;
-  date?: string;
+export interface WorkoutInfo {
+  id: number | null;
+  is_template: boolean;
+  exercises: ExerciseInfo[];
+  tag: string;
 }
 
 interface Action<T> {
@@ -29,13 +28,13 @@ interface Action<T> {
 
 const workoutsSlice = createSlice({
   name: "workout",
-  initialState: { workouts: [] as Workout[] },
+  initialState: { workouts: [] as WorkoutInfo[] },
   reducers: {
-    setWorkoutName: (state, a: PayloadAction<Action<string>>) => {
-      state.workouts[a.payload.workoutIndex!].name = a.payload.value;
+    setTemplateName: (state, a: PayloadAction<Action<string>>) => {
+      state.workouts[a.payload.workoutIndex!].tag = a.payload.value;
     },
 
-    addWorkout: (state, a: PayloadAction<Action<Workout>>) => {
+    addWorkout: (state, a: PayloadAction<Action<WorkoutInfo>>) => {
       state.workouts.push(a.payload.value);
     },
 
@@ -43,8 +42,18 @@ const workoutsSlice = createSlice({
       state.workouts.splice(a.payload.workoutIndex!, 1);
     },
 
-    addExercise: (state, a: PayloadAction<Action<Exercise>>) => {
-      state.workouts[a.payload.workoutIndex!].exercises.push(a.payload.value);
+    updateWorkout: (state, a: PayloadAction<Action<WorkoutInfo>>) => {
+      state.workouts[a.payload.workoutIndex!] = a.payload.value;
+    },
+
+    addExercise: (state, a: PayloadAction<Action<ExerciseInfo>>) => {
+      // default to null instead of undefined so that the object's schea is valid
+      const nullableExerciseFields = ["id", "weight", "reps", "duration", "distance"];
+      let exercise = a.payload.value;
+      for (const field of nullableExerciseFields) {
+        if (exercise[field] === undefined) exercise[field] = null;
+      }
+      state.workouts[a.payload.workoutIndex!].exercises.push(exercise);
     },
 
     removeExercise: (state, a: PayloadAction<Action<null>>) => {

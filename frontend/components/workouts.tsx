@@ -1,5 +1,6 @@
-import { useDispatch } from "react-redux";
-import { Exercise, Workout, workoutActions } from "@/lib/state";
+import { useDispatch, useSelector } from "react-redux";
+import { ExerciseType, ExerciseInfo, WorkoutInfo, workoutActions } from "@/lib/state";
+import { request } from "@/lib/http";
 
 import React from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
@@ -9,35 +10,52 @@ import { Section } from "@/components/container";
 
 import Feather from "@expo/vector-icons/Feather";
 
-interface ViewProps { workout: Workout, index: number };
+interface ViewProps { workout: WorkoutInfo, index: number };
 
 function WorkoutTemplate({ workout, index }: ViewProps) {
   const dispatch = useDispatch();
+  const userData = useSelector(state => state.userData);
 
   const buttonChoices = [
-    { label: "Strength", value: "strength" },
-    { label: "Cardio", value: "cardio" },
+    { label: "Strength", value: ExerciseType.Resistance },
+    { label: "Cardio", value: ExerciseType.Cardio },
   ];
 
-  const addExercise = (choice: string) => {
+  const addExercise = (choice: ExerciseType) => {
     let [defaultName, count] = ["New exercise", 0];
     for (const e of workout.exercises) {
       if (e.name.includes(defaultName)) count++;
     }
     defaultName = `${defaultName} ${count + 1}`;
     dispatch(workoutActions.addExercise({
-      workoutIndex: index, value: { name: defaultName, exerciseType: choice }
+      workoutIndex: index, value: { name: defaultName, exercise_type: choice }
     }));
+  }
+
+  const deleteTemplate = async () => {
+    try {
+      await request("DELETE", `/workout?id=${workout.id}`, undefined, userData.jwt);
+      dispatch(workoutActions.removeWorkout({ workoutIndex: index, value: null }));
+    } catch (err) {
+      console.log("ERROR!", err.message);
+    }
   }
 
   return (
     <Section>
-      <TextInput
-        className="text-xl bg-gray-100 rounded-sm px-3 py-1 outline-none"
-        value={workout.name}
-        onChangeText={(value) => dispatch(workoutActions.setWorkoutName({
-          workoutIndex: index, value
-        }))} />
+      <View className="flex-row">
+        <TextInput
+          className="flex-1 text-xl bg-gray-100 rounded-sm px-3 py-1 outline-none"
+          value={workout.tag}
+          onChangeText={(value) => dispatch(workoutActions.setTemplateName({
+            workoutIndex: index, value
+          }))} />
+        <Pressable
+          onPress={() => deleteTemplate()}
+          className="bg-transparent p-2">
+          <Feather name="trash" color="red" size={18} />
+        </Pressable>
+      </View>
 
       {workout.exercises.map((e, i) => (
         <View key={i}
@@ -50,7 +68,7 @@ function WorkoutTemplate({ workout, index }: ViewProps) {
             }))}
             className="outline-none bg-gray-100 px-2" />
 
-          {e.exerciseType == "strength" &&
+          {e.exercise_type == ExerciseType.Resistance &&
             <NumInput num={e.weight} label="lbs" setNum={(n: number) =>
               dispatch(workoutActions.updateExercise({
                 workoutIndex: index, exerciseIndex: i, value: { weight: n },
@@ -68,8 +86,8 @@ function WorkoutTemplate({ workout, index }: ViewProps) {
 
       <SelectButton
         choices={buttonChoices} icon="plus"
-        defaultChoice="strength" message=""
-        handlePress={(choice: string) => addExercise(choice)} />
+        defaultChoice={ExerciseType.Resistance} message=""
+        handlePress={(choice: ExerciseType) => addExercise(choice)} />
     </Section>
   );
 }
@@ -87,7 +105,7 @@ function WorkoutRecord({ workout, index }: ViewProps) {
 
   return (
     <Section>
-      {workout.exercises.map((e: Exercise, eIndex: number) => {
+      {workout.exercises.map((e: ExerciseInfo, eIndex: number) => {
         const str = `${e.name} (${e.weight} lbs)`;
 
         return (

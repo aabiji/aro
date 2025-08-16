@@ -1,10 +1,11 @@
 
-export async function request(method: string, endpoint: string, body: object) {
-  const url = `http://127.0.0.1:8080${endpoint}`;
-  let payload: RequestInit =
-    { method, headers: { "Content-Type": "application/json" } };
+export async function request(method: string, endpoint: string, body?: object, jwt?: string) {
+  let headers: HeadersInit = { "Content-Type": "application/json" };
+  if (jwt) headers["Authorization"] = `Bearer ${jwt}`;
+  let payload: RequestInit = { method, headers };
   if (body) payload.body = JSON.stringify(body);
 
+  const url = `http://127.0.0.1:8080${endpoint}`;
   const response = await fetch(url, payload);
   const data = await response.json();
 

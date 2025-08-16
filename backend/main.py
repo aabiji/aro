@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
 import uvicorn
+import json
 
 
 def load_env_vars():
@@ -22,7 +23,7 @@ def load_env_vars():
 app = FastAPI()
 app.add_middleware(
   CORSMiddleware,
-  allow_origins=["http://localhost:8081"],
+  allow_origins=["*"],
   allow_credentials=True,
   allow_methods=["*"],
   allow_headers=["*"],
@@ -33,7 +34,7 @@ VARS = load_env_vars()
 
 def create_jwt(user_id):
   exp = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(days=60)
-  payload = {"sub": user_id, "exp": exp}
+  payload = {"sub": str(user_id), "exp": exp}
   encoded = jwt.encode(payload, VARS["JWT_SECRET"], algorithm="HS256")
   return encoded if isinstance(encoded, str) else encoded.decode("utf-8")
 
@@ -52,7 +53,7 @@ def get_user_id(authorization: str = Header(None)):
     secret = VARS["JWT_SECRET"]
     payload = jwt.decode(token, secret, algorithms="HS256")
     user_id = int(payload["sub"])
-  except PyJWTError:
+  except PyJWTError as err:
     raise HTTPException(status_code=400, detail="Invalid JWT")
 
   # ensure the user exists
@@ -133,23 +134,24 @@ def get_user_data(user_id: int = Depends(get_user_id)):
 class ExerciseInfo(BaseModel):
   id: int | None
   name: str
-  exercise_type: str
+  exercise_type: int
   reps: List[int] | None
   weight: int | None
   distance: int | None
   duration: int | None
 
 
-class CreateWorkoutRequest(BaseModel):
+class WorkoutInfo(BaseModel):
+  id: int | None
   exercises: List[ExerciseInfo]
   is_template: bool
-  name: str
+  tag: str
 
 
 @app.post("/workout")
-def create_workout(request: CreateWorkoutRequest, user_id: int = Depends(get_user_id)):
+def create_workout(request: WorkoutInfo, user_id: int = Depends(get_user_id)):
   with db.get_session() as session:
-    w = db.Workout(user_id=user_id, is_template=request.is_template, name=request.name)
+    w = db.Workout(user_id=user_id, is_template=request.is_template, tag=request.tag)
     session.add(w)
     session.commit()
 
@@ -165,12 +167,12 @@ def create_workout(request: CreateWorkoutRequest, user_id: int = Depends(get_use
         distance=e.distance,
       )
       session.add(exercise)
-      session.commit()
       exercises.append(exercise)
 
-      obj = db.row_to_json(w, ["user_id"])
-      obj["exercises"] = [db.row_to_json(row, ["workout_id"]) for row in exercises]
-      return {"workout": obj}
+    session.commit()
+    obj = db.row_to_json(w, ["user_id"])
+    obj["exercises"] = [db.row_to_json(row, ["workout_id"]) for row in exercises]
+    return {"workout": obj}
 
 
 # get the workout and the associated exercises
@@ -188,14 +190,10 @@ def get_workout(user_id, id):
     return [workout, exercises]
 
 
-class DeleteWorkoutRequest(BaseModel):
-  workout_id: int
-
-
 @app.delete("/workout")
-def delete_workout(request: DeleteWorkoutRequest, user_id: int = Depends(get_user_id)):
+def delete_workout(id: int, user_id: int = Depends(get_user_id)):
   with db.get_session() as session:
-    workout, exercises = get_workout(user_id, request.workout_id)
+    workout, exercises = get_workout(user_id, id)
     if workout is None:
       raise HTTPException(status_code=404, detail="Workout not found")
 
@@ -206,38 +204,32 @@ def delete_workout(request: DeleteWorkoutRequest, user_id: int = Depends(get_use
   return {}
 
 
-class UpdateWorkoutRequest(BaseModel):
-  exercises: List[ExerciseInfo]
-  name: str
-  workout_id: int
-
-
 @app.put("/workout")
-def update_workout(request: UpdateWorkoutRequest, user_id: int = Depends(get_user_id)):
+def update_workout(request: WorkoutInfo, user_id: int = Depends(get_user_id)):
   with db.get_session() as session:
-    workout, existing_exercises = get_workout(user_id, request.workout_id)
+    workout, existing_exercises = get_workout(user_id, request.id)
     if workout is None:
       raise HTTPException(status_code=404, detail="Workout not found")
+    workout.tag = request.tag
 
-    if request.name != workout.name:
-      workout.name = request.name
+    existing_exercise_map = {ex.id: ex for ex in existing_exercises}
+    incoming_ids = set(e.id for e in request.exercises if e.id is not None)
 
-    updated_exercises = {e.id: e for e in request.exercises if e.id is not None}
-    for exercise in existing_exercises:
-      # delete exercises
-      if exercise.id not in updated_exercises:
-        session.delete(exercise)
-        continue
+    # delete any exercises not present in incoming payload
+    for existing in existing_exercises:
+      if existing.id not in incoming_ids:
+        session.delete(existing)
 
-      # set the columns of the exiting exercises to those of the new exercises
-      for attr in db.Exercise.__mapper__.column_attrs:
-        new_value = getattr(updated_exercises[exercise.id], attr.key)
-        setattr(exercise, attr.key, new_value)
-
-    # add new exercises
     for e in request.exercises:
-      if e.id is None:
-        new_exercise = db.Exercise(
+      if e.id is not None and e.id in existing_exercise_map:
+        # update existing
+        existing = existing_exercise_map[e.id]
+        for attr in db.Exercise.__mapper__.column_attrs:
+          if hasattr(e, attr.key):
+            setattr(existing, attr.key, getattr(e, attr.key))
+      else:
+        # add new exercise
+        new_ex = db.Exercise(
           workout_id=workout.id,
           name=e.name,
           exercise_type=e.exercise_type,
@@ -246,15 +238,16 @@ def update_workout(request: UpdateWorkoutRequest, user_id: int = Depends(get_use
           duration=e.duration,
           distance=e.distance,
         )
-        session.add(new_exercise)
+        session.add(new_ex)
 
-    # respond with new workout
     session.commit()
     obj = db.row_to_json(workout, ["user_id"])
-    final = (
+    exercises = (
       session.query(db.Exercise).filter(db.Exercise.workout_id == workout.id).all()
     )
-    obj["exercises"] = [db.row_to_json(row, ["workout_id"]) for row in final]
+    obj["exercises"] = [db.row_to_json(row, ["workout_id"]) for row in exercises]
+    print(json.dumps(obj, indent=2))
+    print(json.dumps(request.model_dump(), indent=2))
     return {"workout": obj}
 
 

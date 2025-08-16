@@ -1,18 +1,13 @@
 import { useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { workoutActions } from "@/lib/state";
+import { workoutActions, ExerciseInfo } from "@/lib/state";
+import { request } from "@/lib/http";
 
 import { FlatList, Text, View } from "react-native";
+import WorkoutStateSync from "@/components/sync";
 import { Section, ScrollContainer, Empty } from "@/components/container";
 import { WorkoutRecordMemo } from "@/components/workouts";
 import { SelectButton } from "@/components/select";
-
-/*
-save triggers:
-
-mobile -> AppState (react-native)
-web -> beforeunload, visibilitychange
-*/
 
 export default function Index() {
   const opts = { year: 'numeric', month: 'long', day: 'numeric' };
@@ -20,58 +15,62 @@ export default function Index() {
 
   const dispatch = useDispatch();
   const workoutsState = useSelector(state => state.workouts);
+  const userData = useSelector(state => state.userData);
 
   const workouts = useMemo(() => {
     return workoutsState.workouts
       .map((w, i) => ({ workout: w, index: i }))
-      .filter(w => !w.workout.isTemplate)
+      .filter(w => !w.workout.is_template)
   }, [workoutsState]);
 
   const choices = useMemo(() => {
     return workoutsState.workouts
-      .filter(w => w.isTemplate && w.exercises.length > 0)
-      .map(w => ({ label: w.name, value: w.name }));
+      .filter(w => w.is_template && w.exercises.length > 0)
+      .map(w => ({ label: w.tag, value: w.tag }));
   }, [workoutsState]);
 
-  const addWorkout = (templateName: string) => {
-    const template = workoutsState.workouts.find(w => w.name == templateName);
-    let workout = { isTemplate: false, date: today, name: template.name };
+  const addWorkout = async (templateName: string) => {
+    const template = workoutsState.workouts.find(w => w.tag == templateName);
+    let body = { id: null, is_template: false, tag: today, exercises: [] as ExerciseInfo[] };
 
-    let exercises = [];
     for (const e of template.exercises) {
-      exercises.push({
-        name: e.name,
-        exerciseType: e.exerciseType,
+      body.exercises.push({
+        id: null, name: e.name,
+        exercise_type: e.exercise_type,
         reps: [], duration: 0, distance: 0,
         weight: e.weight ?? 0
       });
     }
-    workout.exercises = exercises;
 
-    dispatch(workoutActions.addWorkout({ value: workout }));
+    try {
+      const json = await request("POST", "/workout", body, userData.jwt);
+      console.log(json.workout);
+      dispatch(workoutActions.addWorkout({ value: json.workout }));
+    } catch (err) {
+      console.log("ERROR!", err.message);
+    }
   };
 
   return (
-    <ScrollContainer>
-      {choices.length == 0 && <Empty messages={
-        ["You have no workout templates", "Create one to get started"]} />
-      }
-
-      {choices.length > 0 &&
+    <WorkoutStateSync>
+      <ScrollContainer>
         <FlatList
           data={[...workouts].reverse()}
           keyExtractor={item => item.index.toString()}
           ListHeaderComponent={
             <View>
               <Text className="font-bold text-xl mb-2">{today}</Text>
-              <Section>
-                <SelectButton
-                  choices={choices}
-                  defaultChoice={choices[0].value}
-                  message="Add workout"
-                  handlePress={(choice: string) => addWorkout(choice)} />
-              </Section>
-              <View className="border-b-2 border-gray-200"></View>
+              {choices.length == 0
+                ? <Empty messages={
+                  ["You have no workout templates"]} />
+                : <Section>
+                  <SelectButton
+                    choices={choices}
+                    defaultChoice={choices[0].value}
+                    message="Add workout"
+                    handlePress={(choice: string) => addWorkout(choice)} />
+                </Section>}
+              <View className="mt-2 mb-2 border-b-2 border-gray-200"></View>
             </View>
           }
           renderItem={({ item, index }) => {
@@ -87,7 +86,8 @@ export default function Index() {
               </View>
             );
           }}
-        />}
-    </ScrollContainer>
+        />
+      </ScrollContainer>
+    </WorkoutStateSync>
   );
 }

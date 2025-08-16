@@ -15,7 +15,7 @@ import MaleIcon from "@/assets/male.svg";
 export default function Index() {
   const dispatch = useDispatch();
   const userData = useSelector(state => state.userData);
-  const [authenticated, setAuthenticated] = useState(userData.jwt.length > 0);
+  const [authenticated, setAuthenticated] = useState(false);//useState(userData.jwt.length > 0);
   // TODO: what to do when the jwt expires?
 
   const [isLogin, setIsLogin] = useState(true);
