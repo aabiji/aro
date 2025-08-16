@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "tracker",
-    "slug": "tracker",
+    "name": "athena",
+    "slug": "athena",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "tracker",
+    "scheme": "athena",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {

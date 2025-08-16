@@ -83,7 +83,7 @@ export default function Index() {
   return (
     <ScrollContainer>
       <View className="m-auto w-[65%]">
-        <Text className="text-center text-2xl font-bold mb-4">tracker</Text>
+        <Text className="text-center text-2xl font-bold mb-4">athena</Text>
 
         <View className="bg-white p-4">
           {errMsg.length > 0 &&
