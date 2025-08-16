@@ -3,6 +3,7 @@ import datetime
 import jwt
 from jwt import PyJWTError
 from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
 import uvicorn
@@ -19,6 +20,14 @@ def load_env_vars():
 
 
 app = FastAPI()
+app.add_middleware(
+  CORSMiddleware,
+  allow_origins=["http://localhost:8081"],
+  allow_credentials=True,
+  allow_methods=["*"],
+  allow_headers=["*"],
+)
+
 VARS = load_env_vars()
 
 
@@ -79,7 +88,7 @@ class SignupRequest(LoginRequest):
   is_female: bool
 
 
-@app.post("/user/create")
+@app.post("/user/signup")
 def handle_signup(request: SignupRequest):
   with db.get_session() as session:
     user = session.query(db.User).filter(db.User.email == request.email).first()
@@ -90,7 +99,6 @@ def handle_signup(request: SignupRequest):
       name=request.name,
       email=request.email,
       password=request.password,
-      is_female=request.is_female,
     )
     session.add(new_user)
     session.commit()
