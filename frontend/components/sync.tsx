@@ -18,6 +18,7 @@ export default function WorkoutStateSync({ children }) {
     for (let i = 0; i < workoutsState.workouts.length; i++) {
       const workout = workoutsState.workouts[i];
       try {
+        console.log("updating...", workout); // TODO: need to debug this more...
         const json = await request("PUT", "/workout", workout, userData.jwt);
         dispatch(workoutActions.updateWorkout({ workoutIndex: i, value: json.workout }));
       } catch (err) {
@@ -28,17 +29,16 @@ export default function WorkoutStateSync({ children }) {
     setAlreadySynching(false);
   }
 
-  setInterval(() => syncWorkouts(), 1000 * 60 * 5); // sync every 5 minutes
-
   const appState = useRef(AppState.currentState);
   let subscription: NativeEventSubscription;
   const handleHidden = () => { if (document.hidden) syncWorkouts(); };
   const handleClose = () => syncWorkouts();
 
   // sync when the app is closed or in the background
-  // FIXME: are we running every single keystroke?
-  // FIXME: the updating is fucked
   useEffect(() => {
+    // sync every 5 minutes
+    const interval = setInterval(() => syncWorkouts(), 1000 * 60 * 5);
+
     if (Platform.OS !== "web") {
       subscription = AppState.addEventListener("change", (nextAppState) => {
         if (appState.current === "active" && nextAppState.match(/inactive|background/))
@@ -51,6 +51,8 @@ export default function WorkoutStateSync({ children }) {
     }
 
     return () => {
+      clearInterval(interval);
+
       if (Platform.OS !== "web") {
         subscription.remove();
       } else {

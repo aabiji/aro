@@ -7,7 +7,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
 import uvicorn
-import json
 
 
 def load_env_vars():
@@ -53,7 +52,7 @@ def get_user_id(authorization: str = Header(None)):
     secret = VARS["JWT_SECRET"]
     payload = jwt.decode(token, secret, algorithms="HS256")
     user_id = int(payload["sub"])
-  except PyJWTError as err:
+  except PyJWTError:
     raise HTTPException(status_code=400, detail="Invalid JWT")
 
   # ensure the user exists
@@ -148,106 +147,74 @@ class WorkoutInfo(BaseModel):
   tag: str
 
 
+def create_workout(session, info, user_id):
+  w = db.Workout(user_id=user_id, is_template=info.is_template, tag=info.tag)
+  session.add(w)
+  session.commit()
+
+  exercises = []
+  for e in info.exercises:
+    exercise = db.Exercise(
+      workout_id=w.id,
+      name=e.name,
+      exercise_type=e.exercise_type,
+      reps=e.reps,
+      weight=e.weight,
+      duration=e.duration,
+      distance=e.distance,
+    )
+    session.add(exercise)
+    exercises.append(exercise)
+
+  session.commit()
+  return [w, exercises]
+
+
+def delete_workout(session, user_id, id):
+  workout = (
+    session.query(db.Workout)
+    .filter(db.Workout.user_id == user_id)
+    .filter(db.Workout.id == id)
+    .first()
+  )
+  if workout is None:
+    return False
+
+  exercises = session.query(db.Exercise).filter(db.Exercise.workout_id == id).all()
+  for exercise in exercises:
+    session.delete(exercise)
+
+  session.delete(workout)
+  session.commit()
+  return True
+
+
 @app.post("/workout")
-def create_workout(request: WorkoutInfo, user_id: int = Depends(get_user_id)):
+def create_workout_endpoint(request: WorkoutInfo, user_id: int = Depends(get_user_id)):
   with db.get_session() as session:
-    w = db.Workout(user_id=user_id, is_template=request.is_template, tag=request.tag)
-    session.add(w)
-    session.commit()
-
-    exercises = []
-    for e in request.exercises:
-      exercise = db.Exercise(
-        workout_id=w.id,
-        name=e.name,
-        exercise_type=e.exercise_type,
-        reps=e.reps,
-        weight=e.weight,
-        duration=e.duration,
-        distance=e.distance,
-      )
-      session.add(exercise)
-      exercises.append(exercise)
-
-    session.commit()
+    w, exercises = create_workout(session, request, user_id)
     obj = db.row_to_json(w, ["user_id"])
     obj["exercises"] = [db.row_to_json(row, ["workout_id"]) for row in exercises]
     return {"workout": obj}
 
 
-# get the workout and the associated exercises
-def get_workout(user_id, id):
-  with db.get_session() as session:
-    workout = (
-      session.query(db.Workout)
-      .filter(db.Workout.user_id == user_id)
-      .filter(db.Workout.id == id)
-      .first()
-    )
-    if workout is None:
-      return [None, None]
-    exercises = session.query(db.Exercise).filter(db.Exercise.workout_id == id).all()
-    return [workout, exercises]
-
-
 @app.delete("/workout")
-def delete_workout(id: int, user_id: int = Depends(get_user_id)):
+def delete_workout_endpoint(id: int, user_id: int = Depends(get_user_id)):
   with db.get_session() as session:
-    workout, exercises = get_workout(user_id, id)
-    if workout is None:
+    if not delete_workout(session, user_id, id):
       raise HTTPException(status_code=404, detail="Workout not found")
-
-    for exercise in exercises:
-      session.delete(exercise)
-    session.delete(workout)
-    session.commit()
   return {}
 
 
 @app.put("/workout")
 def update_workout(request: WorkoutInfo, user_id: int = Depends(get_user_id)):
   with db.get_session() as session:
-    workout, existing_exercises = get_workout(user_id, request.id)
-    if workout is None:
+    if not delete_workout(session, user_id, request.id):
       raise HTTPException(status_code=404, detail="Workout not found")
-    workout.tag = request.tag
 
-    existing_exercise_map = {ex.id: ex for ex in existing_exercises}
-    incoming_ids = set(e.id for e in request.exercises if e.id is not None)
-
-    # delete any exercises not present in incoming payload
-    for existing in existing_exercises:
-      if existing.id not in incoming_ids:
-        session.delete(existing)
-
-    for e in request.exercises:
-      if e.id is not None and e.id in existing_exercise_map:
-        # update existing
-        existing = existing_exercise_map[e.id]
-        for attr in db.Exercise.__mapper__.column_attrs:
-          if hasattr(e, attr.key):
-            setattr(existing, attr.key, getattr(e, attr.key))
-      else:
-        # add new exercise
-        new_ex = db.Exercise(
-          workout_id=workout.id,
-          name=e.name,
-          exercise_type=e.exercise_type,
-          reps=e.reps,
-          weight=e.weight,
-          duration=e.duration,
-          distance=e.distance,
-        )
-        session.add(new_ex)
-
-    session.commit()
-    obj = db.row_to_json(workout, ["user_id"])
-    exercises = (
-      session.query(db.Exercise).filter(db.Exercise.workout_id == workout.id).all()
-    )
+    w, exercises = create_workout(session, request, user_id)
+    obj = db.row_to_json(w, ["user_id"])
     obj["exercises"] = [db.row_to_json(row, ["workout_id"]) for row in exercises]
-    print(json.dumps(obj, indent=2))
-    print(json.dumps(request.model_dump(), indent=2))
     return {"workout": obj}
 
 
