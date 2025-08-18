@@ -60,8 +60,7 @@ export default function Index() {
             <View>
               <Text className="font-bold text-xl mb-2">{today}</Text>
               {choices.length == 0
-                ? <Empty messages={
-                  ["You have no workout templates"]} />
+                ? <Empty messages={["You have no workout templates"]} />
                 : <Section>
                   <SelectButton
                     choices={choices}

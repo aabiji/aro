@@ -1,17 +1,22 @@
 import { useRef, useEffect } from "react";
+import { useWindowDimensions } from "react-native";
 import * as d3 from "d3";
 
-export function LineGraph({ data, height }) {
-  const ref = useRef();
+export function LineGraph({ data, height, getDate, getValue }) {
+  const windowSize = useWindowDimensions();
+
+  const ref = useRef(null);
   const [h, py] = [height, height / 10];
 
   useEffect(() => {
     const svg = d3.select(ref.current);
+    ref.current.innerHTML = ""; // clear
+
     const w = ref.current.getBoundingClientRect().width;
     const px = w / 10;
 
     const xScale = d3.scaleTime()
-      .domain(d3.extent(data, d => d.date))
+      .domain(d3.extent(data, getDate))
       .range([px, w - px]);
     const xAxis = d3.axisBottom(xScale)
       .ticks(5)
@@ -21,15 +26,15 @@ export function LineGraph({ data, height }) {
       .call(xAxis);
 
     const yScale = d3.scaleLinear()
-      .domain(d3.extent(data, d => d.value))
+      .domain(d3.extent(data, getValue))
       .range([h - py, py]);
     svg.append("g")
       .attr("transform", `translate(${px}, 0)`)
       .call(d3.axisLeft(yScale));
 
     const line = d3.line()
-      .x(d => xScale(d.date))
-      .y(d => yScale(d.value))
+      .x(d => xScale(getDate(d)))
+      .y(d => yScale(getValue(d)))
       .curve(d3.curveLinear);
     svg.append("path")
       .datum(data)
@@ -40,19 +45,21 @@ export function LineGraph({ data, height }) {
     svg.selectAll("circle")
       .data(data)
       .join("circle")
-      .attr("cx", d => xScale(d.date))
-      .attr("cy", d => yScale(d.value))
+      .attr("cx", d => xScale(getDate(d)))
+      .attr("cy", d => yScale(getValue(d)))
       .attr("r", 2)
       .attr("fill", "steelblue");
-  }, []);
+  }, [windowSize]);
 
   return <svg ref={ref} width="100%" height={h} />;
 }
 
-export function Heatmap({ data, height }) {
-  const ref = useRef();
-  const oldest = d3.min(data, d => d.date);
-  const newest = d3.max(data, d => d.date);
+export function Heatmap({ data, height, getDate, getValue }) {
+  const windowSize = useWindowDimensions();
+
+  const ref = useRef(null);
+  const oldest = d3.min(data, getDate);
+  const newest = d3.max(data, getDate);
   const weeks = d3.timeWeek.count(d3.timeWeek.floor(oldest), newest) + 1;
   const weekLength = 7;
 
@@ -63,6 +70,8 @@ export function Heatmap({ data, height }) {
 
   useEffect(() => {
     const svg = d3.select(ref.current);
+    ref.current.innerHTML = ""; // clear
+
     const width = ref.current.getBoundingClientRect().width;
     const px = width / 25;
     const cellX = (width - (px * 2)) / weeks;
@@ -91,18 +100,18 @@ export function Heatmap({ data, height }) {
       .call(yAxis);
 
     const colorScale = d3.scaleLinear()
-      .domain(d3.extent(data, d => d.value))
+      .domain(d3.extent(data, getValue))
       .range(["#c0ecfc", "#00b9fc"]);
 
     svg.selectAll("rect")
       .data(data)
       .join("rect")
-      .attr("x", d => px + d3.timeWeek.count(d3.timeWeek.floor(oldest), d.date) * cellX)
+      .attr("x", d => px + d3.timeWeek.count(d3.timeWeek.floor(oldest), getDate(d)) * cellX)
       .attr("width", cellX)
-      .attr("y", d => yScale(d.date.getDay()))
+      .attr("y", d => yScale(getDate(d).getDay()))
       .attr("height", cellY)
-      .attr("fill", d => colorScale(d.value));
-  }, []);
+      .attr("fill", d => colorScale(getValue(d)));
+  }, [windowSize]);
 
   return <svg ref={ref} width="100%" height={h} />;
 }
