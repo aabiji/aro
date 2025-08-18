@@ -48,98 +48,172 @@ function ramerDouglasPeuker(points: any[], epsilon: number, toVec2: (v: any) => 
 }
 
 interface PlotPoint {
-  date: string;
+  date: Date;
   weight: number;
   averageReps: number;
   distance: number;
   duration: number;
 }
 
+interface MonthInterval {
+  index: number; // Index inside the array of plot points marking the new month
+  elapsed: number; // Number of months between this interval and the next interval
+}
+
 interface PlotGroup {
   exercise_type: ExerciseType,
   data: PlotPoint[]
+  months: MonthInterval[]; // from earliest to latest
 }
 
-function ResistancePlot({ name, data }: { name: string; data: PlotPoint[] }) {
-  const earliest = new Date(Math.min(...data.map(d => d.date)));
-  const latest = new Date(Math.max(...data.map(d => d.date)));
-  const monthDiff =
-    latest.getMonth() - earliest.getMonth() + 12 * (latest.getFullYear() - earliest.getFullYear());
+function monthDiff(earliest: Date, latest: Date): number {
+  const years = latest.getFullYear() - earliest.getFullYear();
+  return Math.abs(latest.getMonth() - earliest.getMonth() + 12 * (years))
+}
+
+// get the index of the plot point that's n months in the past 
+function getMonthIndex(monthIntervals: MonthInterval[], n: number): number {
+  let count = 0;
+  let start = 0;
+
+  for (let i = monthIntervals.length - 1; i >= 0; i--) {
+    const m = monthIntervals[i];
+    count += m.elapsed;
+    if (count >= n) {
+      start = m.index;
+      break;
+    }
+  }
+
+  return start;
+}
+
+function ResistancePlot({ name, group }: { name: string; group: PlotGroup }) {
+  const [update, setUpdate] = useState(true);
+  const forceRerender = (ret: void) => setUpdate(!update);
 
   const viewRanges = [
     { label: "This month", value: 1 },
     { label: "Last 6 months", value: 6 },
     { label: "This year", value: 12 },
     { label: "Last 5 years", value: 60, },
-    { label: "All time", value: monthDiff }
+    {
+      label: "All time",
+      value: monthDiff(group.data[0].date, group.data[group.data.length - 1].date)
+    }
   ];
-  const [viewRange, setViewRange] = useState(viewRanges[0]);
-  const [showWeight, setShowWeight] = useState(true);
 
-  const getDate = (v: PlotPoint) => new Date(v.date);
+  const [viewRange, setViewRange] = useState(viewRanges[0].value);
+  const [showWeight, setShowWeight] = useState(true);
+  const [startIndex, setStartIndex] = useState(getMonthIndex(group.months, 1));
+
+  const changeViewRange = (numMonths: number) => {
+    // the dates are in ascending order, so by changing the index at which
+    // we slice the plot points, we change what the oldest plot point will be (change range)
+    setStartIndex(getMonthIndex(group.months, numMonths));
+    setViewRange(numMonths);
+    forceRerender();
+  }
+
+  const getDate = (v: PlotPoint) => v.date;
   const getValue = (v: PlotPoint) => showWeight ? v.weight : v.averageReps;
 
   return (
-    <View className="bg-white p-3 w-full mb-4">
+    <View className="bg-white px-4 py-2 w-full mb-4">
       <View className="items-center flex-row justify-between items-center">
         <Text className="text-xl">{name}</Text>
 
         <View className="flex-column w-[25%]">
           <Selection
             choices={["Weight", "Reps"]}
-            handleChoice={(index: number) => setShowWeight(index == 0)} />
+            handleChoice={(index: number) => forceRerender(setShowWeight(index == 0))} />
           <Dropdown
-            choices={viewRanges}
-            choice={viewRange} setChoice={setViewRange} />
+            choices={viewRanges} choice={viewRange}
+            setChoice={(value: number) => changeViewRange(value)} />
         </View>
       </View>
-      <LineGraph data={data} height={400} getDate={getDate} getValue={getValue} />
+      <LineGraph data={group.data.slice(startIndex, group.data.length)}
+        height={400} getDate={getDate} getValue={getValue} update={update} />
     </View>
   );
 }
 
-function CardioPlot({ name, data }: { name: string; data: PlotPoint[] }) {
-  const earliest = new Date(Math.min(...data.map(d => d.date)));
-  const latest = new Date(Math.max(...data.map(d => d.date)));
+function CardioPlot({ name, group }: { name: string; group: PlotGroup }) {
+  const earliest = group.data[0].date;
+  const latest = group.data[group.data.length - 1].date;
 
-  const [year, setYear] = useState(new Date().getFullYear());
+  const [year, setYear] = useState(latest.getFullYear());
   const [prevDisabled, setPrevDisabled] = useState(false);
   const [nextDisabled, setNextDisabled] = useState(false);
+  const [showDistance, setShowDistance] = useState(true);
+
+  const [startIndex, setStartIndex] = useState(group.data.length - 1);
+  const [endIndex, setEndIndex] = useState(group.data.length - 1);
+
+  const getDate = (v: PlotPoint) => v.date;
+  const getValue = (v: PlotPoint) => showDistance ? v.distance : v.duration;
+
+  const [update, setUpdate] = useState(true);
+  const forceRerender = (ret: void) => setUpdate(!update);
+
   useEffect(() => {
     setPrevDisabled(year <= earliest.getFullYear());
     setNextDisabled(year >= latest.getFullYear());
   }, [year]);
 
-  const [showDistance, setShowDistance] = useState(true);
+  const changeYear = (delta: number) => {
+    const nextYear = year + delta;
+    if (nextYear < earliest.getFullYear() || nextYear > latest.getFullYear()) return;
+    setYear(nextYear);
 
-  const getDate = (v: PlotPoint) => new Date(v.date);
-  const getValue = (v: PlotPoint) => showDistance ? v.distance : v.duration;
+    // Set the start and end indexes for the slice of plot points
+    // that'll be in the range of the currently selected year
+    // (from the start of the year to the start of the next year or the latest date)
+
+    const rangeStart = new Date(nextYear, 0, 1);
+    const startDiff = monthDiff(rangeStart, latest);
+    setStartIndex(getMonthIndex(group.months, startDiff));
+
+    const rangeEnd = nextYear + 1 > latest.getFullYear() ? latest : new Date(nextYear + 1, 0, 1);
+    const endDiff = monthDiff(rangeEnd, latest);
+    setEndIndex(getMonthIndex(group.months, endDiff));
+
+    forceRerender();
+  }
+
+  useEffect(() => changeYear(0), []);
 
   return (
-    <View className="bg-white p-3 w-full mb-4">
-      <View className="flex-row justify-between items-center mb-4">
+    <View className="bg-white px-3 w-full mb-4">
+      <View className="flex-row justify-between items-center">
         <Text className="text-xl">{name}</Text>
 
         <Selection
           choices={["Distance", "Duration"]}
-          handleChoice={(index: number) => setShowDistance(index == 0)} />
+          handleChoice={(index: number) => forceRerender(setShowDistance(index == 0))} />
 
         <View className="flex-row gap-2 items-center">
-          <Pressable onPress={() => setYear(year - 1)} disabled={prevDisabled}>
+          <Pressable
+            onPress={() => changeYear(-1)}
+            disabled={prevDisabled}>
             <Feather name="arrow-left" size={18} color={prevDisabled ? "gray" : "black"} />
           </Pressable>
           <Text className="text-base"> {year} </Text>
-          <Pressable onPress={() => setYear(year + 1)} disabled={nextDisabled}>
+          <Pressable
+            onPress={() => changeYear(1)}
+            disabled={nextDisabled}>
             <Feather name="arrow-right" size={18} color={nextDisabled ? "gray" : "black"} />
           </Pressable>
         </View>
       </View>
-      <Heatmap data={data} height={150} getDate={getDate} getValue={getValue} />
+      <Heatmap data={group.data.slice(startIndex, endIndex + 1)}
+        height={150} getDate={getDate} getValue={getValue} update={update} />
     </View>
   );
 }
 
 export default function ProgressPage() {
+  /*
   const workoutsState = useSelector(state => state.workouts);
 
   let exercises: Record<string, PlotGroup> = {};
@@ -158,21 +232,41 @@ export default function ProgressPage() {
         exercises[e.name].data.push(point);
     }
   }
+  */
 
-  // TODO: where to fit this in?? how to find epsilon??
-  //const epsilon = 1; // bigger epsilon = more simplification
-  //for (const name in exercises) {
-  //  const toVec2 = (v: PlotPoint) => ({ x: new Date(v.date).getTime(), y: v.value });
-  //  exercises[name].data = ramerDouglasPeuker(exercises[name].data, epsilon, toVec2);
-  //}
+  // test data
+  let exercises: Record<string, PlotGroup> = {};
+  for (let j = 0; j < 2; j++) {
+    const name = `Dummy exercise #${j + 1}`;
+    const etype = [ExerciseType.Resistance, ExerciseType.Cardio][j];
 
-  // TODO: how to test with dummy values???
-  //const now = new Date();
-  //const lastYear = new Date(new Date().setFullYear(new Date().getFullYear() - 1));
-  //let rawData = [];
-  //for (let d = new Date(lastYear); d <= now; d.setDate(d.getDate() + 1)) {
-  //  rawData.push({ date: new Date(d), value: Math.floor(Math.random() * 100) });
-  //}
+    const now = new Date();
+    const start = new Date(new Date().setFullYear(new Date().getFullYear() - 6));
+    let data: PlotPoint[] = [];
+
+    for (let d = new Date(start); d <= now; d.setDate(d.getDate() + 1)) {
+      data.push({
+        date: new Date(d),
+        weight: Math.floor(Math.random() * 150),
+        distance: Math.floor(Math.random() * 200),
+        duration: 60 + Math.floor(Math.random() * 180),
+        averageReps: Math.floor(Math.random() * 5),
+      });
+    }
+
+    data.sort((a, b) => a.date.getTime() - b.date.getTime()); // earliest to latest
+
+    // get the month intervals
+    let monthIntervals = [{ elapsed: 1, index: 0 }];
+    for (let index = 1; index < data.length; index++) {
+      const date = data[index].date;
+      const prev = data[index - 1].date;
+      if (date.getMonth() != prev.getMonth())
+        monthIntervals.push({ elapsed: monthDiff(prev, date), index });
+    }
+
+    exercises[name] = { exercise_type: etype, data, months: monthIntervals };
+  }
 
   return (
     <ScrollContainer>
@@ -183,8 +277,8 @@ export default function ProgressPage() {
         data={Object.keys(exercises)}
         renderItem={({ item }) => {
           if (exercises[item].exercise_type == ExerciseType.Resistance)
-            return <ResistancePlot data={exercises[item].data} name={item} />;
-          return <CardioPlot data={exercises[item].data} name={item} />;
+            return <ResistancePlot group={exercises[item]} name={item} />;
+          return <CardioPlot group={exercises[item]} name={item} />;
         }} />
     </ScrollContainer>
   );

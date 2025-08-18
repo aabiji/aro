@@ -2,7 +2,7 @@ import { useRef, useEffect } from "react";
 import { useWindowDimensions } from "react-native";
 import * as d3 from "d3";
 
-export function LineGraph({ data, height, getDate, getValue }) {
+export function LineGraph({ data, height, getDate, getValue, update }) {
   const windowSize = useWindowDimensions();
 
   const ref = useRef(null);
@@ -12,9 +12,7 @@ export function LineGraph({ data, height, getDate, getValue }) {
     const svg = d3.select(ref.current);
     ref.current.innerHTML = ""; // clear
 
-    const w = ref.current.getBoundingClientRect().width;
-    const px = w / 10;
-
+    const [w, px] = [ref.current.getBoundingClientRect().width, 25];
     const xScale = d3.scaleTime()
       .domain(d3.extent(data, getDate))
       .range([px, w - px]);
@@ -49,12 +47,12 @@ export function LineGraph({ data, height, getDate, getValue }) {
       .attr("cy", d => yScale(getValue(d)))
       .attr("r", 2)
       .attr("fill", "steelblue");
-  }, [windowSize]);
+  }, [windowSize, update]);
 
   return <svg ref={ref} width="100%" height={h} />;
 }
 
-export function Heatmap({ data, height, getDate, getValue }) {
+export function Heatmap({ data, height, getDate, getValue, update }) {
   const windowSize = useWindowDimensions();
 
   const ref = useRef(null);
@@ -72,8 +70,7 @@ export function Heatmap({ data, height, getDate, getValue }) {
     const svg = d3.select(ref.current);
     ref.current.innerHTML = ""; // clear
 
-    const width = ref.current.getBoundingClientRect().width;
-    const px = width / 25;
+    const [width, px] = [ref.current.getBoundingClientRect().width, 25];
     const cellX = (width - (px * 2)) / weeks;
     const cellY = cellX * 1.5;
 
@@ -111,7 +108,7 @@ export function Heatmap({ data, height, getDate, getValue }) {
       .attr("y", d => yScale(getDate(d).getDay()))
       .attr("height", cellY)
       .attr("fill", d => colorScale(getValue(d)));
-  }, [windowSize]);
+  }, [windowSize, update]);
 
   return <svg ref={ref} width="100%" height={h} />;
 }
