@@ -10,7 +10,7 @@ import { Section } from "@/components/container";
 
 import Feather from "@expo/vector-icons/Feather";
 
-interface ViewProps { workout: WorkoutInfo, index: number };
+interface ViewProps { workout: WorkoutInfo, index: number, disabled?: boolean };
 
 function WorkoutTemplate({ workout, index }: ViewProps) {
   const dispatch = useDispatch();
@@ -92,7 +92,7 @@ function WorkoutTemplate({ workout, index }: ViewProps) {
   );
 }
 
-function WorkoutRecord({ workout, index }: ViewProps) {
+function WorkoutRecord({ workout, index, disabled }: ViewProps) {
   const dispatch = useDispatch();
 
   const changeRep = (n: number, i: number, eIndex: number) => {
@@ -118,19 +118,22 @@ function WorkoutRecord({ workout, index }: ViewProps) {
             <View className="flex-row items-center">
               <View className="grid grid-cols-4 grid-flow-row gap-2">
                 {e.reps!.map((r: number, i: number) =>
-                  <NumInput key={i} num={r} setNum={(n: number) => changeRep(n, i, eIndex)} />)}
+                  <NumInput
+                    key={i} num={r} disabled={disabled}
+                    setNum={(n: number) => changeRep(n, i, eIndex)} />)}
               </View>
 
-              <Pressable
-                onPress={() =>
-                  dispatch(workoutActions.updateExercise({
-                    workoutIndex: index, exerciseIndex: eIndex,
-                    value: { reps: [...workout.exercises[eIndex].reps!, 0] }
-                  }))
-                }
-                className="bg-transparent px-4 px-2 rounded">
-                <Feather name="plus" color="blue" size={20} />
-              </Pressable>
+              {!disabled &&
+                <Pressable
+                  onPress={() =>
+                    dispatch(workoutActions.updateExercise({
+                      workoutIndex: index, exerciseIndex: eIndex,
+                      value: { reps: [...workout.exercises[eIndex].reps!, 0] }
+                    }))
+                  }
+                  className="bg-transparent px-4 px-2 rounded">
+                  <Feather name="plus" color="blue" size={20} />
+                </Pressable>}
             </View>
           </View>
         );

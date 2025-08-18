@@ -1,15 +1,19 @@
 import { useDispatch, useSelector } from "react-redux";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import { useFocusEffect } from "expo-router";
 import { request } from "@/lib/http";
 import { workoutActions } from "@/lib/state";
 
 import { AppState, NativeEventSubscription, Platform } from "react-native";
 
 export default function WorkoutStateSync({ children }) {
+  const opts = { year: 'numeric', month: 'long', day: 'numeric' };
+  const today = new Intl.DateTimeFormat('en-US', opts).format(new Date());
+  const [alradySynching, setAlreadySynching] = useState(false);
+
   const dispatch = useDispatch();
   const workoutsState = useSelector(state => state.workouts);
   const userData = useSelector(state => state.userData);
-  const [alradySynching, setAlreadySynching] = useState(false);
 
   const syncWorkouts = async () => {
     if (alradySynching) return;
@@ -17,10 +21,12 @@ export default function WorkoutStateSync({ children }) {
 
     for (let i = 0; i < workoutsState.workouts.length; i++) {
       const workout = workoutsState.workouts[i];
+      if (workout.tag != today && !workout.is_template) continue; // ignore archived workouts
+
       try {
-        console.log("updating...", workout); // TODO: need to debug this more...
         const json = await request("PUT", "/workout", workout, userData.jwt);
         dispatch(workoutActions.updateWorkout({ workoutIndex: i, value: json.workout }));
+        console.log();
       } catch (err) {
         console.log("ERROR!", err.message);
       }
@@ -35,10 +41,7 @@ export default function WorkoutStateSync({ children }) {
   const handleClose = () => syncWorkouts();
 
   // sync when the app is closed or in the background
-  useEffect(() => {
-    // sync every 5 minutes
-    const interval = setInterval(() => syncWorkouts(), 1000 * 60 * 5);
-
+  useFocusEffect(useCallback(() => {
     if (Platform.OS !== "web") {
       subscription = AppState.addEventListener("change", (nextAppState) => {
         if (appState.current === "active" && nextAppState.match(/inactive|background/))
@@ -51,8 +54,6 @@ export default function WorkoutStateSync({ children }) {
     }
 
     return () => {
-      clearInterval(interval);
-
       if (Platform.OS !== "web") {
         subscription.remove();
       } else {
@@ -60,7 +61,7 @@ export default function WorkoutStateSync({ children }) {
         document.removeEventListener("visibilitychange", handleHidden);
       }
     };
-  }, []);
+  }, []));
 
   return children;
 }

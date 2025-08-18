@@ -74,15 +74,17 @@ export default function Index() {
             </View>
           }
           renderItem={({ item, index }) => {
-            const prev = workouts[workouts.length - 1 - index].workout.date;
+            const prev = workouts[workouts.length - 1 - index].workout.tag;
             const showDate = index > 0 &&
-              prev !== workouts[workouts.length - index].workout.date;
+              prev !== workouts[workouts.length - index].workout.tag;
 
             return (
               <View>
                 {showDate &&
-                  <Text className="font-bold text-xl mb-2">{item.workout.date}</Text>}
-                <WorkoutRecordMemo workout={item.workout} index={item.index} />
+                  <Text className="font-bold text-xl mb-2">{item.workout.tag}</Text>}
+                <WorkoutRecordMemo
+                  disabled={item.workout.tag != today}
+                  workout={item.workout} index={item.index} />
               </View>
             );
           }}
