@@ -30,6 +30,8 @@ const workoutsSlice = createSlice({
   name: "workout",
   initialState: { workouts: [] as WorkoutInfo[] },
   reducers: {
+    clear: (state) => { state.workouts = []; },
+
     setTemplateName: (state, a: PayloadAction<Action<string>>) => {
       state.workouts[a.payload.workoutIndex!].tag = a.payload.value;
     },
@@ -71,9 +73,14 @@ const workoutsSlice = createSlice({
 
 const userData = createSlice({
   name: "user-data",
-  initialState: { jwt: "" },
+  initialState: {
+    jwt: "",
+    use_imperial: true,
+    is_female: true
+  },
   reducers: {
-    setJwt: (state, a: PayloadAction<string>) => { state.jwt = a.payload },
+    update: (state, a: PayloadAction<object>) => { Object.assign(state, a.payload); },
+    clear: (state) => { state.jwt = ""; state.use_imperial = true; state.is_female = true; },
   }
 });
 

@@ -59,7 +59,7 @@ def get_user_id(authorization: str = Header(None)):
   with db.get_session() as session:
     user = session.query(db.User).filter(db.User.id == user_id).first()
     if user is None:
-      raise HTTPException(status_code=404, detail="User not found")
+      raise HTTPException(status_code=404, detail="Account not found")
 
   return user_id
 
@@ -69,7 +69,7 @@ class LoginRequest(BaseModel):
   password: str
 
 
-@app.post("/user/login")
+@app.post("/login")
 def handle_login(request: LoginRequest):
   with db.get_session() as session:
     user = (
@@ -88,7 +88,7 @@ class SignupRequest(LoginRequest):
   is_female: bool
 
 
-@app.post("/user/signup")
+@app.post("/signup")
 def handle_signup(request: SignupRequest):
   with db.get_session() as session:
     user = session.query(db.User).filter(db.User.email == request.email).first()
@@ -112,7 +112,21 @@ def handle_signup(request: SignupRequest):
     return {"jwt": create_jwt(new_user.id)}
 
 
-@app.get("/user/info")
+class PrefsRequest(BaseModel):
+  use_imperial: bool
+  is_female: bool
+
+
+@app.post("/user")
+def update_user_prefs(request: PrefsRequest, user_id: int = Depends(get_user_id)):
+  with db.get_session() as session:
+    prefs = session.query(db.Preference).filter(db.Preference.user_id == user_id)
+    prefs.use_imperial = request.use_imperial
+    prefs.is_female = request.is_female
+    session.commit()
+
+
+@app.get("/user")
 def get_user_data(user_id: int = Depends(get_user_id)):
   with db.get_session() as session:
     workouts = []
@@ -128,6 +142,22 @@ def get_user_data(user_id: int = Depends(get_user_id)):
 
     pref = session.query(db.Preference).filter(db.Preference.user_id == user_id).first()
     return {"workouts": workouts, "preferences": db.row_to_json(pref, ["user_id"])}
+
+
+@app.delete("/user")
+def delete_user(user_id: int = Depends(get_user_id)):
+  with db.get_session() as session:
+    # delete the user and their preferences
+    session.query(db.User).filter(db.User.id == user_id).delete()
+    session.query(db.Preference).filter(db.Preference.user_id == user_id).delete()
+
+    # delete the user's workouts
+    workouts = session.query(db.Workout).filter(db.Workout.user_id == user_id).all()
+    for workout in workouts:
+      session.query(db.Exercise).filter(db.Exercise.workout_id == workout.id).delete()
+      session.delete(workout)
+
+    session.commit()
 
 
 class ExerciseInfo(BaseModel):
@@ -180,10 +210,7 @@ def delete_workout(session, user_id, id):
   if workout is None:
     return False
 
-  exercises = session.query(db.Exercise).filter(db.Exercise.workout_id == id).all()
-  for exercise in exercises:
-    session.delete(exercise)
-
+  session.query(db.Exercise).filter(db.Exercise.workout_id == id).delete()
   session.delete(workout)
   session.commit()
   return True

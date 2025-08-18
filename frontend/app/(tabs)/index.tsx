@@ -15,7 +15,7 @@ import MaleIcon from "@/assets/male.svg";
 export default function Index() {
   const dispatch = useDispatch();
   const userData = useSelector(state => state.userData);
-  const [authenticated, setAuthenticated] = useState(false);//useState(userData.jwt.length > 0);
+  const [authenticated, setAuthenticated] = useState(userData.jwt.length > 0);
   // TODO: what to do when the jwt expires?
 
   const [isLogin, setIsLogin] = useState(true);
@@ -62,11 +62,11 @@ export default function Index() {
     const body = isLogin
       ? { email, password: passwordHash }
       : { email, name, is_female, password: passwordHash };
-    const endpoint = isLogin ? "/user/login" : "/user/signup";
+    const endpoint = isLogin ? "/login" : "/signup";
 
     try {
       const json = await request("POST", endpoint, body);
-      dispatch(userDataActions.setJwt(json.jwt));
+      dispatch(userDataActions.update({ jwt: json.jwt }));
       console.log("auth complete");
       setAuthenticated(true);
     } catch (err) {
