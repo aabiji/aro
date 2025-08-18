@@ -14,14 +14,14 @@ export default function ProgressPage() {
 
   return (
     <ScrollContainer>
-      <View className="gap-4">
+      <View className="bg-white p-2 w-full mb-4">
         <View className="flex-row justify-between items-center">
           <Text className="text-xl"> Exercise name </Text>
           <View className="flex-row gap-2 items-center">
             <Pressable>
               <Feather name="arrow-left" color="black" size={18} />
             </Pressable>
-            <Text> Year </Text>
+            <Text className="text-base"> Year </Text>
             <Pressable>
               <Feather name="arrow-right" color="black" size={18} />
             </Pressable>
@@ -30,8 +30,8 @@ export default function ProgressPage() {
         <Heatmap data={data} height={150} />
       </View>
 
-      <View>
-        <View className="items-center">
+      <View className="bg-white p-2 w-full mb-4">
+        <View className="items-center flex-row justify-between items-center">
           <Text className="text-xl"> Exercise name </Text>
           <Selection choices={["Weight", "Reps"]} handleChoice={(index) => { }} />
         </View>

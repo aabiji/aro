@@ -31,6 +31,7 @@ const workoutsSlice = createSlice({
   initialState: { workouts: [] as WorkoutInfo[] },
   reducers: {
     clear: (state) => { state.workouts = []; },
+    set: (state, a: PayloadAction<WorkoutInfo[]>) => { state.workouts = a.payload },
 
     setTemplateName: (state, a: PayloadAction<Action<string>>) => {
       state.workouts[a.payload.workoutIndex!].tag = a.payload.value;

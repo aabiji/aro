@@ -44,7 +44,6 @@ export default function Index() {
 
     try {
       const json = await request("POST", "/workout", body, userData.jwt);
-      console.log(json.workout);
       dispatch(workoutActions.addWorkout({ value: json.workout }));
     } catch (err) {
       console.log("ERROR!", err.message);

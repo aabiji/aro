@@ -44,7 +44,6 @@ export default function Settings() {
     try {
       const body = { ...userData };
       delete body.jwt;
-      console.log(body);
       await request("POST", "/user", body, userData.jwt);
     } catch (err) {
       console.log("ERROR!", err.message);

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import * as Crypto from "expo-crypto";
 import { useDispatch, useSelector } from "react-redux";
-import { userDataActions } from "@/lib/state";
+import { workoutActions, userDataActions } from "@/lib/state";
 import { request } from "@/lib/http";
 
 import { Redirect } from "expo-router";
@@ -65,9 +65,10 @@ export default function Index() {
     const endpoint = isLogin ? "/login" : "/signup";
 
     try {
-      const json = await request("POST", endpoint, body);
-      dispatch(userDataActions.update({ jwt: json.jwt }));
-      console.log("auth complete");
+      const jwtJson = await request("POST", endpoint, body);
+      const dataJson = await request("GET", "/user", undefined, jwtJson.jwt);
+      dispatch(userDataActions.update({ jwt: jwtJson.jwt, ...dataJson.preferences }));
+      dispatch(workoutActions.set(dataJson.workouts));
       setAuthenticated(true);
     } catch (err) {
       setErrMsg(err.message);

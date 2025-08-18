@@ -1,4 +1,5 @@
 import { Tabs } from "expo-router";
+import { useSelector } from "react-redux";
 
 import DumbellIcon from '@/assets/dumbell.svg';
 import FoodIcon from '@/assets/food.svg';
@@ -6,6 +7,10 @@ import DropIcon from '@/assets/drop.svg';
 import GearIcon from '@/assets/gear.svg';
 
 export default function TabLayout() {
+  // TODO: more secure check, see (tabs)/index.tsx also
+  const userData = useSelector(state => state.userData);
+  const authenticated = userData.jwt.length > 0;
+
   return (
     <Tabs
       screenOptions={({ route }) => {
@@ -31,12 +36,14 @@ export default function TabLayout() {
       <Tabs.Screen name="index" options={{
         headerShown: false, tabBarItemStyle: { display: "none" }
       }} />
-      <Tabs.Screen
-        name="exercise"
-        options={{ title: "Exercise", headerShown: false }} />
-      <Tabs.Screen
-        name="settings"
-        options={{ title: "Settings", headerShown: false }} />
+      <Tabs.Protected guard={authenticated}>
+        <Tabs.Screen
+          name="exercise"
+          options={{ title: "Exercise", headerShown: false }} />
+        <Tabs.Screen
+          name="settings"
+          options={{ title: "Settings", headerShown: false }} />
+      </Tabs.Protected>
     </Tabs>
   );
 }

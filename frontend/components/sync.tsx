@@ -26,7 +26,6 @@ export default function WorkoutStateSync({ children }) {
       try {
         const json = await request("PUT", "/workout", workout, userData.jwt);
         dispatch(workoutActions.updateWorkout({ workoutIndex: i, value: json.workout }));
-        console.log();
       } catch (err) {
         console.log("ERROR!", err.message);
       }
