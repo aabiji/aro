@@ -84,10 +84,22 @@ const userData = createSlice({
   }
 });
 
+const eventsData = createSlice({
+  name: "events",
+  initialState: {
+
+  },
+  reducers: {
+
+  }
+});
+
 export const workoutActions = workoutsSlice.actions;
 export const userDataActions = userData.actions;
+export const eventsActions = userData.actions;
 
 export const rootReducer = combineReducers({
   workouts: workoutsSlice.reducer,
   userData: userData.reducer,
+  events: eventsData.reducer,
 });

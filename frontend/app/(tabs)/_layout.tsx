@@ -3,7 +3,7 @@ import { useSelector } from "react-redux";
 
 import DumbellIcon from '@/assets/dumbell.svg';
 import FoodIcon from '@/assets/food.svg';
-import DropIcon from '@/assets/drop.svg';
+import CalendarIcon from '@/assets/calendar.svg';
 import GearIcon from '@/assets/gear.svg';
 
 export default function TabLayout() {
@@ -16,7 +16,7 @@ export default function TabLayout() {
       screenOptions={({ route }) => {
         const icons = {
           "index": DumbellIcon, "exercise": DumbellIcon,
-          "food": FoodIcon, "period": DropIcon, "settings": GearIcon
+          "food": FoodIcon, "events": CalendarIcon, "settings": GearIcon
         };
         const isIndex = route.name == "index";
 
@@ -29,7 +29,7 @@ export default function TabLayout() {
           tabBarInactiveTintColor: "#6b7280",
           tabBarIcon: ({ color }) => {
             const Icon = icons[route.name];
-            return <Icon fill={color} />
+            return <Icon fill={color} stroke={color} />
           }
         };
       }}>
@@ -40,6 +40,9 @@ export default function TabLayout() {
         <Tabs.Screen
           name="exercise"
           options={{ title: "Exercise", headerShown: false }} />
+        <Tabs.Screen
+          name="events"
+          options={{ title: "Events", headerShown: false }} />
         <Tabs.Screen
           name="settings"
           options={{ title: "Settings", headerShown: false }} />

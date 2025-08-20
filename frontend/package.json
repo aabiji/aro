@@ -45,6 +45,7 @@
     "react-native-web": "~0.20.0",
     "react-native-webview": "13.13.5",
     "react-redux": "^9.2.0",
+    "reanimated-color-picker": "^4.1.0",
     "redux-persist": "^6.0.0"
   },
   "devDependencies": {
