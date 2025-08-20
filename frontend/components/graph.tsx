@@ -2,7 +2,7 @@ import { useRef, useEffect } from "react";
 import { useWindowDimensions } from "react-native";
 import * as d3 from "d3";
 
-export function LineGraph({ data, height, getDate, getValue, update }) {
+export function LineGraph({ data, height, getDate, getValue, update, px }) {
   const windowSize = useWindowDimensions();
 
   const ref = useRef(null);
@@ -12,7 +12,7 @@ export function LineGraph({ data, height, getDate, getValue, update }) {
     const svg = d3.select(ref.current);
     ref.current.innerHTML = ""; // clear
 
-    const [w, px] = [ref.current.getBoundingClientRect().width, 25];
+    const w = ref.current.getBoundingClientRect().width;
     const xScale = d3.scaleTime()
       .domain(d3.extent(data, getDate))
       .range([px, w - px]);
@@ -40,13 +40,6 @@ export function LineGraph({ data, height, getDate, getValue, update }) {
       .attr("stroke", "steelblue")
       .attr("stroke-width", 2)
       .attr("d", line);
-    svg.selectAll("circle")
-      .data(data)
-      .join("circle")
-      .attr("cx", d => xScale(getDate(d)))
-      .attr("cy", d => yScale(getValue(d)))
-      .attr("r", 2)
-      .attr("fill", "steelblue");
   }, [windowSize, update]);
 
   return <svg ref={ref} width="100%" height={h} />;

@@ -8,7 +8,8 @@ import { Dropdown, Selection } from "@/components/select";
 import Feather from "@expo/vector-icons/Feather";
 import { ExerciseType } from "@/lib/state";
 
-interface Vec2 { x: number; y: number };
+type Vec2 = { x: number; y: number };
+type ToVec2 = (v: any) => Vec2;
 
 // Get the perpendicular distance from a point (p0), to a line segment (p1 to p2)
 // Taken from [here](https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line)
@@ -46,6 +47,15 @@ function ramerDouglasPeuker(points: any[], epsilon: number, toVec2: (v: any) => 
 
   return resultingPoints;
 }
+
+function simplifyGraph(points: any[], targetLength: number, toVec2: ToVec2): Promise<any[]> {
+  if (points.length <= targetLength)
+    return Promise.resolve(points);
+
+  const epsilon = Math.floor(points.length / targetLength / 2);
+  return Promise.resolve(ramerDouglasPeuker(points, epsilon, toVec2));
+}
+
 
 interface PlotPoint {
   date: Date;
@@ -106,6 +116,19 @@ function ResistancePlot({ name, group }: { name: string; group: PlotGroup }) {
   const [viewRange, setViewRange] = useState(viewRanges[0].value);
   const [showWeight, setShowWeight] = useState(true);
   const [startIndex, setStartIndex] = useState(getMonthIndex(group.months, 1));
+  const [simplifiedGraph, setSimplifiedGraph] = useState([] as PlotPoint[]);
+
+  useEffect(() => {
+    const targetPoints = 100;
+    const toVec2 = (v: PlotPoint) =>
+      ({ x: v.date.getTime(), y: showWeight ? v.weight : v.averageReps });
+    const points: PlotPoint[] = group.data.slice(startIndex, group.data.length);
+
+    simplifyGraph(points, targetPoints, toVec2).then((simplified) => {
+      setSimplifiedGraph(simplified);
+      forceRerender();
+    });
+  }, [startIndex, showWeight]);
 
   const changeViewRange = (numMonths: number) => {
     // the dates are in ascending order, so by changing the index at which
@@ -132,7 +155,7 @@ function ResistancePlot({ name, group }: { name: string; group: PlotGroup }) {
             setChoice={(value: number) => changeViewRange(value)} />
         </View>
       </View>
-      <LineGraph data={group.data.slice(startIndex, group.data.length)}
+      <LineGraph data={simplifiedGraph} px={25}
         height={400} getDate={getDate} getValue={getValue} update={update} />
     </View>
   );
@@ -215,7 +238,7 @@ function CardioPlot({ name, group }: { name: string; group: PlotGroup }) {
 export default function ProgressPage() {
   /*
   const workoutsState = useSelector(state => state.workouts);
-
+ 
   let exercises: Record<string, PlotGroup> = {};
   for (const w of workoutsState.workouts) {
     if (w.is_template) continue;
@@ -225,7 +248,7 @@ export default function ProgressPage() {
         duration: e.duration ?? 0, distance: e.distance ?? 0,
         averageReps: e.reps.length ? e.reps.reduce((a, b) => a + b, 0) / e.reps.length : 0,
       };
-
+ 
       if (exercises[e.name] === undefined)
         exercises[e.name] = { exercise_type: e.exercise_type, data: [point] };
       else
@@ -241,7 +264,7 @@ export default function ProgressPage() {
     const etype = [ExerciseType.Resistance, ExerciseType.Cardio][j];
 
     const now = new Date();
-    const start = new Date(new Date().setFullYear(new Date().getFullYear() - 6));
+    const start = new Date(new Date().setFullYear(new Date().getFullYear() - 8));
     let data: PlotPoint[] = [];
 
     for (let d = new Date(start); d <= now; d.setDate(d.getDate() + 1)) {
