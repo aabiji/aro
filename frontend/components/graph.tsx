@@ -1,18 +1,51 @@
-import { useRef, useEffect } from "react";
-import { useWindowDimensions } from "react-native";
+import { useRef, useEffect, useState } from "react";
+import { useWindowDimensions, Text, View } from "react-native";
 import * as d3 from "d3";
 
-export function LineGraph({ data, height, getDate, getValue, update, px }) {
+function handleMouseLeave(setTooltipStyle) { setTooltipStyle({ display: "none" }); }
+
+function handleMouseMove(
+  event, xScale, yScale, isHeatmap,
+  setDate, setValue, setTooltipStyle) {
+  const yValue = (y: number) => {
+    if (!isHeatmap) return yScale.invert(coord[1]);
+    console.log(yScale.range());
+  };
+
+  const coord = d3.pointer(event);
+  const date = xScale.invert(coord[0]).toString();
+  const value = ((Math.round(yValue(coord[1])) * 10) / 10).toFixed(1);
+
+  setDate(date);
+  setValue(value);
+  setTooltipStyle({
+    display: "flex",
+    flexDirection: "column",
+    position: "absolute",
+    left: Math.floor(coord[0]),
+    top: Math.floor(coord[1]),
+    backgroundColor: "grey",
+    padding: 6,
+    cursor: "pointer",
+    pointerEvents: "none", // avoid flickering
+  });
+}
+
+export function LineGraph({ data, height, getDate, getValue, update, label }) {
   const windowSize = useWindowDimensions();
 
   const ref = useRef(null);
   const [h, py] = [height, height / 10];
 
+  const [date, setDate] = useState("");
+  const [value, setValue] = useState("");
+  const [tooltipStyle, setTooltipStyle] = useState({ display: "none" });
+
   useEffect(() => {
     const svg = d3.select(ref.current);
     ref.current.innerHTML = ""; // clear
 
-    const w = ref.current.getBoundingClientRect().width;
+    const [w, px] = [ref.current.getBoundingClientRect().width, 25];
     const xScale = d3.scaleTime()
       .domain(d3.extent(data, getDate))
       .range([px, w - px]);
@@ -34,15 +67,34 @@ export function LineGraph({ data, height, getDate, getValue, update, px }) {
       .x(d => xScale(getDate(d)))
       .y(d => yScale(getValue(d)))
       .curve(d3.curveLinear);
+
     svg.append("path")
       .datum(data)
       .attr("fill", "none")
       .attr("stroke", "steelblue")
       .attr("stroke-width", 2)
       .attr("d", line);
+
+    svg.append("path")
+      .datum(data)
+      .attr("fill", "none")
+      .attr("stroke", "transparent")
+      .attr("stroke-width", 35)
+      .attr("pointer-events", "stroke") // hover only on the stroke, not fill
+      .attr("d", line)
+      .on("mousemove", (event: MouseEvent) =>
+        handleMouseMove(event, xScale, yScale, false, setDate, setValue, setTooltipStyle))
+      .on("mouseleave", () => handleMouseLeave(setTooltipStyle));
   }, [windowSize, update]);
 
-  return <svg ref={ref} width="100%" height={h} />;
+  return (
+    <View>
+      <View style={tooltipStyle}>
+        <Text className="text-white font-bold text-center">{value} {label} - {date}</Text>
+      </View>
+      <svg ref={ref} width="100%" height={h} />
+    </View>
+  );
 }
 
 export function Heatmap({ data, height, getDate, getValue, update }) {
@@ -58,6 +110,10 @@ export function Heatmap({ data, height, getDate, getValue, update }) {
 
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const monthTicks = d3.timeMonth.every(1).range(oldest, newest);
+
+  const [date, setDate] = useState("");
+  const [value, setValue] = useState("");
+  const [tooltipStyle, setTooltipStyle] = useState({ display: "none" });
 
   useEffect(() => {
     const svg = d3.select(ref.current);
@@ -100,8 +156,19 @@ export function Heatmap({ data, height, getDate, getValue, update }) {
       .attr("width", cellX)
       .attr("y", d => yScale(getDate(d).getDay()))
       .attr("height", cellY)
-      .attr("fill", d => colorScale(getValue(d)));
+      .attr("fill", d => colorScale(getValue(d)))
+      .on("mousemove", (event: MouseEvent) =>
+        handleMouseMove(event, xScale, yScale, true, setDate, setValue, setTooltipStyle))
+      .on("mouseleave", () => handleMouseLeave(setTooltipStyle));
   }, [windowSize, update]);
 
-  return <svg ref={ref} width="100%" height={h} />;
+  return (
+    <View>
+      <View style={tooltipStyle}>
+        <Text className="text-white font-bold text-center">{value}</Text>
+        <Text className="text-white text-center">{date}</Text>
+      </View>
+      <svg ref={ref} width="100%" height={h} />
+    </View>
+  );
 }

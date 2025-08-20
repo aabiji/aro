@@ -155,7 +155,7 @@ function ResistancePlot({ name, group }: { name: string; group: PlotGroup }) {
             setChoice={(value: number) => changeViewRange(value)} />
         </View>
       </View>
-      <LineGraph data={simplifiedGraph} px={25}
+      <LineGraph data={simplifiedGraph} label={showWeight ? "lbs" : "reps"}
         height={400} getDate={getDate} getValue={getValue} update={update} />
     </View>
   );
