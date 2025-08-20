@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { workoutActions, ExerciseInfo } from "@/lib/state";
-import { request } from "@/lib/http";
+import { formatDate, request } from "@/lib/utils";
 
 import { FlatList, Text, View } from "react-native";
 import WorkoutStateSync from "@/components/sync";
@@ -10,8 +10,7 @@ import { WorkoutRecordMemo } from "@/components/workouts";
 import { SelectButton } from "@/components/select";
 
 export default function Index() {
-  const opts = { year: 'numeric', month: 'long', day: 'numeric' };
-  const today = new Intl.DateTimeFormat('en-US', opts).format(new Date());
+  const today = formatDate(new Date());
 
   const dispatch = useDispatch();
   const workoutsState = useSelector(state => state.workouts);

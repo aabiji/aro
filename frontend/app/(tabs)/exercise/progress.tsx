@@ -155,7 +155,8 @@ function ResistancePlot({ name, group }: { name: string; group: PlotGroup }) {
             setChoice={(value: number) => changeViewRange(value)} />
         </View>
       </View>
-      <LineGraph data={simplifiedGraph} label={showWeight ? "lbs" : "reps"}
+      <LineGraph
+        data={simplifiedGraph} tooltipLabel={showWeight ? "lbs" : "reps"}
         height={400} getDate={getDate} getValue={getValue} update={update} />
     </View>
   );
@@ -229,7 +230,9 @@ function CardioPlot({ name, group }: { name: string; group: PlotGroup }) {
           </Pressable>
         </View>
       </View>
-      <Heatmap data={group.data.slice(startIndex, endIndex + 1)}
+      <Heatmap
+        data={group.data.slice(startIndex, endIndex + 1)}
+        tooltipLabel={showDistance ? "km" : "min"}
         height={150} getDate={getDate} getValue={getValue} update={update} />
     </View>
   );

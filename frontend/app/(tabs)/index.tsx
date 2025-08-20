@@ -2,7 +2,7 @@ import { useState } from "react";
 import * as Crypto from "expo-crypto";
 import { useDispatch, useSelector } from "react-redux";
 import { workoutActions, userDataActions } from "@/lib/state";
-import { request } from "@/lib/http";
+import { request } from "@/lib/utils";
 
 import { Redirect } from "expo-router";
 import { Pressable, Text, TextInput, View } from "react-native";

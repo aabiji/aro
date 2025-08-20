@@ -1,6 +1,6 @@
 import { useDispatch, useSelector } from "react-redux";
 import { ExerciseType, ExerciseInfo, WorkoutInfo, workoutActions } from "@/lib/state";
-import { request } from "@/lib/http";
+import { request } from "@/lib/utils";
 
 import React from "react";
 import { Pressable, Text, TextInput, View } from "react-native";

@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { userDataActions, workoutActions } from "@/lib/state";
 import { useFocusEffect, useRouter } from "expo-router";
-import { request } from "@/lib/http";
+import { request } from "@/lib/utils";
 
 import { Pressable, Text, View } from "react-native";
 import { ScrollContainer } from "@/components/container";

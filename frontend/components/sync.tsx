@@ -1,14 +1,13 @@
 import { useDispatch, useSelector } from "react-redux";
 import { useCallback, useRef, useState } from "react";
 import { useFocusEffect } from "expo-router";
-import { request } from "@/lib/http";
+import { formatDate, request } from "@/lib/utils";
 import { workoutActions } from "@/lib/state";
 
 import { AppState, NativeEventSubscription, Platform } from "react-native";
 
 export default function WorkoutStateSync({ children }) {
-  const opts = { year: 'numeric', month: 'long', day: 'numeric' };
-  const today = new Intl.DateTimeFormat('en-US', opts).format(new Date());
+  const today = formatDate(new Date());
   const [alradySynching, setAlreadySynching] = useState(false);
 
   const dispatch = useDispatch();

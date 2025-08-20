@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { workoutActions } from "@/lib/state";
-import { request } from "@/lib/http";
+import { request } from "@/lib/utils";
 
 import { FlatList, Pressable, Text, TextInput, View } from "react-native";
 import WorkoutStateSync from "@/components/sync";

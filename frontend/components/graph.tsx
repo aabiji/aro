@@ -1,37 +1,42 @@
 import { useRef, useEffect, useState } from "react";
-import { useWindowDimensions, Text, View } from "react-native";
 import * as d3 from "d3";
+import { formatDate } from "@/lib/utils";
 
-function handleMouseLeave(setTooltipStyle) { setTooltipStyle({ display: "none" }); }
+import { useWindowDimensions, Text, View } from "react-native";
 
 function handleMouseMove(
-  event, xScale, yScale, isHeatmap,
-  setDate, setValue, setTooltipStyle) {
-  const yValue = (y: number) => {
-    if (!isHeatmap) return yScale.invert(coord[1]);
-    console.log(yScale.range());
-  };
-
+  event, point, xScale, yScale,
+  getDate, getValue, setDate, setValue, setTooltipStyle) {
   const coord = d3.pointer(event);
-  const date = xScale.invert(coord[0]).toString();
-  const value = ((Math.round(yValue(coord[1])) * 10) / 10).toFixed(1);
+  if (point !== undefined) {
+    setDate(formatDate(getDate(point)));
+    setValue(getValue(point));
 
-  setDate(date);
-  setValue(value);
+    event.target.setAttribute("stroke", "white");
+    event.target.setAttribute("stroke-width", 2);
+  } else {
+    setDate(formatDate(xScale.invert(coord[0])));
+    setValue(Math.round(((yScale.invert(coord[1])) * 10) / 10).toFixed(1));
+  }
+
   setTooltipStyle({
     display: "flex",
     flexDirection: "column",
     position: "absolute",
     left: Math.floor(coord[0]),
-    top: Math.floor(coord[1]),
+    top: Math.floor(coord[1]) + 10,
     backgroundColor: "grey",
-    padding: 6,
-    cursor: "pointer",
     pointerEvents: "none", // avoid flickering
+    padding: 6
   });
 }
 
-export function LineGraph({ data, height, getDate, getValue, update, label }) {
+function handleMouseLeave(event, setTooltipStyle) {
+  setTooltipStyle({ display: "none" });
+  event.target.setAttribute("stroke", "none");
+}
+
+export function LineGraph({ data, height, getDate, getValue, update, tooltipLabel }) {
   const windowSize = useWindowDimensions();
 
   const ref = useRef(null);
@@ -82,22 +87,26 @@ export function LineGraph({ data, height, getDate, getValue, update, label }) {
       .attr("stroke-width", 35)
       .attr("pointer-events", "stroke") // hover only on the stroke, not fill
       .attr("d", line)
+      .attr("cursor", "pointer")
       .on("mousemove", (event: MouseEvent) =>
-        handleMouseMove(event, xScale, yScale, false, setDate, setValue, setTooltipStyle))
-      .on("mouseleave", () => handleMouseLeave(setTooltipStyle));
+        handleMouseMove(event, undefined, xScale, yScale,
+          getDate, getValue, setDate, setValue, setTooltipStyle))
+      .on("mouseleave", (event: MouseEvent) => handleMouseLeave(event, setTooltipStyle));
   }, [windowSize, update]);
 
   return (
     <View>
       <View style={tooltipStyle}>
-        <Text className="text-white font-bold text-center">{value} {label} - {date}</Text>
+        <Text className="text-white font-bold text-center">
+          {value} {tooltipLabel} - {date}
+        </Text>
       </View>
       <svg ref={ref} width="100%" height={h} />
     </View>
   );
 }
 
-export function Heatmap({ data, height, getDate, getValue, update }) {
+export function Heatmap({ data, height, getDate, getValue, update, tooltipLabel }) {
   const windowSize = useWindowDimensions();
 
   const ref = useRef(null);
@@ -157,16 +166,19 @@ export function Heatmap({ data, height, getDate, getValue, update }) {
       .attr("y", d => yScale(getDate(d).getDay()))
       .attr("height", cellY)
       .attr("fill", d => colorScale(getValue(d)))
-      .on("mousemove", (event: MouseEvent) =>
-        handleMouseMove(event, xScale, yScale, true, setDate, setValue, setTooltipStyle))
-      .on("mouseleave", () => handleMouseLeave(setTooltipStyle));
+      .attr("cursor", "pointer")
+      .on("mousemove", (event: MouseEvent, d) =>
+        handleMouseMove(event, d, undefined, undefined,
+          getDate, getValue, setDate, setValue, setTooltipStyle))
+      .on("mouseleave", (event: MouseEvent) => handleMouseLeave(event, setTooltipStyle));
   }, [windowSize, update]);
 
   return (
     <View>
       <View style={tooltipStyle}>
-        <Text className="text-white font-bold text-center">{value}</Text>
-        <Text className="text-white text-center">{date}</Text>
+        <Text className="text-white font-bold text-center">
+          {value} {tooltipLabel} - {date}
+        </Text>
       </View>
       <svg ref={ref} width="100%" height={h} />
     </View>
