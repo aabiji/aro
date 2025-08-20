@@ -58,12 +58,6 @@ export default function Settings() {
   return (
     <ScrollContainer>
       <Checkbox
-        label="Enable period tracking feature"
-        value={userData.is_female}
-        handleToggle={() =>
-          dispatch(userDataActions.update({ is_female: !userData.is_female }))} />
-
-      <Checkbox
         label="Use imperial units"
         value={userData.use_imperial}
         handleToggle={() =>

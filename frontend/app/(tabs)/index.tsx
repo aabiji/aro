@@ -6,11 +6,7 @@ import { request } from "@/lib/utils";
 
 import { Redirect } from "expo-router";
 import { Pressable, Text, TextInput, View } from "react-native";
-import { Selection } from "@/components/select";
 import { ScrollContainer } from "@/components/container";
-
-import FemaleIcon from "@/assets/female.svg";
-import MaleIcon from "@/assets/male.svg";
 
 export default function Index() {
   const dispatch = useDispatch();
@@ -22,8 +18,6 @@ export default function Index() {
   const [errMsg, setErrMsg] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-  const [is_female, setIsFemale] = useState(true);
 
   const toggle = () => {
     setIsLogin(!isLogin);
@@ -44,11 +38,6 @@ export default function Index() {
       return false;
     }
 
-    if (name.length == 0 && !isLogin) {
-      setErrMsg("Must enter a name");
-      return false;
-    }
-
     setErrMsg("");
     return true;
   };
@@ -58,10 +47,7 @@ export default function Index() {
 
     const passwordHash = await Crypto.digestStringAsync(
       Crypto.CryptoDigestAlgorithm.SHA256, password);
-
-    const body = isLogin
-      ? { email, password: passwordHash }
-      : { email, name, is_female, password: passwordHash };
+    const body = { email, password: passwordHash };
     const endpoint = isLogin ? "/login" : "/signup";
 
     try {
@@ -97,16 +83,6 @@ export default function Index() {
           <TextInput
             value={password} placeholder="Password" secureTextEntry
             onChangeText={(txt) => setPassword(txt)} className={inputStyle} />
-
-          {!isLogin && <TextInput
-            value={name} placeholder="Name"
-            onChangeText={(txt) => setName(txt)} className={inputStyle} />}
-
-          {!isLogin &&
-            <Selection
-              className="mb-4"
-              choices={["Female", "Male"]} icons={[FemaleIcon, MaleIcon]}
-              handleChoice={(index: number) => setIsFemale(index == 0)} />}
 
           <Pressable onPress={auth}
             className="p-3 bg-blue-500 m-auto rounded w-[100%] mb-2">

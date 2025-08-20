@@ -239,9 +239,9 @@ function CardioPlot({ name, group }: { name: string; group: PlotGroup }) {
 }
 
 export default function ProgressPage() {
-  /*
   const workoutsState = useSelector(state => state.workouts);
- 
+
+  // map the data into a set of plot points, and group by exercise
   let exercises: Record<string, PlotGroup> = {};
   for (const w of workoutsState.workouts) {
     if (w.is_template) continue;
@@ -251,47 +251,26 @@ export default function ProgressPage() {
         duration: e.duration ?? 0, distance: e.distance ?? 0,
         averageReps: e.reps.length ? e.reps.reduce((a, b) => a + b, 0) / e.reps.length : 0,
       };
- 
+
       if (exercises[e.name] === undefined)
-        exercises[e.name] = { exercise_type: e.exercise_type, data: [point] };
+        exercises[e.name] = { exercise_type: e.exercise_type, data: [point], months: [] };
       else
         exercises[e.name].data.push(point);
     }
   }
-  */
 
-  // test data
-  let exercises: Record<string, PlotGroup> = {};
-  for (let j = 0; j < 2; j++) {
-    const name = `Dummy exercise #${j + 1}`;
-    const etype = [ExerciseType.Resistance, ExerciseType.Cardio][j];
-
-    const now = new Date();
-    const start = new Date(new Date().setFullYear(new Date().getFullYear() - 8));
-    let data: PlotPoint[] = [];
-
-    for (let d = new Date(start); d <= now; d.setDate(d.getDate() + 1)) {
-      data.push({
-        date: new Date(d),
-        weight: Math.floor(Math.random() * 150),
-        distance: Math.floor(Math.random() * 200),
-        duration: 60 + Math.floor(Math.random() * 180),
-        averageReps: Math.floor(Math.random() * 5),
-      });
-    }
-
-    data.sort((a, b) => a.date.getTime() - b.date.getTime()); // earliest to latest
+  for (let name in exercises) {
+    // sort earliest to latest
+    exercises[name].data.sort((a, b) => a.date.getTime() - b.date.getTime());
 
     // get the month intervals
-    let monthIntervals = [{ elapsed: 1, index: 0 }];
-    for (let index = 1; index < data.length; index++) {
-      const date = data[index].date;
-      const prev = data[index - 1].date;
+    exercises[name].months = [{ elapsed: 1, index: 0 }];
+    for (let index = 1; index < exercises[name].data.length; index++) {
+      const date = exercises[name].data[index].date;
+      const prev = exercises[name].data[index - 1].date;
       if (date.getMonth() != prev.getMonth())
-        monthIntervals.push({ elapsed: monthDiff(prev, date), index });
+        exercises[name].months.push({ elapsed: monthDiff(prev, date), index });
     }
-
-    exercises[name] = { exercise_type: etype, data, months: monthIntervals };
   }
 
   return (

@@ -32,7 +32,6 @@ def row_to_json(row, exclude=[]):
 class User(Base):
   __tablename__ = "Users"
   id = Column(Integer, primary_key=True)
-  name = Column(String, nullable=False)
   email = Column(String, nullable=False)
   password = Column(String, nullable=False)
 
@@ -61,7 +60,6 @@ class Preference(Base):
   __tablename__ = "Preferences"
   user_id = Column(Integer, primary_key=True)
   use_imperial = Column(Boolean, nullable=False)
-  is_female = Column(Boolean, nullable=False)
 
 
 Base.metadata.create_all(engine)

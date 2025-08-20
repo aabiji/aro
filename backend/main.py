@@ -64,13 +64,13 @@ def get_user_id(authorization: str = Header(None)):
   return user_id
 
 
-class LoginRequest(BaseModel):
+class AuthRequest(BaseModel):
   email: str
   password: str
 
 
 @app.post("/login")
-def handle_login(request: LoginRequest):
+def handle_login(request: AuthRequest):
   with db.get_session() as session:
     user = (
       session.query(db.User)
@@ -83,29 +83,18 @@ def handle_login(request: LoginRequest):
     return {"jwt": create_jwt(user.id)}
 
 
-class SignupRequest(LoginRequest):
-  name: str
-  is_female: bool
-
-
 @app.post("/signup")
-def handle_signup(request: SignupRequest):
+def handle_signup(request: AuthRequest):
   with db.get_session() as session:
     user = session.query(db.User).filter(db.User.email == request.email).first()
     if user is not None:
       raise HTTPException(status_code=400, detail="Account already exists")
 
-    new_user = db.User(
-      name=request.name,
-      email=request.email,
-      password=request.password,
-    )
+    new_user = db.User(email=request.email, password=request.password)
     session.add(new_user)
     session.commit()
 
-    pref = db.Preference(
-      user_id=new_user.id, is_female=request.is_female, use_imperial=True
-    )
+    pref = db.Preference(user_id=new_user.id, use_imperial=True)
     session.add(pref)
     session.commit()
 
@@ -114,7 +103,6 @@ def handle_signup(request: SignupRequest):
 
 class PrefsRequest(BaseModel):
   use_imperial: bool
-  is_female: bool
 
 
 @app.post("/user")
@@ -122,7 +110,6 @@ def update_user_prefs(request: PrefsRequest, user_id: int = Depends(get_user_id)
   with db.get_session() as session:
     prefs = session.query(db.Preference).filter(db.Preference.user_id == user_id)
     prefs.use_imperial = request.use_imperial
-    prefs.is_female = request.is_female
     session.commit()
 
 

@@ -77,11 +77,10 @@ const userData = createSlice({
   initialState: {
     jwt: "",
     use_imperial: true,
-    is_female: true
   },
   reducers: {
     update: (state, a: PayloadAction<object>) => { Object.assign(state, a.payload); },
-    clear: (state) => { state.jwt = ""; state.use_imperial = true; state.is_female = true; },
+    clear: (state) => { state.jwt = ""; state.use_imperial = true; },
   }
 });
 
