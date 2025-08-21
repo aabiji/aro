@@ -1,4 +1,5 @@
 import { useWindowDimensions, Text, View } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import DumbellsIcon from '@/assets/dumbells.svg';
 
@@ -7,9 +8,11 @@ export function ScrollContainer({ children }) {
   const containerWidth = width > 1024 ? '40%' : '60%';
 
   return (
-    <View className="m-auto h-[100%] mt-5" style={{ width: containerWidth }}>
-      {children}
-    </View>
+    <SafeAreaView style={{ flex: 1 }}>
+      <View className="m-auto h-[100%] mt-5" style={{ width: containerWidth }}>
+        {children}
+      </View>
+    </SafeAreaView>
   )
 }
 

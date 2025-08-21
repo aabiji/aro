@@ -2,6 +2,16 @@ import { combineReducers, createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 export enum ExerciseType { Resistance, Cardio };
 
+interface Action<T> {
+  value: T;
+  // workouts
+  workoutIndex?: number;
+  exerciseIndex?: number;
+  // tags and events
+  tagIndex?: number;
+  date?: string;
+}
+
 // NOTE: see the corresponding backend api request types
 export interface ExerciseInfo {
   id: number | null;
@@ -18,12 +28,6 @@ export interface WorkoutInfo {
   is_template: boolean;
   exercises: ExerciseInfo[];
   tag: string;
-}
-
-interface Action<T> {
-  workoutIndex?: number;
-  exerciseIndex?: number;
-  value: T;
 }
 
 const workoutsSlice = createSlice({
@@ -84,19 +88,40 @@ const userData = createSlice({
   }
 });
 
+interface Tag {
+  name: string;
+  color: string;
+  selected: boolean;
+}
+
 const eventsData = createSlice({
   name: "events",
   initialState: {
-
+    tags: [] as Tag[],
+    events: {} as Record<string, string[]>, // map date to tag name
   },
   reducers: {
-
+    addTag: (state, a: PayloadAction<Tag>) => { state.tags.push(a.payload); },
+    removeTag: (state, a: PayloadAction<number>) => { state.tags.splice(a.payload); },
+    updateTag: (state, a: PayloadAction<Action<Tag>>) => {
+      Object.assign(state.tags[a.payload.tagIndex!], a.payload.value);
+    },
+    toggleEvent: (state, a: PayloadAction<Action<string>>) => {
+      // assign a tag to a date, or remove that tag from a date
+      let tagNames = state.events[a.payload.date!] ?? [];
+      const index = tagNames.findIndex(tagName => tagName == a.payload.value);
+      if (index != -1)
+        tagNames.splice(index, 1);
+      else
+        tagNames.push(a.payload.value);
+      state.events[a.payload.date!] = tagNames;
+    }
   }
 });
 
 export const workoutActions = workoutsSlice.actions;
 export const userDataActions = userData.actions;
-export const eventsActions = userData.actions;
+export const eventsActions = eventsData.actions;
 
 export const rootReducer = combineReducers({
   workouts: workoutsSlice.reducer,
