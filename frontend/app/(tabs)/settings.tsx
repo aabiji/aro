@@ -12,33 +12,33 @@ import Feather from "@expo/vector-icons/Feather";
 function Checkbox({ label, handleToggle, value }) {
   const bg = value ? "bg-blue-500" : "bg-white";
   return (
-    <View
-      className="w-full flex-row justify-between items-center mb-2">
+    <View className="w-full flex-row justify-between items-center mb-2">
       <Text className="text-base"> {label} </Text>
       <Pressable
         className={`${bg} w-[20] h-[20] rounded items-center border-2 border-blue-500`}
-        onPress={() => handleToggle()}>
+        onPress={() => handleToggle()}
+      >
         {value && <Feather name="check" color="white" size={15} />}
       </Pressable>
-    </View >
+    </View>
   );
 }
 
 export default function Settings() {
   const router = useRouter();
-  const userData = useSelector(state => state.userData);
+  const userData = useSelector((state) => state.userData);
   const dispatch = useDispatch();
 
   const deleteAccount = async () => {
     try {
       await request("DELETE", "/user", undefined, userData.jwt);
-      dispatch((userDataActions.clear()));
-      dispatch((workoutActions.clear()));
+      dispatch(userDataActions.clear());
+      dispatch(workoutActions.clear());
       router.replace("/");
     } catch (err) {
       console.log("ERROR!", err.message);
     }
-  }
+  };
 
   const syncSettings = async () => {
     try {
@@ -48,12 +48,15 @@ export default function Settings() {
     } catch (err) {
       console.log("ERROR!", err.message);
     }
-  }
+  };
 
   useFocusEffect(
     useCallback(() => {
-      return () => { syncSettings(); }
-    }, []));
+      return () => {
+        syncSettings();
+      };
+    }, []),
+  );
 
   return (
     <ScrollContainer>
@@ -61,11 +64,11 @@ export default function Settings() {
         label="Use imperial units"
         value={userData.use_imperial}
         handleToggle={() =>
-          dispatch(userDataActions.update({ use_imperial: !userData.use_imperial }))} />
+          dispatch(userDataActions.update({ use_imperial: !userData.use_imperial }))
+        }
+      />
 
-      <Pressable
-        className="bg-red-500 p-2 rounded"
-        onPress={() => deleteAccount()}>
+      <Pressable className="bg-red-500 p-2 rounded" onPress={() => deleteAccount()}>
         <Text className="text-white text-center"> Delete account </Text>
       </Pressable>
 

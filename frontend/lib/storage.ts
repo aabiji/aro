@@ -2,14 +2,22 @@ import { Platform } from "react-native";
 import { MMKV } from "react-native-mmkv";
 import { configureStore } from "@reduxjs/toolkit";
 import {
-  persistStore, persistReducer, Storage,
-  FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER
+  persistStore,
+  persistReducer,
+  Storage,
+  FLUSH,
+  REHYDRATE,
+  PAUSE,
+  PERSIST,
+  PURGE,
+  REGISTER,
 } from "redux-persist";
 
 import { rootReducer } from "./state";
 
 const isWeb = Platform.OS === "web";
-const isBrowser = typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+const isBrowser =
+  typeof window !== "undefined" && typeof window.localStorage !== "undefined";
 
 const storage = new MMKV();
 

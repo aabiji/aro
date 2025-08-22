@@ -17,9 +17,12 @@ interface TagProps {
 }
 
 export function Tag({ tag, setSelected, showPicker, setName, removeTag }: TagProps) {
-  const editable = setName !== undefined && showPicker !== undefined && removeTag !== undefined;
+  const editable =
+    setName !== undefined && showPicker !== undefined && removeTag !== undefined;
 
-  const select = () => { if (!showPicker && !editable) setSelected(!tag.selected); }
+  const select = () => {
+    if (!showPicker && !editable) setSelected(!tag.selected);
+  };
 
   const style = !editable
     ? `
@@ -33,34 +36,43 @@ export function Tag({ tag, setSelected, showPicker, setName, removeTag }: TagPro
       <View className="relative h-fit flex-row gap-2 items-center">
         <Pressable
           disabled={!editable}
-          onPress={(event) => showPicker(event.nativeEvent.pageX, event.nativeEvent.pageY)}
+          onPress={(event) =>
+            showPicker(event.nativeEvent.pageX, event.nativeEvent.pageY)
+          }
           className="border-1 border-gray-200"
           style={{
-            backgroundColor: tag.color, borderRadius: "50%",
-            width: pickerSize, height: pickerSize
-          }}></Pressable>
+            backgroundColor: tag.color,
+            borderRadius: "50%",
+            width: pickerSize,
+            height: pickerSize,
+          }}
+        ></Pressable>
 
-        {editable
-          ? <TextInput
+        {editable ? (
+          <TextInput
             className="flex-1 text-base bg-white rounded-sm px-3 py-1 outline-none"
             value={tag.name}
-            onChangeText={(value) => setName(value)} />
-          : <Text className={`ml-2 text-base ${tag.selected ? "font-bold" : ""}`}>
+            onChangeText={(value) => setName(value)}
+          />
+        ) : (
+          <Text className={`ml-2 text-base ${tag.selected ? "font-bold" : ""}`}>
             {tag.name}
-          </Text>}
+          </Text>
+        )}
 
-        {editable &&
+        {editable && (
           <Pressable onPress={removeTag} className="ml-auto">
             <Feather name="trash" color="red" size={20} />
-          </Pressable>}
+          </Pressable>
+        )}
       </View>
     </Pressable>
   );
 }
 
-export function TagManager({ visible, close }: { visible: boolean, close: () => void }) {
+export function TagManager({ visible, close }: { visible: boolean; close: () => void }) {
   const dispatch = useDispatch();
-  const tagData = useSelector(state => state.tagData);
+  const tagData = useSelector((state) => state.tagData);
 
   const [showPicker, setShowPicker] = useState(false);
   const [tagIndex, setTagIndex] = useState(-1);
@@ -70,38 +82,47 @@ export function TagManager({ visible, close }: { visible: boolean, close: () => 
     setShowPicker(true);
     setTagIndex(index);
     setPickerPos({ x, y });
-  }
+  };
 
   const updateTag = (name: string, index: number) => {
     // cannot have duplicates
-    const problematic = tagData.tags.findIndex(tag => tag.name == name.trim()) != -1;
+    const problematic = tagData.tags.findIndex((tag) => tag.name == name.trim()) != -1;
 
     if (index == -1) {
-      dispatch(tagActions.addTag({
-        name, color: "#000000",
-        selected: false, problematic
-      }));
+      dispatch(
+        tagActions.addTag({
+          name,
+          color: "#000000",
+          selected: false,
+          problematic,
+        }),
+      );
     } else {
-      dispatch(tagActions.updateTag({
-        tagIndex: index, value: { name, problematic }
-      }));
+      dispatch(
+        tagActions.updateTag({
+          tagIndex: index,
+          value: { name, problematic },
+        }),
+      );
     }
-  }
+  };
 
   const handleClose = () => {
-    const invalid = tagData.tags.findIndex(tag => tag.problematic) != -1;
+    const invalid = tagData.tags.findIndex((tag) => tag.problematic) != -1;
     if (!invalid) close();
-  }
+  };
 
   return (
     <Modal transparent animationType="fade" visible={visible} onRequestClose={close}>
       <Pressable
         onPress={handleClose}
         className="flex-1"
-        style={{ backgroundColor: "rgba(0, 0, 0, 0.3)", cursor: "default" }}>
+        style={{ backgroundColor: "rgba(0, 0, 0, 0.3)", cursor: "default" }}
+      >
         <Pressable
           onPress={(e) => e.stopPropagation()}
-          className="w-full h-[50%] absolute bottom-0 bg-neutral-50 shadow-md py-2 cursor-default">
+          className="w-full h-[50%] absolute bottom-0 bg-neutral-50 shadow-md py-2 cursor-default"
+        >
           <View className="flex-row justify-between w-[55%] m-auto">
             <Text className="text-xl">Manage tags</Text>
             <Pressable onPress={() => updateTag("New tag", -1)}>
@@ -109,40 +130,53 @@ export function TagManager({ visible, close }: { visible: boolean, close: () => 
             </Pressable>
           </View>
 
-          {tagData.tags.length == 0 &&
-            <Text className="text-center mt-4 text-base text-gray-400"> No tags </Text>}
+          {tagData.tags.length == 0 && (
+            <Text className="text-center mt-4 text-base text-gray-400"> No tags </Text>
+          )}
 
           <FlatList
             data={tagData.tags}
             className="w-[55%] m-auto"
             renderItem={({ item, index }) => (
-              <Tag tag={item}
+              <Tag
+                tag={item}
                 showPicker={(mouseX, mouseY) => showTagPicker(mouseX, mouseY, index)}
                 setName={(name: string) => updateTag(name, index)}
-                removeTag={() => dispatch(tagActions.removeTag(index))} />
-            )} />
+                removeTag={() => dispatch(tagActions.removeTag(index))}
+              />
+            )}
+          />
         </Pressable>
       </Pressable>
 
-      {showPicker &&
+      {showPicker && (
         <View
           style={{
-            position: "absolute", left: pickerPos.x - 75,
-            top: pickerPos.y - 75, width: 150, height: 150,
+            position: "absolute",
+            left: pickerPos.x - 75,
+            top: pickerPos.y - 75,
+            width: 150,
+            height: 150,
             zIndex: 9999,
           }}
-          className="rounded-xl bg-white p-2 border-2 border-gray-200">
+          className="rounded-xl bg-white p-2 border-2 border-gray-200"
+        >
           <ColorPicker
             style={{ width: "100%", height: "100%" }}
             onComplete={(color) => {
-              dispatch(tagActions.updateTag({
-                tagIndex: tagIndex, value: { color: color.hex }
-              }));
+              dispatch(
+                tagActions.updateTag({
+                  tagIndex: tagIndex,
+                  value: { color: color.hex },
+                }),
+              );
               setShowPicker(false);
-            }}>
+            }}
+          >
             <Panel3 thumbSize={15} />
           </ColorPicker>
-        </View>}
+        </View>
+      )}
     </Modal>
   );
 }

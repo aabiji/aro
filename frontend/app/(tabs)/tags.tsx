@@ -16,29 +16,34 @@ interface CalendarTileProps {
 }
 
 function CalendarTile({ date, disabled, toggle }: CalendarTileProps) {
-  const tagData = useSelector(state => state.tagData);
+  const tagData = useSelector((state) => state.tagData);
   const tagNames = tagData.taggedDates[formatDate(date!)] ?? [];
-  const colors = tagNames.map((name: string) =>
-    tagData.tags.find((tag: TagInfo) => tag.name == name).color
+  const colors = tagNames.map(
+    (name: string) => tagData.tags.find((tag: TagInfo) => tag.name == name).color,
   );
   const empty = date === undefined || toggle === undefined;
 
   return (
     <Pressable
-      onPress={toggle} disabled={disabled || empty}
-      className="w-full p-[5px] aspect-square bg-gray-100">
-      {!empty && <View className="flex-column h-full">
-        {colors.map((c: string, index: number) =>
-          <View key={index} style={{ flex: 1, backgroundColor: c, opacity: 0.5 }} />)}
-        <Text className="absolute right-[10px] top-[10px]">{date.getDate()}</Text>
-      </View>}
+      onPress={toggle}
+      disabled={disabled || empty}
+      className="w-full p-[5px] aspect-square bg-gray-100"
+    >
+      {!empty && (
+        <View className="flex-column h-full">
+          {colors.map((c: string, index: number) => (
+            <View key={index} style={{ flex: 1, backgroundColor: c, opacity: 0.5 }} />
+          ))}
+          <Text className="absolute right-[10px] top-[10px]">{date.getDate()}</Text>
+        </View>
+      )}
     </Pressable>
   );
 }
 
 export default function TagsPage() {
   const dispatch = useDispatch();
-  const tagData = useSelector(state => state.tagData);
+  const tagData = useSelector((state) => state.tagData);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [tagIndex, setTagIndex] = useState(-1);
@@ -58,35 +63,39 @@ export default function TagsPage() {
   }, [date]);
 
   const changeMonth = (delta: number) => {
-    setDate(prev => {
+    setDate((prev) => {
       const next = new Date(prev);
       next.setMonth(next.getMonth() + delta);
       return next;
     });
-  }
+  };
 
   const selectTag = (index: number) => {
     // can only select one at a time
     if (tagIndex != -1) {
-      dispatch(tagActions.updateTag({
-        tagIndex: tagIndex,
-        value: { selected: !tagData.tags[tagIndex].selected }
-      }));
+      dispatch(
+        tagActions.updateTag({
+          tagIndex: tagIndex,
+          value: { selected: !tagData.tags[tagIndex].selected },
+        }),
+      );
     }
 
     const selected = !tagData.tags[index].selected;
     setTagIndex(selected ? index : -1);
     dispatch(tagActions.updateTag({ tagIndex: index, value: { selected } }));
-  }
+  };
 
   // add/remove tag to a calendar date
   const tagDay = (date: Date) => {
     if (tagIndex == -1) return;
-    dispatch(tagActions.toggleDate({
-      date: formatDate(date),
-      value: tagData.tags[tagIndex].name
-    }));
-  }
+    dispatch(
+      tagActions.toggleDate({
+        date: formatDate(date),
+        value: tagData.tags[tagIndex].name,
+      }),
+    );
+  };
 
   return (
     <ScrollContainer>
@@ -97,11 +106,10 @@ export default function TagsPage() {
         </Pressable>
       </View>
 
-      <View
-        className="mb-2 border-b border-gray-200 flex-row items-center flex-wrap h-max-[100px]">
-        {tagData.tags.map((tag: TagInfo, index: number) =>
+      <View className="mb-2 border-b border-gray-200 flex-row items-center flex-wrap h-max-[100px]">
+        {tagData.tags.map((tag: TagInfo, index: number) => (
           <Tag key={index} tag={tag} setSelected={() => selectTag(index)} />
-        )}
+        ))}
       </View>
 
       <TagManager visible={modalVisible} close={() => setModalVisible(false)} />
@@ -126,8 +134,14 @@ export default function TagsPage() {
             const index = i - startWeekday;
             const d = new Date(date.getFullYear(), date.getMonth(), index + 1);
             const empty = index < 0 || index >= monthLength;
-            return <CalendarTile date={empty ? undefined : d} key={i}
-              disabled={empty || tagIndex == -1} toggle={() => tagDay(d)} />;
+            return (
+              <CalendarTile
+                date={empty ? undefined : d}
+                key={i}
+                disabled={empty || tagIndex == -1}
+                toggle={() => tagDay(d)}
+              />
+            );
           })}
         </View>
       </View>

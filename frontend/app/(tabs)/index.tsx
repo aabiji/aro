@@ -10,7 +10,7 @@ import { ScrollContainer } from "@/components/container";
 
 export default function Index() {
   const dispatch = useDispatch();
-  const userData = useSelector(state => state.userData);
+  const userData = useSelector((state) => state.userData);
   const [authenticated, setAuthenticated] = useState(userData.jwt.length > 0);
   // TODO: what to do when the jwt expires?
 
@@ -22,7 +22,7 @@ export default function Index() {
   const toggle = () => {
     setIsLogin(!isLogin);
     setErrMsg("");
-  }
+  };
 
   const validateForm = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -34,7 +34,9 @@ export default function Index() {
     const pwRegex = /^(?=.*\d)(?=.*[^A-Za-z0-9]).+$/;
     const passwordValid = password.length >= 8 && pwRegex.test(password);
     if (!passwordValid) {
-      setErrMsg("Password must include a number, special character, and be 8+ characters");
+      setErrMsg(
+        "Password must include a number, special character, and be 8+ characters",
+      );
       return false;
     }
 
@@ -46,7 +48,9 @@ export default function Index() {
     if (!validateForm()) return;
 
     const passwordHash = await Crypto.digestStringAsync(
-      Crypto.CryptoDigestAlgorithm.SHA256, password);
+      Crypto.CryptoDigestAlgorithm.SHA256,
+      password,
+    );
     const body = { email, password: passwordHash };
     const endpoint = isLogin ? "/login" : "/signup";
 
@@ -59,13 +63,13 @@ export default function Index() {
     } catch (err) {
       setErrMsg(err.message);
     }
-  }
+  };
 
-  const inputStyle = "bg-white outline-blue-400 border-2 border-gray-200\
-    placeholder-gray-400 p-2 mb-4 rounded text-base"
+  const inputStyle =
+    "bg-white outline-blue-400 border-2 border-gray-200\
+    placeholder-gray-400 p-2 mb-4 rounded text-base";
 
-  if (authenticated)
-    return <Redirect href="/exercise" />;
+  if (authenticated) return <Redirect href="/exercise" />;
 
   return (
     <ScrollContainer>
@@ -73,27 +77,36 @@ export default function Index() {
         <Text className="text-center text-2xl font-bold mb-4">athena</Text>
 
         <View className="bg-white p-4">
-          {errMsg.length > 0 &&
-            <Text className="mb-2 text-center text-red-500 text-base">{errMsg}</Text>}
+          {errMsg.length > 0 && (
+            <Text className="mb-2 text-center text-red-500 text-base">{errMsg}</Text>
+          )}
 
           <TextInput
-            value={email} placeholder="Email"
-            onChangeText={(txt) => setEmail(txt)} className={inputStyle} />
+            value={email}
+            placeholder="Email"
+            onChangeText={(txt) => setEmail(txt)}
+            className={inputStyle}
+          />
 
           <TextInput
-            value={password} placeholder="Password" secureTextEntry
-            onChangeText={(txt) => setPassword(txt)} className={inputStyle} />
+            value={password}
+            placeholder="Password"
+            secureTextEntry
+            onChangeText={(txt) => setPassword(txt)}
+            className={inputStyle}
+          />
 
-          <Pressable onPress={auth}
-            className="p-3 bg-blue-500 m-auto rounded w-[100%] mb-2">
+          <Pressable
+            onPress={auth}
+            className="p-3 bg-blue-500 m-auto rounded w-[100%] mb-2"
+          >
             <Text className="font-bold text-center text-white text-lg">
-              {isLogin ? "Login" : "Create account"}</Text>
+              {isLogin ? "Login" : "Create account"}
+            </Text>
           </Pressable>
 
           <Pressable className="m-auto" onPress={toggle}>
-            <Text className="text-[15]">
-              {isLogin ? "Create account" : "Login"}
-            </Text>
+            <Text className="text-[15]">{isLogin ? "Create account" : "Login"}</Text>
           </Pressable>
         </View>
       </View>

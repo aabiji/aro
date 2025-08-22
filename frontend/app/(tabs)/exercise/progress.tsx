@@ -21,13 +21,20 @@ function perpendicularDistance(p0: Vec2, p1: Vec2, p2: Vec2) {
 
 // Algorithm to simplify a curve by removing points
 // Taken from [here](https://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm)
-function ramerDouglasPeuker(points: any[], epsilon: number, toVec2: (v: any) => Vec2): any[] {
+function ramerDouglasPeuker(
+  points: any[],
+  epsilon: number,
+  toVec2: (v: any) => Vec2,
+): any[] {
   // find the point with the max distance to the current line segment
   let maxDistance = 0;
   let index = 0;
   for (let i = 1; i < points.length - 1; i++) {
     const d = perpendicularDistance(
-      toVec2(points[i]), toVec2(points[0]), toVec2(points[points.length - 1]));
+      toVec2(points[i]),
+      toVec2(points[0]),
+      toVec2(points[points.length - 1]),
+    );
     if (d > maxDistance) {
       maxDistance = d;
       index = i;
@@ -48,14 +55,16 @@ function ramerDouglasPeuker(points: any[], epsilon: number, toVec2: (v: any) => 
   return resultingPoints;
 }
 
-function simplifyGraph(points: any[], targetLength: number, toVec2: ToVec2): Promise<any[]> {
-  if (points.length <= targetLength)
-    return Promise.resolve(points);
+function simplifyGraph(
+  points: any[],
+  targetLength: number,
+  toVec2: ToVec2,
+): Promise<any[]> {
+  if (points.length <= targetLength) return Promise.resolve(points);
 
   const epsilon = Math.floor(points.length / targetLength / 2);
   return Promise.resolve(ramerDouglasPeuker(points, epsilon, toVec2));
 }
-
 
 interface PlotPoint {
   date: Date;
@@ -71,17 +80,17 @@ interface MonthInterval {
 }
 
 interface PlotGroup {
-  exercise_type: ExerciseType,
-  data: PlotPoint[]
+  exercise_type: ExerciseType;
+  data: PlotPoint[];
   months: MonthInterval[]; // from earliest to latest
 }
 
 function monthDiff(earliest: Date, latest: Date): number {
   const years = latest.getFullYear() - earliest.getFullYear();
-  return Math.abs(latest.getMonth() - earliest.getMonth() + 12 * (years))
+  return Math.abs(latest.getMonth() - earliest.getMonth() + 12 * years);
 }
 
-// get the index of the plot point that's n months in the past 
+// get the index of the plot point that's n months in the past
 function getMonthIndex(monthIntervals: MonthInterval[], n: number): number {
   let count = 0;
   let start = 0;
@@ -106,11 +115,11 @@ function ResistancePlot({ name, group }: { name: string; group: PlotGroup }) {
     { label: "This month", value: 1 },
     { label: "Last 6 months", value: 6 },
     { label: "This year", value: 12 },
-    { label: "Last 5 years", value: 60, },
+    { label: "Last 5 years", value: 60 },
     {
       label: "All time",
-      value: monthDiff(group.data[0].date, group.data[group.data.length - 1].date)
-    }
+      value: monthDiff(group.data[0].date, group.data[group.data.length - 1].date),
+    },
   ];
 
   const [viewRange, setViewRange] = useState(viewRanges[0].value);
@@ -120,8 +129,10 @@ function ResistancePlot({ name, group }: { name: string; group: PlotGroup }) {
 
   useEffect(() => {
     const targetPoints = 100;
-    const toVec2 = (v: PlotPoint) =>
-      ({ x: v.date.getTime(), y: showWeight ? v.weight : v.averageReps });
+    const toVec2 = (v: PlotPoint) => ({
+      x: v.date.getTime(),
+      y: showWeight ? v.weight : v.averageReps,
+    });
     const points: PlotPoint[] = group.data.slice(startIndex, group.data.length);
 
     simplifyGraph(points, targetPoints, toVec2).then((simplified) => {
@@ -136,10 +147,10 @@ function ResistancePlot({ name, group }: { name: string; group: PlotGroup }) {
     setStartIndex(getMonthIndex(group.months, numMonths));
     setViewRange(numMonths);
     forceRerender();
-  }
+  };
 
   const getDate = (v: PlotPoint) => v.date;
-  const getValue = (v: PlotPoint) => showWeight ? v.weight : v.averageReps;
+  const getValue = (v: PlotPoint) => (showWeight ? v.weight : v.averageReps);
 
   return (
     <View className="bg-white px-4 py-2 w-full mb-4">
@@ -149,15 +160,23 @@ function ResistancePlot({ name, group }: { name: string; group: PlotGroup }) {
         <View className="flex-column w-[25%]">
           <Selection
             choices={["Weight", "Reps"]}
-            handleChoice={(index: number) => forceRerender(setShowWeight(index == 0))} />
+            handleChoice={(index: number) => forceRerender(setShowWeight(index == 0))}
+          />
           <Dropdown
-            choices={viewRanges} choice={viewRange}
-            setChoice={(value: number) => changeViewRange(value)} />
+            choices={viewRanges}
+            choice={viewRange}
+            setChoice={(value: number) => changeViewRange(value)}
+          />
         </View>
       </View>
       <LineGraph
-        data={simplifiedGraph} tooltipLabel={showWeight ? "lbs" : "reps"}
-        height={400} getDate={getDate} getValue={getValue} update={update} />
+        data={simplifiedGraph}
+        tooltipLabel={showWeight ? "lbs" : "reps"}
+        height={400}
+        getDate={getDate}
+        getValue={getValue}
+        update={update}
+      />
     </View>
   );
 }
@@ -175,7 +194,7 @@ function CardioPlot({ name, group }: { name: string; group: PlotGroup }) {
   const [endIndex, setEndIndex] = useState(group.data.length - 1);
 
   const getDate = (v: PlotPoint) => v.date;
-  const getValue = (v: PlotPoint) => showDistance ? v.distance : v.duration;
+  const getValue = (v: PlotPoint) => (showDistance ? v.distance : v.duration);
 
   const [update, setUpdate] = useState(true);
   const forceRerender = (ret: void) => setUpdate(!update);
@@ -198,12 +217,13 @@ function CardioPlot({ name, group }: { name: string; group: PlotGroup }) {
     const startDiff = monthDiff(rangeStart, latest);
     setStartIndex(getMonthIndex(group.months, startDiff));
 
-    const rangeEnd = nextYear + 1 > latest.getFullYear() ? latest : new Date(nextYear + 1, 0, 1);
+    const rangeEnd =
+      nextYear + 1 > latest.getFullYear() ? latest : new Date(nextYear + 1, 0, 1);
     const endDiff = monthDiff(rangeEnd, latest);
     setEndIndex(getMonthIndex(group.months, endDiff));
 
     forceRerender();
-  }
+  };
 
   useEffect(() => changeYear(0), []);
 
@@ -214,32 +234,41 @@ function CardioPlot({ name, group }: { name: string; group: PlotGroup }) {
 
         <Selection
           choices={["Distance", "Duration"]}
-          handleChoice={(index: number) => forceRerender(setShowDistance(index == 0))} />
+          handleChoice={(index: number) => forceRerender(setShowDistance(index == 0))}
+        />
 
         <View className="flex-row gap-2 items-center">
-          <Pressable
-            onPress={() => changeYear(-1)}
-            disabled={prevDisabled}>
-            <Feather name="arrow-left" size={18} color={prevDisabled ? "gray" : "black"} />
+          <Pressable onPress={() => changeYear(-1)} disabled={prevDisabled}>
+            <Feather
+              name="arrow-left"
+              size={18}
+              color={prevDisabled ? "gray" : "black"}
+            />
           </Pressable>
           <Text className="text-base"> {year} </Text>
-          <Pressable
-            onPress={() => changeYear(1)}
-            disabled={nextDisabled}>
-            <Feather name="arrow-right" size={18} color={nextDisabled ? "gray" : "black"} />
+          <Pressable onPress={() => changeYear(1)} disabled={nextDisabled}>
+            <Feather
+              name="arrow-right"
+              size={18}
+              color={nextDisabled ? "gray" : "black"}
+            />
           </Pressable>
         </View>
       </View>
       <Heatmap
         data={group.data.slice(startIndex, endIndex + 1)}
         tooltipLabel={showDistance ? "km" : "min"}
-        height={150} getDate={getDate} getValue={getValue} update={update} />
+        height={150}
+        getDate={getDate}
+        getValue={getValue}
+        update={update}
+      />
     </View>
   );
 }
 
 export default function ProgressPage() {
-  const workoutsState = useSelector(state => state.workouts);
+  const workoutsState = useSelector((state) => state.workouts);
 
   // map the data into a set of plot points, and group by exercise
   let exercises: Record<string, PlotGroup> = {};
@@ -247,15 +276,22 @@ export default function ProgressPage() {
     if (w.is_template) continue;
     for (const e of w.exercises) {
       const point = {
-        date: w.tag, weight: e.weight ?? 0,
-        duration: e.duration ?? 0, distance: e.distance ?? 0,
-        averageReps: e.reps.length ? e.reps.reduce((a, b) => a + b, 0) / e.reps.length : 0,
+        date: w.tag,
+        weight: e.weight ?? 0,
+        duration: e.duration ?? 0,
+        distance: e.distance ?? 0,
+        averageReps: e.reps.length
+          ? e.reps.reduce((a, b) => a + b, 0) / e.reps.length
+          : 0,
       };
 
       if (exercises[e.name] === undefined)
-        exercises[e.name] = { exercise_type: e.exercise_type, data: [point], months: [] };
-      else
-        exercises[e.name].data.push(point);
+        exercises[e.name] = {
+          exercise_type: e.exercise_type,
+          data: [point],
+          months: [],
+        };
+      else exercises[e.name].data.push(point);
     }
   }
 
@@ -275,8 +311,9 @@ export default function ProgressPage() {
 
   return (
     <ScrollContainer>
-      {Object.keys(exercises).length == 0 &&
-        <Empty messages={["You have no workout templates"]} />}
+      {Object.keys(exercises).length == 0 && (
+        <Empty messages={["You have no workout templates"]} />
+      )}
 
       <FlatList
         data={Object.keys(exercises)}
@@ -284,7 +321,8 @@ export default function ProgressPage() {
           if (exercises[item].exercise_type == ExerciseType.Resistance)
             return <ResistancePlot group={exercises[item]} name={item} />;
           return <CardioPlot group={exercises[item]} name={item} />;
-        }} />
+        }}
+      />
     </ScrollContainer>
   );
 }

@@ -12,30 +12,42 @@ export default function ExerciseStackLayout() {
         name="index"
         options={{
           title: "Workouts",
-          header: ({ route }) =>
+          header: ({ route }) => (
             <ExerciseNavbar
-              icons={icons} routes={routes}
-              panes={panes} route={route.name} />,
+              icons={icons}
+              routes={routes}
+              panes={panes}
+              route={route.name}
+            />
+          ),
         }}
       />
       <Stack.Screen
         name="progress"
         options={{
           title: "Progress",
-          header: ({ route }) =>
+          header: ({ route }) => (
             <ExerciseNavbar
-              icons={icons} routes={routes}
-              panes={panes} route={route.name} />,
+              icons={icons}
+              routes={routes}
+              panes={panes}
+              route={route.name}
+            />
+          ),
         }}
       />
       <Stack.Screen
         name="templates"
         options={{
           title: "Templates",
-          header: ({ route }) =>
+          header: ({ route }) => (
             <ExerciseNavbar
-              icons={icons} routes={routes}
-              panes={panes} route={route.name} />,
+              icons={icons}
+              routes={routes}
+              panes={panes}
+              route={route.name}
+            />
+          ),
         }}
       />
     </Stack>
