@@ -88,43 +88,46 @@ const userData = createSlice({
   }
 });
 
-interface Tag {
+export interface TagInfo {
   name: string;
   color: string;
-  selected: boolean;
+  selected?: boolean;
+  problematic?: boolean;
 }
 
-const eventsData = createSlice({
-  name: "events",
+const tagData = createSlice({
+  name: "tags",
   initialState: {
-    tags: [] as Tag[],
-    events: {} as Record<string, string[]>, // map date to tag name
+    tags: [] as TagInfo[],
+    taggedDates: {} as Record<string, string[]>, // map dates to tag names
   },
   reducers: {
-    addTag: (state, a: PayloadAction<Tag>) => { state.tags.push(a.payload); },
+    addTag: (state, a: PayloadAction<TagInfo>) => { state.tags.push(a.payload); },
     removeTag: (state, a: PayloadAction<number>) => { state.tags.splice(a.payload); },
-    updateTag: (state, a: PayloadAction<Action<Tag>>) => {
+    updateTag: (state, a: PayloadAction<Action<TagInfo>>) => {
       Object.assign(state.tags[a.payload.tagIndex!], a.payload.value);
     },
-    toggleEvent: (state, a: PayloadAction<Action<string>>) => {
-      // assign a tag to a date, or remove that tag from a date
-      let tagNames = state.events[a.payload.date!] ?? [];
+    // toggle a tag on a specific date: add it if missing, remove it otherwise
+    toggleDate: (state, a: PayloadAction<Action<string>>) => {
+      let tagNames = state.taggedDates[a.payload.date!] ?? [];
+
       const index = tagNames.findIndex(tagName => tagName == a.payload.value);
       if (index != -1)
         tagNames.splice(index, 1);
       else
         tagNames.push(a.payload.value);
-      state.events[a.payload.date!] = tagNames;
+
+      state.taggedDates[a.payload.date!] = tagNames;
     }
   }
 });
 
 export const workoutActions = workoutsSlice.actions;
 export const userDataActions = userData.actions;
-export const eventsActions = eventsData.actions;
+export const tagActions = tagData.actions;
 
 export const rootReducer = combineReducers({
   workouts: workoutsSlice.reducer,
   userData: userData.reducer,
-  events: eventsData.reducer,
+  tagData: tagData.reducer,
 });

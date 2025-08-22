@@ -16,7 +16,7 @@ export default function TabLayout() {
       screenOptions={({ route }) => {
         const icons = {
           "index": DumbellIcon, "exercise": DumbellIcon,
-          "food": FoodIcon, "events": CalendarIcon, "settings": GearIcon
+          "food": FoodIcon, "tags": CalendarIcon, "settings": GearIcon
         };
         const isIndex = route.name == "index";
 
@@ -41,8 +41,8 @@ export default function TabLayout() {
           name="exercise"
           options={{ title: "Exercise", headerShown: false }} />
         <Tabs.Screen
-          name="events"
-          options={{ title: "Events", headerShown: false }} />
+          name="tags"
+          options={{ title: "Tags", headerShown: false }} />
         <Tabs.Screen
           name="settings"
           options={{ title: "Settings", headerShown: false }} />

@@ -14,7 +14,9 @@ export async function request(method: string, endpoint: string, body?: object, j
   return data;
 }
 
-export function formatDate(date: Date) {
-  const opts = { year: 'numeric', month: 'long', day: 'numeric' };
-  return new Intl.DateTimeFormat('en-US', opts).format(date);
+export function formatDate(date: Date, onlyMonth?: boolean) {
+  const opts = onlyMonth !== undefined
+    ? { month: "long" }
+    : { year: "numeric", month: "long", day: "numeric" };
+  return new Intl.DateTimeFormat("en-US", opts).format(date);
 }
