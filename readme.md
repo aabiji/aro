@@ -1,9 +1,14 @@
-all in one to **track** your nutrition, exercise, periods and weight
+Our lives move like an arrow through time, twisting and changing course
+along the way. In the moment, it's easy to lose track or miss the details
+that help us understand ourselves better. That's where Aro comes in.
+Aro helps you track the key elements of your health, your nutrition,
+exercise, weight, periods and more, so your focus can stay where it belongs,
+on you.
 
 tech stack:
 - react native frontend using Expo, D3.js for charts, Nativewind for styling
-- postgresql database
-- python backend
+- postgresql database (sqlite for now)
+- golang backend
 
 icons:
 - https://thenounproject.com/icon/dumbbells-44534/

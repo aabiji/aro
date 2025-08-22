@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "athena",
-    "slug": "athena",
+    "name": "aro",
+    "slug": "aro",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "athena",
+    "scheme": "aro",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
