@@ -1,56 +1,68 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
+	"strconv"
+	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
-// http response middleware
-type JSONResponseWriter struct {
-	http.ResponseWriter
-	responseStatus int
-	response       any
-}
-
-func (w *JSONResponseWriter) Respond(status int, response any) {
-	w.responseStatus = status
-	w.response = response
-}
-
-func JSONResponseHandler(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		writer := &JSONResponseWriter{ResponseWriter: w}
-		next.ServeHTTP(writer, r)
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(writer.responseStatus)
-
-		if err := json.NewEncoder(w).Encode(writer.response); err != nil {
-			http.Error(w, "error encoding json", http.StatusInternalServerError)
-		}
-	})
-}
-
-// CORS middleware
-func CORS(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		origin := r.Header.Get("Origin")
-		allowedOrigins := []string{"https://localhost:8081"}
-		for _, allowed := range allowedOrigins {
-			if origin == allowed {
-				w.Header().Set("Access-Control-Allow-Origin", origin)
-			}
+func CORSMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		origin := c.GetHeader("Origin")
+		allowed := []string{"http://localhost:8081"}
+		if slices.Contains(allowed, origin) {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
 		}
 
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization")
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
 			return
 		}
-		next.ServeHTTP(w, r)
-	})
+
+		c.Next()
+	}
+}
+
+func AuthMiddleware(s *Server) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		parts := strings.Split(c.GetHeader("Authorization"), " ")
+		if len(parts) != 2 && parts[0] != "Bearer" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid auth header"})
+			return
+		}
+
+		token, err := verifyToken(parts[1], s.secrets["JWT_SECRET"])
+		if err != nil || !token.Valid {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid auth header"})
+			return
+		}
+
+		userId, err := token.Claims.GetSubject()
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid auth header"})
+			return
+		}
+
+		id, err := strconv.Atoi(userId)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid auth header"})
+			return
+		}
+
+		if user := s.GetUser(&User{ID: id}); user == nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid auth header"})
+			return
+		}
+
+		c.Set("userId", id)
+		c.Next()
+	}
 }
 
 func main() {
@@ -59,16 +71,16 @@ func main() {
 		panic(err)
 	}
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/login", server.HandleLogin)
-	mux.HandleFunc("/signup", server.HandleSignup)
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/" {
-			http.NotFound(w, r)
-		}
-	})
+	r := gin.Default()
+	r.POST("/login", server.HandleLogin)
+	r.POST("/signup", server.HandleSignup)
 
-	fmt.Println("Starting the server on port :8080")
-	handler := CORS(JSONResponseHandler(mux))
-	http.ListenAndServe(":8080", handler)
+	auth := r.Group("/auth")
+	auth.Use(AuthMiddleware(&server))
+
+	auth.POST("/workout", server.HandleCreateWorkout)
+	auth.DELETE("/workout", server.HandleDeleteWorkout)
+
+	fmt.Println("Server running on http://localhost:8080")
+	r.Run(":8080")
 }

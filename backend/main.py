@@ -73,7 +73,7 @@ class AuthRequest(BaseModel):
 def handle_login(request: AuthRequest):
   with db.get_session() as session:
     user = (
-      session.query(db.User)
+      session.query(db.UGser)
       .filter(db.User.email == request.email)
       .filter(db.User.password == request.password)
       .first()
