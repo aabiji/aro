@@ -23,7 +23,9 @@ export default function WorkoutStateSync({ children }) {
       if (workout.tag != today && !workout.is_template) continue; // ignore archived workouts
 
       try {
-        const json = await request("PUT", "/workout", workout, userData.jwt);
+        // update = delete the existing one then create a new one
+        await request("DELETE", `/auth/workout/${workout.id}`, undefined, userData.jwt);
+        const json = await request("POST", "/auth/workout", workout, userData.jwt);
         dispatch(
           workoutActions.updateWorkout({
             workoutIndex: i,

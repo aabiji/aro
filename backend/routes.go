@@ -2,46 +2,56 @@ package main
 
 import (
 	"fmt"
-	"strconv"
-
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
-
+	"gorm.io/datatypes"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
+// the same as gorm.Model, just with no json output
+type BaseModel struct {
+	ID        uint           `gorm:"primarykey" json:"id"`
+	CreatedAt time.Time      `json:"-"`
+	UpdatedAt time.Time      `json:"-"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
 // database models
 type User struct {
-	gorm.Model
-	Email    string
-	Password string
-	Settings Settings
-	Workouts []Workout
+	BaseModel
+	Email    string    `gorm:"uniqueIndex" json:"-"`
+	Password string    `json:"-"`
+	Settings Settings  `json:"settings" gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
+	Workouts []Workout `json:"workouts" gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
 }
 
 type Workout struct {
-	gorm.Model
-	UserId    uint
-	Template  bool
-	Tag       string // name or date
-	Exercises []Exercise
+	BaseModel
+	UserID    uint       `json:"-"`
+	Template  bool       `json:"is_template"`
+	Tag       string     `json:"tag"` // name or date
+	Exercises []Exercise `json:"exercises" gorm:"foreignKey:WorkoutID;constraint:OnDelete:CASCADE"`
 }
 
 type Exercise struct {
-	gorm.Model
-	Name         string
-	ExerciseType int
-	Reps         []int
-	Weight       int
-	Duration     int
-	Distance     int
+	BaseModel
+	WorkoutID    uint                     `json:"-"`
+	Name         string                   `json:"name"`
+	ExerciseType int                      `json:"exercise_type"`
+	Reps         datatypes.JSONSlice[int] `gorm:"type:json" json:"reps"` // []int
+	Weight       int                      `json:"weight"`
+	Duration     int                      `json:"duration"`
+	Distance     int                      `json:"distance"`
 }
 
 type Settings struct {
-	gorm.Model
-	ImperialUnits bool
+	BaseModel
+	UserID        uint `gorm:"uniqueIndex" json:"-"`
+	ImperialUnits bool `json:"use_imperial"`
 }
 
 // server and routes
@@ -59,7 +69,9 @@ func NewServer() (Server, error) {
 		return Server{}, err
 	}
 
-	server.db.AutoMigrate(&User{}, &Workout{}, &Exercise{}, &Settings{})
+	if err := server.db.AutoMigrate(&User{}, &Workout{}, &Exercise{}, &Settings{}); err != nil {
+		return Server{}, err
+	}
 
 	server.secrets, err = loadEnvVars(".env")
 	return server, err
@@ -70,52 +82,61 @@ type AuthInfo struct {
 	Password string `json:"password"`
 }
 
-func (s *Server) GetUser(query *User) *User {
-	var user *User
-	result := s.db.Where(query).First(user)
+func (s *Server) GetUser(id uint64) *User {
+	var user User
+	result := s.db.First(&user, id)
 	if result.Error != nil {
 		return nil
 	}
-	return user
+	return &user
 }
 
-func (s *Server) HandleLogin(c *gin.Context) {
+func (s *Server) Login(c *gin.Context) {
 	var req AuthInfo
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	user := s.GetUser(&User{Email: req.Email, Password: req.Password})
-	if user == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "User not found"})
+	var user User
+	result := s.db.Where(&User{Email: req.Email, Password: req.Password}).First(&user)
+	if result.Error != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Account not found"})
 		return
 	}
 
 	token, err := createToken(fmt.Sprintf("%d", user.ID), s.secrets["JWT_SECRET"])
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Coudln't create the JWT"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't create the jwt"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"jwt": token})
 }
 
-func (s *Server) HandleSignup(c *gin.Context) {
+func (s *Server) Signup(c *gin.Context) {
 	var req AuthInfo
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	user := User{
-		Email:    req.Email,
-		Password: req.Password,
-		Settings: Settings{ImperialUnits: true},
-		Workouts: []Workout{},
+	var existing User
+	result := s.db.Where(&User{Email: req.Email}).First(&existing)
+	if result.Error == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Account already exists"})
+		return
 	}
+
+	user := User{Email: req.Email, Password: req.Password}
 	if result := s.db.Create(&user); result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "error creating user"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating user"})
+		return
+	}
+
+	settings := Settings{UserID: user.ID, ImperialUnits: true}
+	if err := s.db.Create(&settings).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating settings"})
 		return
 	}
 
@@ -126,6 +147,75 @@ func (s *Server) HandleSignup(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"jwt": token})
+}
+
+func (s *Server) GetUserInfo(c *gin.Context) {
+	var fullUser User
+	user := c.MustGet("user").(*User)
+
+	r := s.db.Preload("Settings").Preload("Workouts.Exercises").First(&fullUser, user.ID)
+	if r.Error != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to get user"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"user": fullUser})
+}
+
+type SettingsInfo struct {
+	ImperialUnits bool `json:"use_imperial"`
+}
+
+func (s *Server) UpdateUserSettings(c *gin.Context) {
+	var req SettingsInfo
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var fullUser User
+	user := c.MustGet("user").(*User)
+	if s.db.Preload("Settings").First(&fullUser, user.ID).Error != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to get user"})
+		return
+	}
+
+	fullUser.Settings.ImperialUnits = req.ImperialUnits
+	if err := s.db.Save(&fullUser.Settings).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update settings"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{})
+}
+
+func (s *Server) DeleteUser(c *gin.Context) {
+	user := c.MustGet("user").(*User)
+
+	// get all workout ids
+	subQuery := s.db.Model(&Workout{}).Select("id").Where("user_id = ?", user.ID)
+
+	if err := s.db.Where("workout_id IN (?)", subQuery).Delete(&Exercise{}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete exercises"})
+		return
+	}
+
+	if err := s.db.Where(&Workout{UserID: user.ID}).Delete(&Workout{}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete workouts"})
+		return
+	}
+
+	if err := s.db.Where(&Settings{UserID: user.ID}).Delete(&Settings{}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete settings"})
+		return
+	}
+
+	if err := s.db.Delete(&User{}, user.ID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{})
 }
 
 type ExerciseInfo struct {
@@ -145,49 +235,68 @@ type WorkoutInfo struct {
 	Tag       string         `json:"tag"`
 }
 
-func (s *Server) HandleCreateWorkout(c *gin.Context) {
-	userId, _ := c.Get("userId")
-
+func (s *Server) CreateWorkout(c *gin.Context) {
 	var req WorkoutInfo
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	workout := Workout{UserId: userId.(uint), Template: req.Template, Tag: req.Tag}
+	user := c.MustGet("user").(*User)
+	workout := Workout{UserID: user.ID, Template: req.Template, Tag: req.Tag}
+
 	for _, exercise := range req.Exercises {
 		workout.Exercises = append(workout.Exercises, Exercise{
-			Name: exercise.Name, ExerciseType: exercise.ExerciseType,
-			Reps: exercise.Reps, Weight: exercise.Weight,
-			Duration: exercise.Duration, Distance: exercise.Distance,
+			Name:         exercise.Name,
+			ExerciseType: exercise.ExerciseType,
+			Weight:       exercise.Weight,
+			Duration:     exercise.Duration,
+			Distance:     exercise.Distance,
+			Reps:         datatypes.NewJSONSlice(exercise.Reps),
 		})
 	}
 
 	if result := s.db.Create(&workout); result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "error creating workout"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating workout"})
 		return
 	}
 
-	// TODO: respond with json {"workout": workout}
+	var fullWorkout Workout
+	if err := s.db.Preload("Exercises").First(&fullWorkout, workout.ID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load workout"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"workout": fullWorkout})
 }
 
-func (s *Server) HandleDeleteWorkout(c *gin.Context) {
-	userId, _ := c.Get("userId")
-
-	id, err := strconv.Atoi(c.Params.ByName("id"))
+func (s *Server) DeleteWorkout(c *gin.Context) {
+	idInt, err := strconv.ParseUint(c.Param("id"), 10, strconv.IntSize)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid workout id"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid workout id"})
+		return
+	}
+	id := uint(idInt)
+	user := c.MustGet("user").(*User)
+
+	// verify workout exists and belongs to the user
+	var workout Workout
+	if err := s.db.Where("id = ? AND user_id = ?", id, user.ID).First(&workout).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Workout not found"})
 		return
 	}
 
-	query := &Workout{UserId: userId.(uint), ID: id}
-	if result := s.db.Delete(query); result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "error deleting workout"})
+	// delete exercises
+	if err := s.db.Where("workout_id = ?", workout.ID).Delete(&Exercise{}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error deleting exercises"})
+		return
+	}
+
+	// delete workout
+	if err := s.db.Delete(&workout).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error deleting workout"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{})
 }
-
-//var workout Workout
-//db.Preload("Exercises").First(&workout, workoutID)

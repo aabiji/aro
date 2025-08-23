@@ -32,7 +32,7 @@ export default function TemplatesPage() {
         tag: templateName,
         exercises: [],
       };
-      const json = await request("POST", "/workout", body, userData.jwt);
+      const json = await request("POST", "/auth/workout", body, userData.jwt);
       dispatch(workoutActions.addWorkout({ value: json.workout }));
     } catch (err) {
       console.log("ERROR!", err.message);

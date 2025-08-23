@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { userDataActions, workoutActions } from "@/lib/state";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -29,9 +29,12 @@ export default function Settings() {
   const userData = useSelector((state) => state.userData);
   const dispatch = useDispatch();
 
+  const [deleted, setDeleted] = useState(false);
+
   const deleteAccount = async () => {
+    setDeleted(true);
     try {
-      await request("DELETE", "/user", undefined, userData.jwt);
+      await request("DELETE", "/auth/user", undefined, userData.jwt);
       dispatch(userDataActions.clear());
       dispatch(workoutActions.clear());
       router.replace("/");
@@ -41,10 +44,11 @@ export default function Settings() {
   };
 
   const syncSettings = async () => {
+    if (deleted) return;
     try {
       const body = { ...userData };
       delete body.jwt;
-      await request("POST", "/user", body, userData.jwt);
+      await request("POST", "/auth/user", body, userData.jwt);
     } catch (err) {
       console.log("ERROR!", err.message);
     }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"slices"
 	"strconv"
@@ -10,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// enable cors for the frontend
 func CORSMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		origin := c.GetHeader("Origin")
@@ -21,7 +21,7 @@ func CORSMiddleware() gin.HandlerFunc {
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization")
 		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
+			c.AbortWithStatus(http.StatusNoContent)
 			return
 		}
 
@@ -29,6 +29,8 @@ func CORSMiddleware() gin.HandlerFunc {
 	}
 }
 
+// verify the json web token in the authorization header
+// pass in the user to all subsequent routes if the user the jwt is refering to exists
 func AuthMiddleware(s *Server) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		parts := strings.Split(c.GetHeader("Authorization"), " ")
@@ -49,18 +51,19 @@ func AuthMiddleware(s *Server) gin.HandlerFunc {
 			return
 		}
 
-		id, err := strconv.Atoi(userId)
+		id, err := strconv.ParseUint(userId, 10, strconv.IntSize)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid auth header"})
 			return
 		}
 
-		if user := s.GetUser(&User{ID: id}); user == nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid auth header"})
+		user := s.GetUser(id)
+		if user == nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "user not found"})
 			return
 		}
 
-		c.Set("userId", id)
+		c.Set("user", user)
 		c.Next()
 	}
 }
@@ -72,15 +75,21 @@ func main() {
 	}
 
 	r := gin.Default()
-	r.POST("/login", server.HandleLogin)
-	r.POST("/signup", server.HandleSignup)
+	r.Use(CORSMiddleware())
 
 	auth := r.Group("/auth")
 	auth.Use(AuthMiddleware(&server))
 
-	auth.POST("/workout", server.HandleCreateWorkout)
-	auth.DELETE("/workout", server.HandleDeleteWorkout)
+	r.POST("/login", server.Login)
+	r.POST("/signup", server.Signup)
 
-	fmt.Println("Server running on http://localhost:8080")
+	auth.GET("/user", server.GetUserInfo)
+	auth.POST("/user", server.UpdateUserSettings)
+	auth.DELETE("/user", server.DeleteUser)
+
+	auth.POST("/workout", server.CreateWorkout)
+	auth.DELETE("/workout/:id", server.DeleteWorkout)
+
+	gin.SetMode(gin.DebugMode)
 	r.Run(":8080")
 }

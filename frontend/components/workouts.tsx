@@ -41,7 +41,7 @@ function WorkoutTemplate({ workout, index }: ViewProps) {
 
   const deleteTemplate = async () => {
     try {
-      await request("DELETE", `/workout?id=${workout.id}`, undefined, userData.jwt);
+      await request("DELETE", `/auth/workout?id=${workout.id}`, undefined, userData.jwt);
       dispatch(workoutActions.removeWorkout({ workoutIndex: index, value: null }));
     } catch (err) {
       console.log("ERROR!", err.message);

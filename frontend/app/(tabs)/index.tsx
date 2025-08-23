@@ -56,9 +56,9 @@ export default function Index() {
 
     try {
       const jwtJson = await request("POST", endpoint, body);
-      const dataJson = await request("GET", "/user", undefined, jwtJson.jwt);
-      dispatch(userDataActions.update({ jwt: jwtJson.jwt, ...dataJson.preferences }));
-      dispatch(workoutActions.set(dataJson.workouts));
+      const dataJson = await request("GET", "/auth/user", undefined, jwtJson.jwt);
+      dispatch(userDataActions.update({ jwt: jwtJson.jwt, ...dataJson.user.settings }));
+      dispatch(workoutActions.set(dataJson.user.workouts));
       setAuthenticated(true);
     } catch (err) {
       setErrMsg(err.message);

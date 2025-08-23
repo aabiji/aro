@@ -10,6 +10,11 @@ tech stack:
 - postgresql database (sqlite for now)
 - golang backend
 
+```bash
+bunx expo run android # run android
+bunx expo start # run web
+```
+
 icons:
 - https://thenounproject.com/icon/dumbbells-44534/
 - https://thenounproject.com/icon/dumbbell-157388/
