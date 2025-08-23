@@ -114,7 +114,8 @@ func (s *Server) GetUserInfo(c *gin.Context) {
 
 	r := s.db.Preload("Settings").
 		Preload("Workouts.Exercises").
-		Preload("TaggedDates.Tags").
+		Preload("TaggedDates").
+		Preload("Tags").
 		First(&fullUser, user.ID)
 	if r.Error != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to get user"})
@@ -287,4 +288,27 @@ func (s *Server) SetTag(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"tag": tag})
+}
+
+func (s *Server) DeleteTag(c *gin.Context) {
+	idInt, err := strconv.ParseUint(c.Param("id"), 10, strconv.IntSize)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tag id"})
+		return
+	}
+	id := uint(idInt)
+	user := c.MustGet("user").(*User)
+
+	var tag Tag
+	if err := s.db.Where("id = ? AND user_id = ?", id, user.ID).First(&tag).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Tag not found"})
+		return
+	}
+
+	if err := s.db.Delete(&tag).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error deleting tag"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{})
 }

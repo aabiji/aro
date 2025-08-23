@@ -91,6 +91,7 @@ func main() {
 	auth.DELETE("/workout/:id", server.DeleteWorkout)
 
 	auth.POST("/tag", server.SetTag)
+	auth.DELETE("/tag/:id", server.DeleteTag)
 
 	gin.SetMode(gin.DebugMode)
 	r.Run(":8080")

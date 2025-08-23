@@ -17,9 +17,9 @@ interface CalendarTileProps {
 
 function CalendarTile({ date, disabled, toggle }: CalendarTileProps) {
   const tagData = useSelector((state) => state.tagData);
-  const tagNames = tagData.taggedDates[formatDate(date!)] ?? [];
-  const colors = tagNames.map(
-    (name: string) => tagData.tags.find((tag: TagInfo) => tag.name == name).color,
+  const tagIds = tagData.taggedDates[formatDate(date!)] ?? [];
+  const colors = tagIds.map(
+    (id: number) => tagData.tags.find((tag: TagInfo) => tag.id == id).color,
   );
   const empty = date === undefined || toggle === undefined;
 
@@ -30,7 +30,7 @@ function CalendarTile({ date, disabled, toggle }: CalendarTileProps) {
       className="w-full p-[5px] aspect-square bg-gray-100"
     >
       {!empty && (
-        <View className="flex-column h-full">
+        <View className="flex-column h-full gap-[3px]">
           {colors.map((c: string, index: number) => (
             <View key={index} style={{ flex: 1, backgroundColor: c, opacity: 0.5 }} />
           ))}
@@ -46,7 +46,7 @@ export default function TagsPage() {
   const tagData = useSelector((state) => state.tagData);
 
   const [modalVisible, setModalVisible] = useState(false);
-  const [tagIndex, setTagIndex] = useState(-1);
+  const [selectedTag, setSelectedTag] = useState(-1);
 
   const [date, setDate] = useState(new Date());
   const [monthLength, setMonthLength] = useState(0);
@@ -70,29 +70,13 @@ export default function TagsPage() {
     });
   };
 
-  const selectTag = (index: number) => {
-    // can only select one at a time
-    if (tagIndex != -1) {
-      dispatch(
-        tagActions.updateTag({
-          tagIndex: tagIndex,
-          value: { selected: !tagData.tags[tagIndex].selected },
-        }),
-      );
-    }
-
-    const selected = !tagData.tags[index].selected;
-    setTagIndex(selected ? index : -1);
-    dispatch(tagActions.updateTag({ tagIndex: index, value: { selected } }));
-  };
-
   // add/remove tag to a calendar date
   const tagDay = (date: Date) => {
-    if (tagIndex == -1) return;
+    if (selectedTag == -1) return;
     dispatch(
       tagActions.toggleDate({
         date: formatDate(date),
-        value: tagData.tags[tagIndex].name,
+        value: tagData.tags[selectedTag].id,
       }),
     );
   };
@@ -108,7 +92,8 @@ export default function TagsPage() {
 
       <View className="mb-2 border-b border-gray-200 flex-row items-center flex-wrap h-max-[100px]">
         {tagData.tags.map((tag: TagInfo, index: number) => (
-          <Tag key={index} tag={tag} setSelected={() => selectTag(index)} />
+          <Tag key={index} tag={tag} selected={selectedTag == index}
+            setSelected={() => setSelectedTag(selectedTag == index ? -1 : index)} />
         ))}
       </View>
 
@@ -138,7 +123,7 @@ export default function TagsPage() {
               <CalendarTile
                 date={empty ? undefined : d}
                 key={i}
-                disabled={empty || tagIndex == -1}
+                disabled={empty || selectedTag == -1}
                 toggle={() => tagDay(d)}
               />
             );

@@ -89,37 +89,32 @@ const userData = createSlice({
 });
 
 export interface TagInfo {
+  id?: number;
   name: string;
   color: string;
-  selected?: boolean;
-  problematic?: boolean;
 }
 
 const tagData = createSlice({
   name: "tags",
   initialState: {
     tags: [] as TagInfo[],
-    taggedDates: {} as Record<string, string[]>, // map dates to tag names
+    taggedDates: {} as Record<string, number[]>, // map dates to tag ids
   },
   reducers: {
-    addTag: (state, a: PayloadAction<TagInfo>) => {
-      state.tags.push(a.payload);
-    },
-    removeTag: (state, a: PayloadAction<number>) => {
-      state.tags.splice(a.payload);
-    },
+    addTag: (state, a: PayloadAction<TagInfo>) => { state.tags.push(a.payload); },
+    removeTag: (state, a: PayloadAction<number>) => { state.tags.splice(a.payload); },
     updateTag: (state, a: PayloadAction<Action<TagInfo>>) => {
       Object.assign(state.tags[a.payload.tagIndex!], a.payload.value);
     },
     // toggle a tag on a specific date: add it if missing, remove it otherwise
-    toggleDate: (state, a: PayloadAction<Action<string>>) => {
-      let tagNames = state.taggedDates[a.payload.date!] ?? [];
+    toggleDate: (state, a: PayloadAction<Action<number>>) => {
+      let tagIds = state.taggedDates[a.payload.date!] ?? [];
 
-      const index = tagNames.findIndex((tagName) => tagName == a.payload.value);
-      if (index != -1) tagNames.splice(index, 1);
-      else tagNames.push(a.payload.value);
+      const index = tagIds.findIndex((id) => id == a.payload.value);
+      if (index != -1) tagIds.splice(index, 1);
+      else tagIds.push(a.payload.value);
 
-      state.taggedDates[a.payload.date!] = tagNames;
+      state.taggedDates[a.payload.date!] = tagIds;
     },
   },
 });

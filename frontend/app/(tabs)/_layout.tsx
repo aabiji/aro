@@ -28,10 +28,10 @@ export default function TabLayout() {
           tabBarStyle: isIndex
             ? { display: "none" }
             : {
-                backgroundColor: "transparent",
-                borderTopColor: "#d1d5db",
-                elevation: 0,
-              },
+              backgroundColor: "transparent",
+              borderTopColor: "#d1d5db",
+              elevation: 0,
+            },
           tabBarActiveTintColor: "#60a5fa",
           tabBarInactiveTintColor: "#6b7280",
           tabBarIcon: ({ color }) => {

@@ -6,33 +6,32 @@ import { FlatList, Modal, Pressable, Text, TextInput, View } from "react-native"
 import ColorPicker, { Panel3 } from "reanimated-color-picker";
 
 import Feather from "@expo/vector-icons/Feather";
+import { request } from "@/lib/utils";
 
 interface TagProps {
   tag: TagInfo;
-  setSelected?: (value: boolean) => void;
+  selected?: boolean;
+  setSelected?: () => void;
   setColor?: (color: string) => void;
   setName?: (name: string) => void;
   showPicker?: (mouseX: number, mouseY: number) => void;
   removeTag?: () => void;
 }
 
-export function Tag({ tag, setSelected, showPicker, setName, removeTag }: TagProps) {
+export function Tag({ tag, selected, setSelected, showPicker, setName, removeTag }: TagProps) {
   const editable =
     setName !== undefined && showPicker !== undefined && removeTag !== undefined;
-
-  const select = () => {
-    if (!showPicker && !editable) setSelected(!tag.selected);
-  };
 
   const style = !editable
     ? `
       p-2 border-2 rounded-xl w-fit h-fit flex-row items-center cursor-pointer
-      ${tag.selected ? "border-gray-400" : "border-gray-200"}`
-    : `w-[100%] p-2 border-b border-t ${tag.problematic ? "border-red-500" : "border-gray-200"}`;
+      ${selected ? "border-gray-400" : "border-gray-200"}`
+    : `w-[100%] p-2 border-b border-t border-gray-200`;
   const pickerSize = editable ? 30 : 25;
 
   return (
-    <Pressable onPress={select} className={style}>
+    <Pressable className={style}
+      onPress={() => { if (!showPicker && !editable) setSelected() }}>
       <View className="relative h-fit flex-row gap-2 items-center">
         <Pressable
           disabled={!editable}
@@ -55,7 +54,7 @@ export function Tag({ tag, setSelected, showPicker, setName, removeTag }: TagPro
             onChangeText={(value) => setName(value)}
           />
         ) : (
-          <Text className={`ml-2 text-base ${tag.selected ? "font-bold" : ""}`}>
+          <Text className={`ml-2 text-base ${selected ? "font-bold" : ""}`}>
             {tag.name}
           </Text>
         )}
@@ -72,6 +71,7 @@ export function Tag({ tag, setSelected, showPicker, setName, removeTag }: TagPro
 
 export function TagManager({ visible, close }: { visible: boolean; close: () => void }) {
   const dispatch = useDispatch();
+  const userData = useSelector((state) => state.userData);
   const tagData = useSelector((state) => state.tagData);
 
   const [showPicker, setShowPicker] = useState(false);
@@ -84,38 +84,37 @@ export function TagManager({ visible, close }: { visible: boolean; close: () => 
     setPickerPos({ x, y });
   };
 
-  const updateTag = (name: string, index: number) => {
-    // cannot have duplicates
-    const problematic = tagData.tags.findIndex((tag) => tag.name == name.trim()) != -1;
-
-    if (index == -1) {
-      dispatch(
-        tagActions.addTag({
-          name,
-          color: "#000000",
-          selected: false,
-          problematic,
-        }),
-      );
-    } else {
-      dispatch(
-        tagActions.updateTag({
-          tagIndex: index,
-          value: { name, problematic },
-        }),
-      );
+  const updateTag = async (name: string, index: number) => {
+    if (index == -1) { // create tag
+      try {
+        const t = { name, color: "#000000" };
+        const json = await request("POST", "/auth/tag", t, userData.jwt);
+        dispatch(tagActions.addTag(json.tag));
+      } catch (err) {
+        console.log(err.message);
+      }
+      return;
     }
-  };
 
-  const handleClose = () => {
-    const invalid = tagData.tags.findIndex((tag) => tag.problematic) != -1;
-    if (!invalid) close();
-  };
+    dispatch(tagActions.updateTag({ tagIndex: index, value: { name } }));
+    // TODO: unified way to sync tag updates??
+  }
+
+  const removeTag = async (index: number) => {
+    try {
+      const id = tagData.tags[index].id;
+      await request("DELETE", `/auth/tag?id=${id}`, undefined, userData.jwt);
+      dispatch(tagActions.removeTag(index));
+    } catch (err) {
+      console.log(err.message);
+    }
+    // TODO: remove tag from tagged dates efficiently
+  }
 
   return (
     <Modal transparent animationType="fade" visible={visible} onRequestClose={close}>
       <Pressable
-        onPress={handleClose}
+        onPress={close}
         className="flex-1"
         style={{ backgroundColor: "rgba(0, 0, 0, 0.3)", cursor: "default" }}
       >
@@ -142,7 +141,7 @@ export function TagManager({ visible, close }: { visible: boolean; close: () => 
                 tag={item}
                 showPicker={(mouseX, mouseY) => showTagPicker(mouseX, mouseY, index)}
                 setName={(name: string) => updateTag(name, index)}
-                removeTag={() => dispatch(tagActions.removeTag(index))}
+                removeTag={() => removeTag(index)}
               />
             )}
           />

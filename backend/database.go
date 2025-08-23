@@ -44,14 +44,14 @@ type Exercise struct {
 
 type Tag struct {
 	BaseModel
-	UserID uint   `gorm:"uniqueIndex" json:"-"`
+	UserID uint   `json:"-"`
 	Name   string `json:"name"`
 	Color  string `json:"color"`
 }
 
 type TaggedDate struct {
 	BaseModel
-	UserID uint                        `gorm:"uniqueIndex" json:"-"`
+	UserID uint                        `json:"-"`
 	Date   string                      `json:"date"`
 	Tags   datatypes.JSONSlice[string] `gorm:"type:json" json:"tagNames"`
 }
