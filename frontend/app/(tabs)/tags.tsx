@@ -100,7 +100,7 @@ export default function TagsPage() {
   return (
     <ScrollContainer>
       <View className="flex-row justify-between">
-        <Text className="text-xl">Mark events</Text>
+        <Text className="text-xl">Tag dates</Text>
         <Pressable onPress={() => setModalVisible(true)}>
           <Feather name="command" color="black" size={18} />
         </Pressable>

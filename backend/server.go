@@ -4,55 +4,12 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/datatypes"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
-
-// the same as gorm.Model, just with no json output
-type BaseModel struct {
-	ID        uint           `gorm:"primarykey" json:"id"`
-	CreatedAt time.Time      `json:"-"`
-	UpdatedAt time.Time      `json:"-"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
-}
-
-// database models
-type User struct {
-	BaseModel
-	Email    string    `gorm:"uniqueIndex" json:"-"`
-	Password string    `json:"-"`
-	Settings Settings  `json:"settings" gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
-	Workouts []Workout `json:"workouts" gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
-}
-
-type Workout struct {
-	BaseModel
-	UserID    uint       `json:"-"`
-	Template  bool       `json:"is_template"`
-	Tag       string     `json:"tag"` // name or date
-	Exercises []Exercise `json:"exercises" gorm:"foreignKey:WorkoutID;constraint:OnDelete:CASCADE"`
-}
-
-type Exercise struct {
-	BaseModel
-	WorkoutID    uint                     `json:"-"`
-	Name         string                   `json:"name"`
-	ExerciseType int                      `json:"exercise_type"`
-	Reps         datatypes.JSONSlice[int] `gorm:"type:json" json:"reps"` // []int
-	Weight       int                      `json:"weight"`
-	Duration     int                      `json:"duration"`
-	Distance     int                      `json:"distance"`
-}
-
-type Settings struct {
-	BaseModel
-	UserID        uint `gorm:"uniqueIndex" json:"-"`
-	ImperialUnits bool `json:"use_imperial"`
-}
 
 // server and routes
 type Server struct {
@@ -63,17 +20,19 @@ type Server struct {
 func NewServer() (Server, error) {
 	var err error
 	server := Server{}
+	server.secrets, err = loadEnvVars(".env")
 
 	server.db, err = gorm.Open(sqlite.Open("database.db"), &gorm.Config{})
 	if err != nil {
 		return Server{}, err
 	}
 
-	if err := server.db.AutoMigrate(&User{}, &Workout{}, &Exercise{}, &Settings{}); err != nil {
+	err = server.db.AutoMigrate(&User{}, &Workout{}, &Exercise{},
+		&Settings{}, &Tag{}, &TaggedDate{})
+	if err != nil {
 		return Server{}, err
 	}
 
-	server.secrets, err = loadEnvVars(".env")
 	return server, err
 }
 
@@ -153,7 +112,10 @@ func (s *Server) GetUserInfo(c *gin.Context) {
 	var fullUser User
 	user := c.MustGet("user").(*User)
 
-	r := s.db.Preload("Settings").Preload("Workouts.Exercises").First(&fullUser, user.ID)
+	r := s.db.Preload("Settings").
+		Preload("Workouts.Exercises").
+		Preload("TaggedDates.Tags").
+		First(&fullUser, user.ID)
 	if r.Error != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to get user"})
 		return
@@ -224,14 +186,14 @@ type ExerciseInfo struct {
 	ExerciseType int    `json:"exercise_type"`
 	Reps         []int  `json:"reps,omitempty"`
 	Weight       int    `json:"weight,omitempty"`
-	Distance     int    `json:"distance"`
-	Duration     int    `json:"duration"`
+	Distance     int    `json:"distance,omitempty"`
+	Duration     int    `json:"duration,omitempty"`
 }
 
 type WorkoutInfo struct {
 	Id        int            `json:"id,omitempty"`
 	Exercises []ExerciseInfo `json:"exercises"`
-	Template  bool           `json:"is_template"`
+	Template  bool           `json:"isTemplate"`
 	Tag       string         `json:"tag"`
 }
 
@@ -299,4 +261,30 @@ func (s *Server) DeleteWorkout(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{})
+}
+
+type TagInfo struct {
+	Id    int    `json:"id,omitempty"`
+	Name  string `json:"name"`
+	Color string `json:"color"`
+}
+
+func (s *Server) SetTag(c *gin.Context) {
+	var req TagInfo
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	user := c.MustGet("user").(*User)
+	tag := Tag{
+		BaseModel: BaseModel{ID: uint(req.Id)},
+		UserID:    user.ID, Name: req.Name, Color: req.Color}
+
+	if result := s.db.Save(&tag); result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating/updating tag"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"tag": tag})
 }

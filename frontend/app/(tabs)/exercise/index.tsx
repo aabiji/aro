@@ -30,16 +30,10 @@ export default function Index() {
 
   const addWorkout = async (templateName: string) => {
     const template = workoutsState.workouts.find((w) => w.tag == templateName);
-    let body = {
-      id: null,
-      is_template: false,
-      tag: today,
-      exercises: [] as ExerciseInfo[],
-    };
+    let body = { is_template: false, tag: today, exercises: [] as ExerciseInfo[] };
 
     for (const e of template.exercises) {
       body.exercises.push({
-        id: null,
         name: e.name,
         exercise_type: e.exercise_type,
         reps: [],

@@ -27,7 +27,6 @@ export default function TemplatesPage() {
 
     try {
       const body = {
-        id: null,
         is_template: true,
         tag: templateName,
         exercises: [],

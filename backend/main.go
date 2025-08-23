@@ -35,31 +35,31 @@ func AuthMiddleware(s *Server) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		parts := strings.Split(c.GetHeader("Authorization"), " ")
 		if len(parts) != 2 && parts[0] != "Bearer" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid auth header"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid auth header"})
 			return
 		}
 
 		token, err := verifyToken(parts[1], s.secrets["JWT_SECRET"])
 		if err != nil || !token.Valid {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid auth header"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid jwt"})
 			return
 		}
 
 		userId, err := token.Claims.GetSubject()
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid auth header"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid jwt"})
 			return
 		}
 
 		id, err := strconv.ParseUint(userId, 10, strconv.IntSize)
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid auth header"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid user id"})
 			return
 		}
 
 		user := s.GetUser(id)
 		if user == nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "user not found"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid user id"})
 			return
 		}
 
@@ -89,6 +89,8 @@ func main() {
 
 	auth.POST("/workout", server.CreateWorkout)
 	auth.DELETE("/workout/:id", server.DeleteWorkout)
+
+	auth.POST("/tag", server.SetTag)
 
 	gin.SetMode(gin.DebugMode)
 	r.Run(":8080")

@@ -17,18 +17,18 @@ interface Action<T> {
 
 // NOTE: see the corresponding backend api request types
 export interface ExerciseInfo {
-  id: number | null;
+  id?: number;
   exercise_type: ExerciseType;
   name: string;
-  weight: number | null;
-  reps: number[] | null;
-  duration: number | null;
-  distance: number | null;
+  weight: number;
+  reps: number[];
+  duration: number;
+  distance: number;
 }
 
 export interface WorkoutInfo {
-  id: number | null;
-  is_template: boolean;
+  id: number;
+  isTemplate: boolean;
   exercises: ExerciseInfo[];
   tag: string;
 }
@@ -37,9 +37,6 @@ const workoutsSlice = createSlice({
   name: "workout",
   initialState: { workouts: [] as WorkoutInfo[] },
   reducers: {
-    clear: (state) => {
-      state.workouts = [];
-    },
     set: (state, a: PayloadAction<WorkoutInfo[]>) => {
       state.workouts = a.payload;
     },
@@ -61,13 +58,7 @@ const workoutsSlice = createSlice({
     },
 
     addExercise: (state, a: PayloadAction<Action<ExerciseInfo>>) => {
-      // default to null instead of undefined so that the object's schea is valid
-      const nullableExerciseFields = ["id", "weight", "reps", "duration", "distance"];
-      let exercise = a.payload.value;
-      for (const field of nullableExerciseFields) {
-        if (exercise[field] === undefined) exercise[field] = null;
-      }
-      state.workouts[a.payload.workoutIndex!].exercises.push(exercise);
+      state.workouts[a.payload.workoutIndex!].exercises.push(a.payload.value);
     },
 
     removeExercise: (state, a: PayloadAction<Action<null>>) => {
@@ -89,17 +80,11 @@ const workoutsSlice = createSlice({
 const userData = createSlice({
   name: "user-data",
   initialState: {
-    jwt: "",
-    use_imperial: true,
+    jwt: "", id: 0,
+    useImperial: true,
   },
   reducers: {
-    update: (state, a: PayloadAction<object>) => {
-      Object.assign(state, a.payload);
-    },
-    clear: (state) => {
-      state.jwt = "";
-      state.use_imperial = true;
-    },
+    update: (state, a: PayloadAction<object>) => { Object.assign(state, a.payload); },
   },
 });
 

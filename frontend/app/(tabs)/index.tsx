@@ -11,7 +11,7 @@ import { ScrollContainer } from "@/components/container";
 export default function Index() {
   const dispatch = useDispatch();
   const userData = useSelector((state) => state.userData);
-  const [authenticated, setAuthenticated] = useState(userData.jwt.length > 0);
+  const authenticated = userData.jwt.length > 0;
   // TODO: what to do when the jwt expires?
 
   const [isLogin, setIsLogin] = useState(true);
@@ -59,7 +59,6 @@ export default function Index() {
       const dataJson = await request("GET", "/auth/user", undefined, jwtJson.jwt);
       dispatch(userDataActions.update({ jwt: jwtJson.jwt, ...dataJson.user.settings }));
       dispatch(workoutActions.set(dataJson.user.workouts));
-      setAuthenticated(true);
     } catch (err) {
       setErrMsg(err.message);
     }
@@ -74,7 +73,7 @@ export default function Index() {
   return (
     <ScrollContainer>
       <View className="m-auto w-[65%]">
-        <Text className="text-center text-2xl font-bold mb-4">athena</Text>
+        <Text className="text-center text-2xl font-bold mb-4">aro</Text>
 
         <View className="bg-white p-4">
           {errMsg.length > 0 && (

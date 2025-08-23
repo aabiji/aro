@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { userDataActions, workoutActions } from "@/lib/state";
 import { useFocusEffect, useRouter } from "expo-router";
+import { persistor } from "@/lib/storage";
 import { request } from "@/lib/utils";
 
 import { Pressable, Text, View } from "react-native";
@@ -26,17 +27,15 @@ function Checkbox({ label, handleToggle, value }) {
 
 export default function Settings() {
   const router = useRouter();
-  const userData = useSelector((state) => state.userData);
   const dispatch = useDispatch();
-
+  const userData = useSelector((state) => state.userData);
   const [deleted, setDeleted] = useState(false);
 
   const deleteAccount = async () => {
-    setDeleted(true);
     try {
       await request("DELETE", "/auth/user", undefined, userData.jwt);
-      dispatch(userDataActions.clear());
-      dispatch(workoutActions.clear());
+      await persistor.purge();
+      setDeleted(true);
       router.replace("/");
     } catch (err) {
       console.log("ERROR!", err.message);
@@ -44,7 +43,6 @@ export default function Settings() {
   };
 
   const syncSettings = async () => {
-    if (deleted) return;
     try {
       const body = { ...userData };
       delete body.jwt;
@@ -55,11 +53,7 @@ export default function Settings() {
   };
 
   useFocusEffect(
-    useCallback(() => {
-      return () => {
-        syncSettings();
-      };
-    }, []),
+    useCallback(() => { return () => { if (!deleted) syncSettings(); }; }, [deleted]),
   );
 
   return (
