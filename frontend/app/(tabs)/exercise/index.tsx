@@ -35,7 +35,7 @@ export default function Index() {
     for (const e of template.exercises) {
       body.exercises.push({
         name: e.name,
-        exercise_type: e.exercise_type,
+        exerciseType: e.exercise_type,
         reps: [],
         duration: 0,
         distance: 0,

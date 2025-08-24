@@ -6,6 +6,14 @@ import { workoutActions } from "@/lib/state";
 
 import { AppState, NativeEventSubscription, Platform } from "react-native";
 
+// unified way to synchronize the updates (creation/deletion a non problem)
+// of user settings, workouts, tags and tagged dates
+//
+// have a set of ids; Set<number>
+// when updating, add the id the object into the set,
+// then iterate over the ids in the set, and sync with backend
+// actually....just use redux's createEntityAdapter!
+
 export default function WorkoutStateSync({ children }) {
   const today = formatDate(new Date());
   const [alradySynching, setAlreadySynching] = useState(false);

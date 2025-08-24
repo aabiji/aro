@@ -34,7 +34,7 @@ function WorkoutTemplate({ workout, index }: ViewProps) {
     dispatch(
       workoutActions.addExercise({
         workoutIndex: index,
-        value: { name: defaultName, exercise_type: choice },
+        value: { name: defaultName, exerciseType: choice },
       }),
     );
   };
@@ -88,7 +88,7 @@ function WorkoutTemplate({ workout, index }: ViewProps) {
             className="outline-none bg-gray-100 px-2"
           />
 
-          {e.exercise_type == ExerciseType.Resistance && (
+          {e.exerciseType == ExerciseType.Resistance && (
             <NumInput
               num={e.weight}
               label="lbs"

@@ -184,7 +184,7 @@ func (s *Server) DeleteUser(c *gin.Context) {
 type ExerciseInfo struct {
 	Id           int    `json:"id,omitempty"`
 	Name         string `json:"name"`
-	ExerciseType int    `json:"exercise_type"`
+	ExerciseType int    `json:"exerciseType"`
 	Reps         []int  `json:"reps,omitempty"`
 	Weight       int    `json:"weight,omitempty"`
 	Distance     int    `json:"distance,omitempty"`

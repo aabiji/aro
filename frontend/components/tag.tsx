@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { tagActions, TagInfo } from "@/lib/state";
+import { tagActions, TagInfo, selectAllTags, selectTagById } from "@/lib/state";
+import { request } from "@/lib/utils";
 
 import { FlatList, Modal, Pressable, Text, TextInput, View } from "react-native";
 import ColorPicker, { Panel3 } from "reanimated-color-picker";
 
 import Feather from "@expo/vector-icons/Feather";
-import { request } from "@/lib/utils";
 
 interface TagProps {
   tag: TagInfo;
@@ -72,7 +72,7 @@ export function Tag({ tag, selected, setSelected, showPicker, setName, removeTag
 export function TagManager({ visible, close }: { visible: boolean; close: () => void }) {
   const dispatch = useDispatch();
   const userData = useSelector((state) => state.userData);
-  const tagData = useSelector((state) => state.tagData);
+  const tags = useSelector(selectAllTags);
 
   const [showPicker, setShowPicker] = useState(false);
   const [tagIndex, setTagIndex] = useState(-1);
