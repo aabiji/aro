@@ -39,7 +39,7 @@ interface AppStore {
   tags: Record<number, TagInfo>,
   taggedDates: Record<string, number[]>,
 
-  setUserData: (userDate: object) => void;
+  updateUserData: (userDate: object) => void;
   upsertWorkout: (w: WorkoutInfo) => void;
   removeWorkout: (id: number) => void;
   addExercise: (workoutId: number, exercise: ExerciseInfo) => void;
@@ -57,7 +57,7 @@ const createAppStore: StateCreator<AppStore> = (set, _get) =>  ({
   workouts: {},
   taggedDates: {},
 
-  setUserData: (userData) => set((_state: AppStore) => ({ ...userData })),
+  updateUserData: (userData) => set((_state: AppStore) => ({ ...userData })),
 
   upsertWorkout: (w) =>
     set((state: AppStore) => ({
@@ -147,12 +147,33 @@ const createAppStore: StateCreator<AppStore> = (set, _get) =>  ({
 
 const mmvkStorage = new MMKV();
 
-const zustandStorage: StateStorage = {
-  getItem: (name: string) => mmvkStorage.getString(name) ?? null,
-  removeItem: (name: string) => { mmvkStorage.delete(name) },
-  setItem: (name: string, value: string) => { mmvkStorage.set(name, value) },
+const storage: StateStorage = {
+  getItem: (name) => mmvkStorage.getString(name) ?? null,
+  removeItem: (name) => { mmvkStorage.delete(name) },
+  setItem: (name, value) => { mmvkStorage.set(name, value) },
 };
 
-export const store = create<AppStore>()(
-  persist(createAppStore, { name: "app-data", storage: zustandStorage })
+export const useStore = create<AppStore>()(
+  persist(createAppStore, { name: "app-data", storage })
 )
+
+export const resetStore = async () => {
+  useStore.setState({
+    jwt: "",
+    useImperial: true,
+    workouts: {},
+    tags: {},
+    taggedDates: {},
+    updateUserData: useStore.getState().updateUserData,
+    upsertWorkout: useStore.getState().upsertWorkout,
+    removeWorkout: useStore.getState().removeWorkout,
+    addExercise: useStore.getState().addExercise,
+    updateExercise: useStore.getState().updateExercise,
+    removeExercise: useStore.getState().removeExercise,
+    upsertTag: useStore.getState().upsertTag,
+    removeTag: useStore.getState().removeTag,
+    toggleTaggedDate: useStore.getState().toggleTaggedDate,
+  });
+
+  await storage.removeItem("app-data");
+};

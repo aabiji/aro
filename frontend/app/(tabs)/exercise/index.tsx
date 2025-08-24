@@ -1,35 +1,32 @@
 import { useMemo } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { workoutActions, ExerciseInfo } from "@/lib/state";
+import { ExerciseInfo, useStore, WorkoutInfo } from "@/lib/state";
 import { formatDate, request } from "@/lib/utils";
 
 import { FlatList, Text, View } from "react-native";
-import WorkoutStateSync from "@/components/sync";
+import StateSync from "@/components/sync";
 import { Section, ScrollContainer, Empty } from "@/components/container";
 import { WorkoutRecordMemo } from "@/components/workouts";
 import { SelectButton } from "@/components/select";
 
 export default function Index() {
   const today = formatDate(new Date());
+  const { jwt, upsertWorkout, workouts } = useStore();
 
-  const dispatch = useDispatch();
-  const workoutsState = useSelector((state) => state.workouts);
-  const userData = useSelector((state) => state.userData);
-
-  const workouts = useMemo(() => {
-    return workoutsState.workouts
-      .map((w, i) => ({ workout: w, index: i }))
-      .filter((w) => !w.workout.is_template);
-  }, [workoutsState]);
+  const sortedWorkouts = useMemo(() => {
+    return Object.values(workouts)
+      .filter((w: WorkoutInfo) => !w.is_template)
+      .sort((a: WorkoutInfo, b: WorkoutInfo) => new Date(b.tag).getTime() - new Date(a.tag).getTime());
+  }, [workouts]);
 
   const choices = useMemo(() => {
-    return workoutsState.workouts
-      .filter((w) => w.is_template && w.exercises.length > 0)
-      .map((w) => ({ label: w.tag, value: w.tag }));
-  }, [workoutsState]);
+    return Object.values(workouts)
+      .filter((w: WorkoutInfo) => w.is_template && w.exercises.length > 0)
+      .map((w: WorkoutInfo) => ({ label: w.tag, value: w.tag }));
+  }, [workouts]);
 
   const addWorkout = async (templateName: string) => {
-    const template = workoutsState.workouts.find((w) => w.tag == templateName);
+    const template: WorkoutInfo =
+      Object.values(workouts).find((w: WorkoutInfo) => w.tag == templateName);
     let body = { is_template: false, tag: today, exercises: [] as ExerciseInfo[] };
 
     for (const e of template.exercises) {
@@ -44,19 +41,19 @@ export default function Index() {
     }
 
     try {
-      const json = await request("POST", "/auth/workout", body, userData.jwt);
-      dispatch(workoutActions.addWorkout({ value: json.workout }));
-    } catch (err) {
+      const json = await request("POST", "/auth/workout", body, jwt);
+      upsertWorkout(json.workout);
+    } catch (err: any) {
       console.log("ERROR!", err.message);
     }
   };
 
   return (
-    <WorkoutStateSync>
+    <StateSync>
       <ScrollContainer>
         <FlatList
-          data={[...workouts].reverse()}
-          keyExtractor={(item) => item.index.toString()}
+          data={sortedWorkouts}
+          keyExtractor={(item: WorkoutInfo) => item.id}
           ListHeaderComponent={
             <View>
               <Text className="font-bold text-xl mb-2">{today}</Text>
@@ -76,25 +73,21 @@ export default function Index() {
             </View>
           }
           renderItem={({ item, index }) => {
-            const prev = workouts[workouts.length - 1 - index].workout.tag;
+            const prev = sortedWorkouts[sortedWorkouts.length - 1 - index].tag;
             const showDate =
-              index > 0 && prev !== workouts[workouts.length - index].workout.tag;
+              index > 0 && prev !== sortedWorkouts[sortedWorkouts.length - index].tag;
 
             return (
               <View>
                 {showDate && (
-                  <Text className="font-bold text-xl mb-2">{item.workout.tag}</Text>
+                  <Text className="font-bold text-xl mb-2">{item.tag}</Text>
                 )}
-                <WorkoutRecordMemo
-                  disabled={item.workout.tag != today}
-                  workout={item.workout}
-                  index={item.index}
-                />
+                <WorkoutRecordMemo disabled={item.tag != today} workout={item} />
               </View>
             );
           }}
         />
       </ScrollContainer>
-    </WorkoutStateSync>
+    </StateSync>
   );
 }

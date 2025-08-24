@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { useSelector } from "react-redux";
+import { useStore } from "@/lib/state";
 
 import DumbellIcon from "@/assets/dumbell.svg";
 import FoodIcon from "@/assets/food.svg";
@@ -8,8 +8,8 @@ import GearIcon from "@/assets/gear.svg";
 
 export default function TabLayout() {
   // TODO: more secure check, see (tabs)/index.tsx also
-  const userData = useSelector((state) => state.userData);
-  const authenticated = userData.jwt.length > 0;
+  const { jwt } = useStore();
+  const authenticated = jwt.length > 0;
 
   return (
     <Tabs

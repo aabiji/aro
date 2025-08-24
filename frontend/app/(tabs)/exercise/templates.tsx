@@ -1,29 +1,20 @@
-import { useMemo, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { workoutActions } from "@/lib/state";
+import { useState } from "react";
+import { Workout, useStore } from "@/lib/state";
 import { request } from "@/lib/utils";
 
 import { FlatList, Pressable, Text, TextInput, View } from "react-native";
-import WorkoutStateSync from "@/components/sync";
+import StateSync from "@/components/sync";
 import { WorkoutTemplateMemo } from "@/components/workouts";
 import { ScrollContainer, Empty } from "@/components/container";
 import Feather from "@expo/vector-icons/Feather";
 
 export default function TemplatesPage() {
-  const dispatch = useDispatch();
-  const workoutsState = useSelector((state) => state.workouts);
-  const userData = useSelector((state) => state.userData);
+  const { upsertWorkout, jwt, workouts } = useStore();
 
   const [templateName, setWorkoutName] = useState("");
-  const templates = useMemo(() => {
-    return workoutsState.workouts
-      .map((w, i) => ({ workout: w, index: i }))
-      .filter((w) => w.workout.is_template);
-  }, [workoutsState]);
 
   const createTemplate = async () => {
-    const exists = templates.find((w) => w.workout.tag == templateName);
-    if (exists) return;
+    if (workouts[templateName] !== undefined) return;
 
     try {
       const body = {
@@ -31,15 +22,15 @@ export default function TemplatesPage() {
         tag: templateName,
         exercises: [],
       };
-      const json = await request("POST", "/auth/workout", body, userData.jwt);
-      dispatch(workoutActions.addWorkout({ value: json.workout }));
-    } catch (err) {
+      const json = await request("POST", "/auth/workout", body, jwt);
+      upsertWorkout(json.workout);
+    } catch (err: any) {
       console.log("ERROR!", err.message);
     }
   };
 
   return (
-    <WorkoutStateSync>
+    <StateSync>
       <ScrollContainer>
         <View className="flex-row mb-5">
           <TextInput
@@ -58,17 +49,16 @@ export default function TemplatesPage() {
           </Pressable>
         </View>
 
-        {templates.length == 0 && <Empty messages={["You have no workout templates"]} />}
+        {Object.values(workouts).some((w: Workout) => w.isTemplate) &&
+          <Empty messages={["You have no workout templates"]} />}
 
         <FlatList
-          data={templates}
+          data={Object.values(workouts).filter((w: Workout) => w.isTemplate)}
           className="w-[100%]"
-          keyExtractor={(item) => item.index}
-          renderItem={({ item }) => (
-            <WorkoutTemplateMemo workout={item.workout} index={item.index} />
-          )}
+          keyExtractor={(w: Workout) => w.id}
+          renderItem={({ item }) => <WorkoutTemplateMemo workout={item} />}
         />
       </ScrollContainer>
-    </WorkoutStateSync>
+    </StateSync>
   );
 }

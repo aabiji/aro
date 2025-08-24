@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { tagActions, TagInfo } from "@/lib/state";
+import { useStore, TagInfo } from "@/lib/state";
 import { formatDate } from "@/lib/utils";
 
 import { Pressable, Text, View } from "react-native";
@@ -16,10 +15,10 @@ interface CalendarTileProps {
 }
 
 function CalendarTile({ date, disabled, toggle }: CalendarTileProps) {
-  const tagData = useSelector((state) => state.tagData);
-  const tagIds = tagData.taggedDates[formatDate(date!)] ?? [];
+  const { tags, taggedDates } = useStore();
+  const tagIds = taggedDates[formatDate(date!)] ?? [];
   const colors = tagIds.map(
-    (id: number) => tagData.tags.find((tag: TagInfo) => tag.id == id).color,
+    (id: number) => tags.find((tag: TagInfo) => tag.id == id).color,
   );
   const empty = date === undefined || toggle === undefined;
 
@@ -42,8 +41,7 @@ function CalendarTile({ date, disabled, toggle }: CalendarTileProps) {
 }
 
 export default function TagsPage() {
-  const dispatch = useDispatch();
-  const tagData = useSelector((state) => state.tagData);
+  const { tags, toggleTaggedDate } = useStore();
 
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedTag, setSelectedTag] = useState(-1);
@@ -73,12 +71,7 @@ export default function TagsPage() {
   // add/remove tag to a calendar date
   const tagDay = (date: Date) => {
     if (selectedTag == -1) return;
-    dispatch(
-      tagActions.toggleDate({
-        date: formatDate(date),
-        value: tagData.tags[selectedTag].id,
-      }),
-    );
+    toggleTaggedDate(formatDate(date), selectedTag);
   };
 
   return (
@@ -91,7 +84,7 @@ export default function TagsPage() {
       </View>
 
       <View className="mb-2 border-b border-gray-200 flex-row items-center flex-wrap h-max-[100px]">
-        {tagData.tags.map((tag: TagInfo, index: number) => (
+        {Object.values(tags).map((tag: TagInfo, index: number) => (
           <Tag key={index} tag={tag} selected={selectedTag == index}
             setSelected={() => setSelectedTag(selectedTag == index ? -1 : index)} />
         ))}

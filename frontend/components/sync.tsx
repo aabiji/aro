@@ -1,8 +1,7 @@
-import { useDispatch, useSelector } from "react-redux";
 import { useCallback, useRef, useState } from "react";
 import { useFocusEffect } from "expo-router";
+import { useStore } from "@/lib/state";
 import { formatDate, request } from "@/lib/utils";
-import { workoutActions } from "@/lib/state";
 
 import { AppState, NativeEventSubscription, Platform } from "react-native";
 
@@ -14,7 +13,8 @@ import { AppState, NativeEventSubscription, Platform } from "react-native";
 // then iterate over the ids in the set, and sync with backend
 // actually....just use redux's createEntityAdapter!
 
-export default function WorkoutStateSync({ children }) {
+export default function StateSync({ children }) {
+  /*
   const today = formatDate(new Date());
   const [alradySynching, setAlreadySynching] = useState(false);
 
@@ -79,6 +79,6 @@ export default function WorkoutStateSync({ children }) {
       };
     }, []),
   );
-
+  */
   return children;
 }

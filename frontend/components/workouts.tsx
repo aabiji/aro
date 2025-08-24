@@ -1,5 +1,6 @@
-import { useDispatch, useSelector } from "react-redux";
-import { ExerciseType, ExerciseInfo, WorkoutInfo, workoutActions } from "@/lib/state";
+import {
+  Exercise, ExerciseInfo, ExerciseType,
+  useStore, WorkoutInfo } from "@/lib/state";
 import { request } from "@/lib/utils";
 
 import React from "react";
@@ -10,40 +11,31 @@ import { Section } from "@/components/container";
 
 import Feather from "@expo/vector-icons/Feather";
 
-interface ViewProps {
-  workout: WorkoutInfo;
-  index: number;
-  disabled?: boolean;
-}
-
-function WorkoutTemplate({ workout, index }: ViewProps) {
-  const dispatch = useDispatch();
-  const userData = useSelector((state) => state.userData);
+function WorkoutTemplate({ workout }: {workout: WorkoutInfo}) {
+  const {
+    addExercise, jwt, removeExercise,
+    removeWorkout, updateExercise, upsertWorkout
+  } = useStore();
 
   const buttonChoices = [
     { label: "Strength", value: ExerciseType.Resistance },
     { label: "Cardio", value: ExerciseType.Cardio },
   ];
 
-  const addExercise = (choice: ExerciseType) => {
+  const insertExercise = (choice: ExerciseType) => {
     let [defaultName, count] = ["New exercise", 0];
     for (const e of workout.exercises) {
       if (e.name.includes(defaultName)) count++;
     }
     defaultName = `${defaultName} ${count + 1}`;
-    dispatch(
-      workoutActions.addExercise({
-        workoutIndex: index,
-        value: { name: defaultName, exerciseType: choice },
-      }),
-    );
+    addExercise(workout.id, { name: defaultName, exerciseType: choice });
   };
 
   const deleteTemplate = async () => {
     try {
-      await request("DELETE", `/auth/workout?id=${workout.id}`, undefined, userData.jwt);
-      dispatch(workoutActions.removeWorkout({ workoutIndex: index, value: null }));
-    } catch (err) {
+      await request("DELETE", `/auth/workout?id=${workout.id}`, undefined, jwt);
+      removeWorkout(workout.id);
+    } catch (err: any) {
       console.log("ERROR!", err.message);
     }
   };
@@ -54,21 +46,14 @@ function WorkoutTemplate({ workout, index }: ViewProps) {
         <TextInput
           className="flex-1 text-xl bg-gray-100 rounded-sm px-3 py-1 outline-none"
           value={workout.tag}
-          onChangeText={(value) =>
-            dispatch(
-              workoutActions.setTemplateName({
-                workoutIndex: index,
-                value,
-              }),
-            )
-          }
+          onChangeText={(value) => upsertWorkout({ id: workout.id, name: value })}
         />
         <Pressable onPress={() => deleteTemplate()} className="bg-transparent p-2">
           <Feather name="trash" color="red" size={18} />
         </Pressable>
       </View>
 
-      {workout.exercises.map((e, i) => (
+      {workout.exercises.map((e: Exercise, i: number) => (
         <View
           key={i}
           className="flex-row w-[100%] justify-between border-t border-gray-100 p-2"
@@ -76,46 +61,21 @@ function WorkoutTemplate({ workout, index }: ViewProps) {
           <TextInput
             value={e.name}
             placeholder="Exercise name"
-            onChangeText={(txt) =>
-              dispatch(
-                workoutActions.updateExercise({
-                  workoutIndex: index,
-                  exerciseIndex: i,
-                  value: { name: txt },
-                }),
-              )
-            }
             className="outline-none bg-gray-100 px-2"
+            onChangeText={(name) => updateExercise(workout.id, i, { name })}
           />
 
           {e.exerciseType == ExerciseType.Resistance && (
             <NumInput
               num={e.weight}
               label="lbs"
-              setNum={(n: number) =>
-                dispatch(
-                  workoutActions.updateExercise({
-                    workoutIndex: index,
-                    exerciseIndex: i,
-                    value: { weight: n },
-                  }),
-                )
-              }
+              setNum={(weight: number) => updateExercise(workout.id, i, { weight })}
             />
           )}
 
           <Pressable
-            onPress={() =>
-              dispatch(
-                workoutActions.removeExercise({
-                  workoutIndex: index,
-                  exerciseIndex: i,
-                  value: null,
-                }),
-              )
-            }
-            className="bg-transparent p-2"
-          >
+            onPress={() => removeExercise(workout.id, i)}
+            className="bg-transparent p-2">
             <Feather name="trash" color="red" size={18} />
           </Pressable>
         </View>
@@ -126,25 +86,19 @@ function WorkoutTemplate({ workout, index }: ViewProps) {
         icon="plus"
         defaultChoice={ExerciseType.Resistance}
         message=""
-        handlePress={(choice: ExerciseType) => addExercise(choice)}
+        handlePress={(choice: ExerciseType) => insertExercise(choice)}
       />
     </Section>
   );
 }
 
-function WorkoutRecord({ workout, index, disabled }: ViewProps) {
-  const dispatch = useDispatch();
+function WorkoutRecord({ workout, disabled }: {workout: WorkoutInfo, disabled: boolean}) {
+  const { updateExercise } = useStore();
 
   const changeRep = (n: number, i: number, eIndex: number) => {
     let reps = [...workout.exercises[eIndex].reps!];
     reps[i] = n;
-    dispatch(
-      workoutActions.updateExercise({
-        workoutIndex: index,
-        exerciseIndex: eIndex,
-        value: { reps: reps },
-      }),
-    );
+    updateExercise(workout.id, eIndex, { reps });
   };
 
   return (
@@ -175,19 +129,9 @@ function WorkoutRecord({ workout, index, disabled }: ViewProps) {
 
               {!disabled && (
                 <Pressable
-                  onPress={() =>
-                    dispatch(
-                      workoutActions.updateExercise({
-                        workoutIndex: index,
-                        exerciseIndex: eIndex,
-                        value: {
-                          reps: [...workout.exercises[eIndex].reps!, 0],
-                        },
-                      }),
-                    )
-                  }
-                  className="bg-transparent px-4 px-2 rounded"
-                >
+                  onPress={() => updateExercise(workout.id, eIndex, {
+                    reps: [...workout.exercises[eIndex].reps!, 0] })}
+                  className="bg-transparent px-4 px-2 rounded">
                   <Feather name="plus" color="blue" size={20} />
                 </Pressable>
               )}

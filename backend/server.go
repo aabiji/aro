@@ -21,6 +21,9 @@ func NewServer() (Server, error) {
 	var err error
 	server := Server{}
 	server.secrets, err = loadEnvVars(".env")
+	if err != nil {
+		return Server{}, err
+	}
 
 	server.db, err = gorm.Open(sqlite.Open("database.db"), &gorm.Config{})
 	if err != nil {

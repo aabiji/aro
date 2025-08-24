@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
+import { ExerciseType, useStore } from "@/lib/state";
 
 import { FlatList, Pressable, Text, View } from "react-native";
 import { LineGraph, Heatmap } from "@/components/graph";
 import { Empty, ScrollContainer } from "@/components/container";
 import { Dropdown, Selection } from "@/components/select";
 import Feather from "@expo/vector-icons/Feather";
-import { ExerciseType } from "@/lib/state";
 
 type Vec2 = { x: number; y: number };
 type ToVec2 = (v: any) => Vec2;
@@ -268,11 +267,11 @@ function CardioPlot({ name, group }: { name: string; group: PlotGroup }) {
 }
 
 export default function ProgressPage() {
-  const workoutsState = useSelector((state) => state.workouts);
+  const { workouts } = useStore();
 
   // map the data into a set of plot points, and group by exercise
   let exercises: Record<string, PlotGroup> = {};
-  for (const w of workoutsState.workouts) {
+  for (const w of Object.values(workouts)) {
     if (w.is_template) continue;
     for (const e of w.exercises) {
       const point = {

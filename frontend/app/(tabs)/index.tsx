@@ -1,7 +1,6 @@
 import { useState } from "react";
 import * as Crypto from "expo-crypto";
-import { useDispatch, useSelector } from "react-redux";
-import { workoutActions, userDataActions } from "@/lib/state";
+import { useStore } from "@/lib/state";
 import { request } from "@/lib/utils";
 
 import { Redirect } from "expo-router";
@@ -9,10 +8,9 @@ import { Pressable, Text, TextInput, View } from "react-native";
 import { ScrollContainer } from "@/components/container";
 
 export default function Index() {
-  const dispatch = useDispatch();
-  const userData = useSelector((state) => state.userData);
-  const authenticated = userData.jwt.length > 0;
   // TODO: what to do when the jwt expires?
+  const { jwt, setUserData, upsertWorkout } = useStore();
+  const authenticated = jwt.length > 0;
 
   const [isLogin, setIsLogin] = useState(true);
   const [errMsg, setErrMsg] = useState("");
@@ -57,8 +55,10 @@ export default function Index() {
     try {
       const jwtJson = await request("POST", endpoint, body);
       const dataJson = await request("GET", "/auth/user", undefined, jwtJson.jwt);
-      dispatch(userDataActions.update({ jwt: jwtJson.jwt, ...dataJson.user.settings }));
-      dispatch(workoutActions.set(dataJson.user.workouts));
+      setUserData({ jwt: jwtJson.jwt, ...dataJson.user.settings });
+      for (const workout of dataJson.user.workouts) {
+        upsertWorkout(workout);
+      }
     } catch (err) {
       setErrMsg(err.message);
     }

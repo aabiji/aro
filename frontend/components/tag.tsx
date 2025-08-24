@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { tagActions, TagInfo, selectAllTags, selectTagById } from "@/lib/state";
+import { TagInfo, useStore } from "@/lib/state";
 import { request } from "@/lib/utils";
 
 import { FlatList, Modal, Pressable, Text, TextInput, View } from "react-native";
@@ -70,42 +69,39 @@ export function Tag({ tag, selected, setSelected, showPicker, setName, removeTag
 }
 
 export function TagManager({ visible, close }: { visible: boolean; close: () => void }) {
-  const dispatch = useDispatch();
-  const userData = useSelector((state) => state.userData);
-  const tags = useSelector(selectAllTags);
+  const { jwt, tags, removeTag, upsertTag } = useStore();
 
   const [showPicker, setShowPicker] = useState(false);
-  const [tagIndex, setTagIndex] = useState(-1);
+  const [currentTag, setCurrentTag] = useState(-1);
   const [pickerPos, setPickerPos] = useState({ x: 0, y: 0 });
 
-  const showTagPicker = (x: number, y: number, index: number) => {
+  const showTagPicker = (x: number, y: number, id: number) => {
     setShowPicker(true);
-    setTagIndex(index);
+    setCurrentTag(id);
     setPickerPos({ x, y });
   };
 
-  const updateTag = async (name: string, index: number) => {
-    if (index == -1) { // create tag
+  const updateTag = async (name: string, id: number) => {
+    if (id == -1) { // create tag
       try {
         const t = { name, color: "#000000" };
-        const json = await request("POST", "/auth/tag", t, userData.jwt);
-        dispatch(tagActions.addTag(json.tag));
-      } catch (err) {
+        const json = await request("POST", "/auth/tag", t, jwt);
+        upsertTag(json.tag);
+      } catch (err: any) {
         console.log(err.message);
       }
       return;
     }
 
-    dispatch(tagActions.updateTag({ tagIndex: index, value: { name } }));
+    upsertTag({ id, name });
     // TODO: unified way to sync tag updates??
   }
 
-  const removeTag = async (index: number) => {
+  const deleteTag = async (id: number) => {
     try {
-      const id = tagData.tags[index].id;
-      await request("DELETE", `/auth/tag?id=${id}`, undefined, userData.jwt);
-      dispatch(tagActions.removeTag(index));
-    } catch (err) {
+      await request("DELETE", `/auth/tag?id=${id}`, undefined, jwt);
+      removeTag(id);
+    } catch (err: any) {
       console.log(err.message);
     }
     // TODO: remove tag from tagged dates efficiently
@@ -116,8 +112,7 @@ export function TagManager({ visible, close }: { visible: boolean; close: () => 
       <Pressable
         onPress={close}
         className="flex-1"
-        style={{ backgroundColor: "rgba(0, 0, 0, 0.3)", cursor: "default" }}
-      >
+        style={{ backgroundColor: "rgba(0, 0, 0, 0.3)", cursor: "default" }}>
         <Pressable
           onPress={(e) => e.stopPropagation()}
           className="w-full h-[50%] absolute bottom-0 bg-neutral-50 shadow-md py-2 cursor-default"
@@ -129,19 +124,19 @@ export function TagManager({ visible, close }: { visible: boolean; close: () => 
             </Pressable>
           </View>
 
-          {tagData.tags.length == 0 && (
+          {Object.keys(tags).length == 0 && (
             <Text className="text-center mt-4 text-base text-gray-400"> No tags </Text>
           )}
 
           <FlatList
-            data={tagData.tags}
+            data={Object.values(tags)}
             className="w-[55%] m-auto"
-            renderItem={({ item, index }) => (
+            renderItem={({ item }) => (
               <Tag
                 tag={item}
-                showPicker={(mouseX, mouseY) => showTagPicker(mouseX, mouseY, index)}
-                setName={(name: string) => updateTag(name, index)}
-                removeTag={() => removeTag(index)}
+                showPicker={(mouseX, mouseY) => showTagPicker(mouseX, mouseY, item.id)}
+                setName={(name: string) => updateTag(name, item.id)}
+                removeTag={() => deleteTag(item.id)}
               />
             )}
           />
@@ -163,15 +158,9 @@ export function TagManager({ visible, close }: { visible: boolean; close: () => 
           <ColorPicker
             style={{ width: "100%", height: "100%" }}
             onComplete={(color) => {
-              dispatch(
-                tagActions.updateTag({
-                  tagIndex: tagIndex,
-                  value: { color: color.hex },
-                }),
-              );
+              upsertTag({ id: currentTag, color: color.hex });
               setShowPicker(false);
-            }}
-          >
+            }}>
             <Panel3 thumbSize={15} />
           </ColorPicker>
         </View>

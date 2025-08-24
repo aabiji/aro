@@ -1,8 +1,6 @@
 import { useCallback, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { userDataActions, workoutActions } from "@/lib/state";
 import { useFocusEffect, useRouter } from "expo-router";
-import { persistor } from "@/lib/storage";
+import { resetStore, useStore } from "@/lib/state";
 import { request } from "@/lib/utils";
 
 import { Pressable, Text, View } from "react-native";
@@ -10,7 +8,9 @@ import { ScrollContainer } from "@/components/container";
 
 import Feather from "@expo/vector-icons/Feather";
 
-function Checkbox({ label, handleToggle, value }) {
+function Checkbox(
+  { label, handleToggle, value }:
+  { label: string; handleToggle: () => void; value: boolean; }) {
   const bg = value ? "bg-blue-500" : "bg-white";
   return (
     <View className="w-full flex-row justify-between items-center mb-2">
@@ -26,28 +26,25 @@ function Checkbox({ label, handleToggle, value }) {
 }
 
 export default function Settings() {
+  const { jwt, useImperial, updateUserData } = useStore();
   const router = useRouter();
-  const dispatch = useDispatch();
-  const userData = useSelector((state) => state.userData);
   const [deleted, setDeleted] = useState(false);
 
   const deleteAccount = async () => {
     try {
-      await request("DELETE", "/auth/user", undefined, userData.jwt);
-      await persistor.purge();
+      await request("DELETE", "/auth/user", undefined, jwt);
+      await resetStore();
       setDeleted(true);
       router.replace("/");
-    } catch (err) {
+    } catch (err: Error) {
       console.log("ERROR!", err.message);
     }
   };
 
   const syncSettings = async () => {
     try {
-      const body = { ...userData };
-      delete body.jwt;
-      await request("POST", "/auth/user", body, userData.jwt);
-    } catch (err) {
+      await request("POST", "/auth/user", { useImperial }, jwt);
+    } catch (err: Error) {
       console.log("ERROR!", err.message);
     }
   };
@@ -59,12 +56,8 @@ export default function Settings() {
   return (
     <ScrollContainer>
       <Checkbox
-        label="Use imperial units"
-        value={userData.use_imperial}
-        handleToggle={() =>
-          dispatch(userDataActions.update({ use_imperial: !userData.use_imperial }))
-        }
-      />
+        label="Use imperial units" value={useImperial}
+        handleToggle={() => updateUserData({ useImperial: !useImperial })} />
 
       <Pressable className="bg-red-500 p-2 rounded" onPress={() => deleteAccount()}>
         <Text className="text-white text-center"> Delete account </Text>
