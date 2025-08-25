@@ -84,9 +84,9 @@ export function TagManager({ visible, close }: { visible: boolean; close: () => 
   const updateTag = async (name: string, id: number) => {
     if (id == -1) { // create tag
       try {
-        const t = { name, color: "#000000" };
-        const json = await request("POST", "/auth/tag", t, jwt);
-        upsertTag(json.tag);
+        const body = { tags: [{ name, color: "#000000" }] };
+        const json = await request("POST", "/auth/tag", body, jwt);
+        upsertTag(json.tags[0]);
       } catch (err: any) {
         console.log(err.message);
       }

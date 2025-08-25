@@ -1,5 +1,4 @@
-import { useCallback, useState } from "react";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { resetStore, useStore } from "@/lib/state";
 import { request } from "@/lib/utils";
 
@@ -28,33 +27,19 @@ function Checkbox(
 export default function Settings() {
   const { jwt, useImperial, updateUserData } = useStore();
   const router = useRouter();
-  const [deleted, setDeleted] = useState(false);
 
   const deleteAccount = async () => {
     try {
       await request("DELETE", "/auth/user", undefined, jwt);
       await resetStore();
-      setDeleted(true);
       router.replace("/");
-    } catch (err: Error) {
+    } catch (err: any) {
       console.log("ERROR!", err.message);
     }
   };
-
-  const syncSettings = async () => {
-    try {
-      await request("POST", "/auth/user", { useImperial }, jwt);
-    } catch (err: Error) {
-      console.log("ERROR!", err.message);
-    }
-  };
-
-  useFocusEffect(
-    useCallback(() => { return () => { if (!deleted) syncSettings(); }; }, [deleted]),
-  );
 
   return (
-    <ScrollContainer>
+    <ScrollContainer syncState>
       <Checkbox
         label="Use imperial units" value={useImperial}
         handleToggle={() => updateUserData({ useImperial: !useImperial })} />

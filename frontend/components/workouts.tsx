@@ -1,5 +1,5 @@
 import {
-  Exercise, ExerciseInfo, ExerciseType,
+  ExerciseInfo, ExerciseType,
   useStore, WorkoutInfo } from "@/lib/state";
 import { request } from "@/lib/utils";
 
@@ -38,7 +38,7 @@ function WorkoutTemplate({ workout }: {workout: WorkoutInfo}) {
 
   const deleteTemplate = async () => {
     try {
-      await request("DELETE", `/auth/workout?id=${workout.id}`, undefined, jwt);
+      await request("DELETE", "/auth/workout", { ids: [workout.id] }, jwt);
       removeWorkout(workout.id);
     } catch (err: any) {
       console.log("ERROR!", err.message);

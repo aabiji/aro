@@ -52,9 +52,9 @@ type Tag struct {
 
 type TaggedDate struct {
 	BaseModel
-	UserID uint                        `json:"-"`
-	Date   string                      `json:"date"`
-	Tags   datatypes.JSONSlice[string] `gorm:"type:json" json:"tagNames"`
+	UserID uint                     `json:"-"`
+	Date   string                   `json:"date"`
+	Tags   datatypes.JSONSlice[int] `gorm:"type:json" json:"tagIds"`
 }
 
 type Settings struct {

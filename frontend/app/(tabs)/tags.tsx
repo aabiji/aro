@@ -73,7 +73,7 @@ export default function TagsPage() {
   };
 
   return (
-    <ScrollContainer>
+    <ScrollContainer syncState>
       <View className="flex-row justify-between">
         <Text className="text-xl">Tag dates</Text>
         <Pressable onPress={() => setModalVisible(true)}>

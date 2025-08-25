@@ -88,10 +88,11 @@ func main() {
 	auth.DELETE("/user", server.DeleteUser)
 
 	auth.POST("/workout", server.CreateWorkout)
-	auth.DELETE("/workout/:id", server.DeleteWorkout)
+	auth.DELETE("/workout", server.DeleteWorkout)
 
 	auth.POST("/tag", server.SetTag)
 	auth.DELETE("/tag/:id", server.DeleteTag)
+	auth.POST("/taggedDates", server.UpdateTaggedDates)
 
 	gin.SetMode(gin.DebugMode)
 	r.Run(":8080")

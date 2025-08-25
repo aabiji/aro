@@ -38,36 +38,83 @@ interface AppStore {
   workouts: Record<number, WorkoutInfo>,
   tags: Record<number, TagInfo>,
   taggedDates: Record<string, number[]>,
+  changedWorkoutIds: Set<number>,
+  changedTaggedDates: Set<string>,
+  changedTagIds: Set<number>,
+  settingsChanged: boolean;
 
   updateUserData: (userDate: object) => void;
-  upsertWorkout: (w: WorkoutInfo) => void;
+  upsertWorkout: (w: WorkoutInfo, ignoreChange?: boolean) => void;
   removeWorkout: (id: number) => void;
   addExercise: (workoutId: number, exercise: ExerciseInfo) => void;
   updateExercise: (workoutId: number, exerciseIndex: number, exercise: ExerciseInfo) => void;
   removeExercise: (workoutId: number, exerciseIndex: number) => void;
-  upsertTag: (tag: TagInfo) => void;
+  upsertTag: (tag: TagInfo, ignoreChange?: boolean) => void;
   removeTag: (id: number) => void;
   toggleTaggedDate: (date: string, tagId: number) => void;
+  clearChangeSets: () => void;
+  setAllData: (jwt: string, json: any) => void;
 }
 
+// remember, set() *merges* state
 const createAppStore: StateCreator<AppStore> = (set, _get) =>  ({
   jwt: "",
   useImperial: true,
   tags: {},
   workouts: {},
   taggedDates: {},
+  changedWorkoutIds: new Set(),
+  changedTaggedDates: new Set(),
+  changedTagIds: new Set(),
+  settingsChanged: false,
 
-  updateUserData: (userData) => set((state: AppStore) => ({ ...state, ...userData })),
+  updateUserData: (userData) => set((state: AppStore) => {
+    return { ...state, ...userData, settingsChanged: true }
+  }),
 
-  upsertWorkout: (w) =>
+  setAllData: (jwt, json) =>
+    set((_state: AppStore) => {
+      let workouts = {};
+      for (const w of json.user.workouts) {
+        workouts[w.id] = w;
+      }
+
+      let taggedDates = {};
+      for (const td of json.user.taggedDates) {
+        taggedDates[td.date] = td.tagIds;
+      }
+
+      let tags = {};
+      for (const t of json.user.tags) {
+        tags[t.id] = t;
+      }
+
+      return {
+        jwt, workouts, tags, taggedDates,
+        useImperial: json.user.settings.useImperial,
+      };
+    }),
+
+  clearChangeSets: () =>
+    set((_state: AppStore) => ({
+      settingsChanged: false,
+      changedWorkoutIds: new Set(),
+      changedTagIds: new Set(),
+      changedTaggedDates: new Set(),
+    })),
+
+  upsertWorkout: (w, ignoreChange) =>
     set((state: AppStore) => ({
+      changedWorkoutIds: ignoreChange === undefined
+        ? new Set([...state.changedWorkoutIds, w.id])
+        : state.changedWorkoutIds,
       workouts: {
         ...state.workouts,
         [w.id]: {
           ...state.workouts[w.id],
           ...w,
-        }
-      }
+        },
+      },
     })),
 
   removeWorkout: (id) =>
@@ -79,6 +126,7 @@ const createAppStore: StateCreator<AppStore> = (set, _get) =>  ({
 
   addExercise: (workoutId, exercise) =>
     set((state: AppStore) => ({
+      changedWorkoutIds: new Set([...state.changedWorkoutIds, workoutId]),
       workouts: {
         ...state.workouts,
         [workoutId]: {
@@ -93,6 +141,7 @@ const createAppStore: StateCreator<AppStore> = (set, _get) =>  ({
       let exercises = [...state.workouts[workoutId].exercises];
       Object.assign(exercises[exerciseIndex], exercise);
       return {
+        changedWorkoutIds: new Set([...state.changedWorkoutIds, workoutId]),
         workouts: {
           ...state.workouts,
           [workoutId]: { ...state.workouts[workoutId], exercises }
@@ -105,6 +154,7 @@ const createAppStore: StateCreator<AppStore> = (set, _get) =>  ({
       let exercises = [...state.workouts[workoutId].exercises];
       exercises.splice(exerciseIndex, 1);
       return {
+        changedWorkoutIds: new Set([...state.changedWorkoutIds, workoutId]),
         workouts: {
           ...state.workouts,
           [workoutId]: { ...state.workouts[workoutId], exercises }
@@ -112,8 +162,11 @@ const createAppStore: StateCreator<AppStore> = (set, _get) =>  ({
       }
     }),
 
-  upsertTag: (tag) =>
+  upsertTag: (tag, ignoreChange) =>
     set((state: AppStore) => ({
+      changedTagIds: ignoreChange === undefined
+        ? new Set([...state.changedTagIds, tag.id])
+        : state.changedTagIds,
       tags: {
         ...state.tags,
         [tag.id]: {
@@ -138,7 +191,10 @@ const createAppStore: StateCreator<AppStore> = (set, _get) =>  ({
         tagIds.splice(index, 1);
       else
         tagIds.push(tagId);
-      return { taggedDates: { ...state.taggedDates, [date]: tagIds }};
+      return {
+        changedTaggedDates: new Set([...state.changedTaggedDates, date]),
+        taggedDates: { ...state.taggedDates, [date]: tagIds }
+      };
     }),
 });
 
@@ -158,12 +214,18 @@ export const useStore = create<AppStore>()(
 );
 
 export const resetStore = async () => {
+  await storageBackend.removeItem("app-data");
   useStore.setState({
     jwt: "",
     useImperial: true,
-    workouts: {},
     tags: {},
+    workouts: {},
     taggedDates: {},
+    changedWorkoutIds: new Set(),
+    changedTaggedDates: new Set(),
+    changedTagIds: new Set(),
+    settingsChanged: false,
+
     updateUserData: useStore.getState().updateUserData,
     upsertWorkout: useStore.getState().upsertWorkout,
     removeWorkout: useStore.getState().removeWorkout,
@@ -173,6 +235,7 @@ export const resetStore = async () => {
     upsertTag: useStore.getState().upsertTag,
     removeTag: useStore.getState().removeTag,
     toggleTaggedDate: useStore.getState().toggleTaggedDate,
+    clearChangeSets: useStore.getState().clearChangeSets,
+    setAllData: useStore.getState().setAllData,
   });
-  await storageBackend.removeItem("app-data");
 };

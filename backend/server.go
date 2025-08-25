@@ -129,7 +129,7 @@ func (s *Server) GetUserInfo(c *gin.Context) {
 }
 
 type SettingsInfo struct {
-	ImperialUnits bool `json:"use_imperial"`
+	ImperialUnits bool `json:"useImperial"`
 }
 
 func (s *Server) UpdateUserSettings(c *gin.Context) {
@@ -201,67 +201,80 @@ type WorkoutInfo struct {
 	Tag       string         `json:"tag"`
 }
 
+type BatchedWorkoutInfo struct {
+	Workouts []Workout `json:"workouts"`
+}
+
 func (s *Server) CreateWorkout(c *gin.Context) {
-	var req WorkoutInfo
+	var req BatchedWorkoutInfo
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
 	user := c.MustGet("user").(*User)
-	workout := Workout{UserID: user.ID, Template: req.Template, Tag: req.Tag}
+	arr := []Workout{}
 
-	for _, exercise := range req.Exercises {
-		workout.Exercises = append(workout.Exercises, Exercise{
-			Name:         exercise.Name,
-			ExerciseType: exercise.ExerciseType,
-			Weight:       exercise.Weight,
-			Duration:     exercise.Duration,
-			Distance:     exercise.Distance,
-			Reps:         datatypes.NewJSONSlice(exercise.Reps),
-		})
+	for _, w := range req.Workouts {
+		workout := Workout{UserID: user.ID, Template: w.Template, Tag: w.Tag}
+
+		for _, exercise := range w.Exercises {
+			workout.Exercises = append(workout.Exercises, Exercise{
+				Name:         exercise.Name,
+				ExerciseType: exercise.ExerciseType,
+				Weight:       exercise.Weight,
+				Duration:     exercise.Duration,
+				Distance:     exercise.Distance,
+				Reps:         datatypes.NewJSONSlice(exercise.Reps),
+			})
+		}
+
+		if result := s.db.Create(&workout); result.Error != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating workout"})
+			return
+		}
+
+		var full Workout
+		if err := s.db.Preload("Exercises").First(&full, workout.ID).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load workout"})
+			return
+		}
+		arr = append(arr, full)
 	}
 
-	if result := s.db.Create(&workout); result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating workout"})
-		return
-	}
+	c.JSON(http.StatusOK, gin.H{"workouts": arr})
+}
 
-	var fullWorkout Workout
-	if err := s.db.Preload("Exercises").First(&fullWorkout, workout.ID).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load workout"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"workout": fullWorkout})
+type DeleteWorkoutInfo struct {
+	Ids []int `json:"ids"`
 }
 
 func (s *Server) DeleteWorkout(c *gin.Context) {
-	idInt, err := strconv.ParseUint(c.Param("id"), 10, strconv.IntSize)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid workout id"})
+	var req DeleteWorkoutInfo
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	id := uint(idInt)
 	user := c.MustGet("user").(*User)
 
-	// verify workout exists and belongs to the user
-	var workout Workout
-	if err := s.db.Where("id = ? AND user_id = ?", id, user.ID).First(&workout).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Workout not found"})
-		return
-	}
+	for _, id := range req.Ids {
+		// verify workout exists and belongs to the user
+		var workout Workout
+		if err := s.db.Where("id = ? AND user_id = ?", id, user.ID).First(&workout).Error; err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Workout not found"})
+			return
+		}
 
-	// delete exercises
-	if err := s.db.Where("workout_id = ?", workout.ID).Delete(&Exercise{}).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error deleting exercises"})
-		return
-	}
+		// delete exercises
+		if err := s.db.Where("workout_id = ?", workout.ID).Delete(&Exercise{}).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error deleting exercises"})
+			return
+		}
 
-	// delete workout
-	if err := s.db.Delete(&workout).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error deleting workout"})
-		return
+		// delete workout
+		if err := s.db.Delete(&workout).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error deleting workout"})
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{})
@@ -273,24 +286,32 @@ type TagInfo struct {
 	Color string `json:"color"`
 }
 
+type BatchedTagInfo struct {
+	Tags []TagInfo `json:"tags"`
+}
+
 func (s *Server) SetTag(c *gin.Context) {
-	var req TagInfo
+	var req BatchedTagInfo
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	user := c.MustGet("user").(*User)
-	tag := Tag{
-		BaseModel: BaseModel{ID: uint(req.Id)},
-		UserID:    user.ID, Name: req.Name, Color: req.Color}
+	arr := []Tag{}
+	for _, t := range req.Tags {
+		user := c.MustGet("user").(*User)
+		tag := Tag{
+			BaseModel: BaseModel{ID: uint(t.Id)},
+			UserID:    user.ID, Name: t.Name, Color: t.Color}
 
-	if result := s.db.Save(&tag); result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating/updating tag"})
-		return
+		if result := s.db.Save(&tag); result.Error != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating/updating tag"})
+			return
+		}
+		arr = append(arr, tag)
 	}
 
-	c.JSON(http.StatusOK, gin.H{"tag": tag})
+	c.JSON(http.StatusOK, gin.H{"tags": arr})
 }
 
 func (s *Server) DeleteTag(c *gin.Context) {
@@ -311,6 +332,38 @@ func (s *Server) DeleteTag(c *gin.Context) {
 	if err := s.db.Delete(&tag).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error deleting tag"})
 		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{})
+}
+
+type TaggedDatesInfo struct {
+	Dates map[string][]int `json:"taggedDates"`
+}
+
+func (s *Server) UpdateTaggedDates(c *gin.Context) {
+	var req TaggedDatesInfo
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	user := c.MustGet("user").(*User)
+
+	for date, tags := range req.Dates {
+		// insert/update the row or remove it when the date no longer has any corresponding tags
+		if len(tags) == 0 {
+			clause := &TaggedDate{UserID: user.ID, Date: date}
+			if err := s.db.Where(clause).Delete(&TaggedDate{}).Error; err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete tagged date"})
+				return
+			}
+		} else {
+			row := TaggedDate{UserID: user.ID, Date: date, Tags: datatypes.NewJSONSlice(tags)}
+			if result := s.db.Save(&row); result.Error != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating/updating tagged date"})
+				return
+			}
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{})

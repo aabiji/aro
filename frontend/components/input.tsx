@@ -16,7 +16,7 @@ export default function NumInput({ num, setNum, label, disabled }: InputProps) {
   return (
     <View className="items-center flex-row">
       <TextInput
-        editable={disabled !== undefined ? !disabled : false}
+        editable={disabled !== undefined ? !disabled : true}
         inputMode="numeric"
         value={String(num)}
         placeholder="0"

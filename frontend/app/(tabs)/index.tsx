@@ -9,7 +9,7 @@ import { ScrollContainer } from "@/components/container";
 
 export default function Index() {
   // TODO: what to do when the jwt expires?
-  const { jwt, updateUserData, upsertWorkout } = useStore();
+  const { jwt, setAllData } = useStore();
   const authenticated = jwt.length > 0;
 
   const [isLogin, setIsLogin] = useState(true);
@@ -55,11 +55,8 @@ export default function Index() {
     try {
       const jwtJson = await request("POST", endpoint, body);
       const dataJson = await request("GET", "/auth/user", undefined, jwtJson.jwt);
-      updateUserData({ jwt: jwtJson.jwt, ...dataJson.user.settings });
-      for (const workout of dataJson.user.workouts) {
-        upsertWorkout(workout);
-      }
-    } catch (err) {
+      setAllData(jwtJson.jwt, dataJson);
+    } catch (err: any) {
       setErrMsg(err.message);
     }
   };
