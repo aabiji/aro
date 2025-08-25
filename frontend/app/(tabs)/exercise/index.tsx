@@ -14,25 +14,25 @@ export default function Index() {
 
   const sortedWorkouts = useMemo(() => {
     return Object.values(workouts)
-      .filter((w: WorkoutInfo) => !w.is_template)
+      .filter((w: WorkoutInfo) => !w.isTemplate)
       .sort((a: WorkoutInfo, b: WorkoutInfo) => new Date(b.tag).getTime() - new Date(a.tag).getTime());
   }, [workouts]);
 
   const choices = useMemo(() => {
     return Object.values(workouts)
-      .filter((w: WorkoutInfo) => w.is_template && w.exercises.length > 0)
+      .filter((w: WorkoutInfo) => w.isTemplate && w.exercises.length > 0)
       .map((w: WorkoutInfo) => ({ label: w.tag, value: w.tag }));
   }, [workouts]);
 
   const addWorkout = async (templateName: string) => {
     const template: WorkoutInfo =
       Object.values(workouts).find((w: WorkoutInfo) => w.tag == templateName);
-    let body = { is_template: false, tag: today, exercises: [] as ExerciseInfo[] };
+    let body = { isTemplate: false, tag: today, exercises: [] as ExerciseInfo[] };
 
     for (const e of template.exercises) {
       body.exercises.push({
         name: e.name,
-        exerciseType: e.exercise_type,
+        exerciseType: e.exerciseType,
         reps: [],
         duration: 0,
         distance: 0,
@@ -53,7 +53,7 @@ export default function Index() {
       <ScrollContainer>
         <FlatList
           data={sortedWorkouts}
-          keyExtractor={(item: WorkoutInfo) => item.id}
+          keyExtractor={(item: WorkoutInfo) => String(item.id)}
           ListHeaderComponent={
             <View>
               <Text className="font-bold text-xl mb-2">{today}</Text>
@@ -73,9 +73,8 @@ export default function Index() {
             </View>
           }
           renderItem={({ item, index }) => {
-            const prev = sortedWorkouts[sortedWorkouts.length - 1 - index].tag;
-            const showDate =
-              index > 0 && prev !== sortedWorkouts[sortedWorkouts.length - index].tag;
+            const prevTag = sortedWorkouts[index - 1]?.tag;
+            const showDate = index > 0 && item.tag !== prevTag;
 
             return (
               <View>

@@ -79,7 +79,7 @@ interface MonthInterval {
 }
 
 interface PlotGroup {
-  exercise_type: ExerciseType;
+  exerciseType: ExerciseType;
   data: PlotPoint[];
   months: MonthInterval[]; // from earliest to latest
 }
@@ -272,10 +272,10 @@ export default function ProgressPage() {
   // map the data into a set of plot points, and group by exercise
   let exercises: Record<string, PlotGroup> = {};
   for (const w of Object.values(workouts)) {
-    if (w.is_template) continue;
+    if (w.isTemplate) continue;
     for (const e of w.exercises) {
       const point = {
-        date: w.tag,
+        date: new Date(w.tag),
         weight: e.weight ?? 0,
         duration: e.duration ?? 0,
         distance: e.distance ?? 0,
@@ -286,7 +286,7 @@ export default function ProgressPage() {
 
       if (exercises[e.name] === undefined)
         exercises[e.name] = {
-          exercise_type: e.exercise_type,
+          exerciseType: e.exerciseType,
           data: [point],
           months: [],
         };
@@ -311,13 +311,13 @@ export default function ProgressPage() {
   return (
     <ScrollContainer>
       {Object.keys(exercises).length == 0 && (
-        <Empty messages={["You have no workout templates"]} />
+        <Empty messages={["You have no exercises"]} />
       )}
 
       <FlatList
         data={Object.keys(exercises)}
         renderItem={({ item }) => {
-          if (exercises[item].exercise_type == ExerciseType.Resistance)
+          if (exercises[item].exerciseType == ExerciseType.Resistance)
             return <ResistancePlot group={exercises[item]} name={item} />;
           return <CardioPlot group={exercises[item]} name={item} />;
         }}

@@ -28,7 +28,12 @@ function WorkoutTemplate({ workout }: {workout: WorkoutInfo}) {
       if (e.name.includes(defaultName)) count++;
     }
     defaultName = `${defaultName} ${count + 1}`;
-    addExercise(workout.id, { name: defaultName, exerciseType: choice });
+    addExercise(workout.id, {
+      name: defaultName,
+      exerciseType: choice,
+      weight: 0, reps: [], id: 0,
+      duration: 0, distance: 0,
+    });
   };
 
   const deleteTemplate = async () => {

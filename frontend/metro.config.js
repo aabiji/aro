@@ -14,4 +14,14 @@ config.resolver = {
   sourceExts: [...config.resolver.sourceExts, "svg"],
 };
 
+// Make Zustand work, taken from [here](https://github.com/pmndrs/zustand/discussions/1967)
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (moduleName.includes("zustand")) {
+    const result = require.resolve(moduleName); // gets CommonJS version
+    return context.resolveRequest(context, result, platform);
+  }
+  // otherwise chain to the standard Metro resolver.
+  return context.resolveRequest(context, moduleName, platform);
+};
+
 module.exports = withNativeWind(config, { input: "./global.css" });

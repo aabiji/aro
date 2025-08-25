@@ -1,8 +1,9 @@
 package main
 
 import (
-	"gorm.io/datatypes"
 	"time"
+
+	"gorm.io/datatypes"
 )
 
 // the same as gorm.Model, just with no json output
@@ -35,7 +36,7 @@ type Exercise struct {
 	BaseModel
 	WorkoutID    uint                     `json:"-"`
 	Name         string                   `json:"name"`
-	ExerciseType int                      `json:"exercise_type"`
+	ExerciseType int                      `json:"exerciseType"`
 	Reps         datatypes.JSONSlice[int] `gorm:"type:json" json:"reps"`
 	Weight       int                      `json:"weight"`
 	Duration     int                      `json:"duration"`

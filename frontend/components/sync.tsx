@@ -28,7 +28,7 @@ export default function StateSync({ children }) {
 
     for (let i = 0; i < workoutsState.workouts.length; i++) {
       const workout = workoutsState.workouts[i];
-      if (workout.tag != today && !workout.is_template) continue; // ignore archived workouts
+      if (workout.tag != today && !workout.isTemplate) continue; // ignore archived workouts
 
       try {
         // update = delete the existing one then create a new one

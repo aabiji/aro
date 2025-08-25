@@ -10,18 +10,11 @@ import Feather from "@expo/vector-icons/Feather";
 
 export default function TemplatesPage() {
   const { upsertWorkout, jwt, workouts } = useStore();
-
   const [templateName, setWorkoutName] = useState("");
 
   const createTemplate = async () => {
-    if (workouts[templateName] !== undefined) return;
-
     try {
-      const body = {
-        is_template: true,
-        tag: templateName,
-        exercises: [],
-      };
+      const body = { isTemplate: true, tag: templateName, exercises: [] };
       const json = await request("POST", "/auth/workout", body, jwt);
       upsertWorkout(json.workout);
     } catch (err: any) {
@@ -49,13 +42,13 @@ export default function TemplatesPage() {
           </Pressable>
         </View>
 
-        {Object.values(workouts).some((w: Workout) => w.isTemplate) &&
+        {!Object.values(workouts).some((w: Workout) => w.isTemplate) &&
           <Empty messages={["You have no workout templates"]} />}
 
         <FlatList
           data={Object.values(workouts).filter((w: Workout) => w.isTemplate)}
           className="w-[100%]"
-          keyExtractor={(w: Workout) => w.id}
+          keyExtractor={(w: Workout) => String(w.id)}
           renderItem={({ item }) => <WorkoutTemplateMemo workout={item} />}
         />
       </ScrollContainer>

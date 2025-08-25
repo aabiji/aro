@@ -1,5 +1,5 @@
 import { MMKV } from "react-native-mmkv";
-import { persist, StateStorage } from "zustand/middleware";
+import { createJSONStorage, persist, StateStorage } from "zustand/middleware";
 import { create, StateCreator } from "zustand";
 
 export enum ExerciseType { Resistance, Cardio }
@@ -57,7 +57,7 @@ const createAppStore: StateCreator<AppStore> = (set, _get) =>  ({
   workouts: {},
   taggedDates: {},
 
-  updateUserData: (userData) => set((_state: AppStore) => ({ ...userData })),
+  updateUserData: (userData) => set((state: AppStore) => ({ ...state, ...userData })),
 
   upsertWorkout: (w) =>
     set((state: AppStore) => ({
@@ -132,30 +132,30 @@ const createAppStore: StateCreator<AppStore> = (set, _get) =>  ({
 
   toggleTaggedDate: (date, tagId) =>
     set((state: AppStore) => {
-      const existingIds = state.taggedDates[date];
-      const index = existingIds.findIndex(id => id == tagId);
-
-      let tagIds = existingIds !== undefined ? [...existingIds] : [];
+      let tagIds = state.taggedDates[date] !== undefined ? [...state.taggedDates[date]] : [];
+      const index = tagIds.findIndex(id => id == tagId);
       if (index != -1)
         tagIds.splice(index, 1);
       else
         tagIds.push(tagId);
-
       return { taggedDates: { ...state.taggedDates, [date]: tagIds }};
     }),
 });
 
 const mmvkStorage = new MMKV();
 
-const storage: StateStorage = {
-  getItem: (name) => mmvkStorage.getString(name) ?? null,
-  removeItem: (name) => { mmvkStorage.delete(name) },
-  setItem: (name, value) => { mmvkStorage.set(name, value) },
+const storageBackend: StateStorage = {
+  getItem: (key) => mmvkStorage.getString(key) ?? null,
+  removeItem: (key) => { mmvkStorage.delete(key) },
+  setItem: (key, value) => { mmvkStorage.set(key, value) },
 };
 
 export const useStore = create<AppStore>()(
-  persist(createAppStore, { name: "app-data", storage })
-)
+  persist(createAppStore, {
+    name: "app-data",
+    storage: createJSONStorage(() => storageBackend)
+  })
+);
 
 export const resetStore = async () => {
   useStore.setState({
@@ -174,6 +174,5 @@ export const resetStore = async () => {
     removeTag: useStore.getState().removeTag,
     toggleTaggedDate: useStore.getState().toggleTaggedDate,
   });
-
-  await storage.removeItem("app-data");
+  await storageBackend.removeItem("app-data");
 };

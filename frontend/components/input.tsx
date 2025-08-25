@@ -8,7 +8,7 @@ interface InputProps {
 }
 
 export default function NumInput({ num, setNum, label, disabled }: InputProps) {
-  const update = (value) => {
+  const update = (value: string) => {
     if (/\D/.test(value)) return; // can't have non numeric chars
     setNum(Number(value));
   };
@@ -16,9 +16,9 @@ export default function NumInput({ num, setNum, label, disabled }: InputProps) {
   return (
     <View className="items-center flex-row">
       <TextInput
-        editable={disabled ?? false}
+        editable={disabled !== undefined ? !disabled : false}
         inputMode="numeric"
-        value={num}
+        value={String(num)}
         placeholder="0"
         onChangeText={update}
         maxLength={4}

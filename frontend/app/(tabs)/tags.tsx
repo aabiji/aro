@@ -17,9 +17,7 @@ interface CalendarTileProps {
 function CalendarTile({ date, disabled, toggle }: CalendarTileProps) {
   const { tags, taggedDates } = useStore();
   const tagIds = taggedDates[formatDate(date!)] ?? [];
-  const colors = tagIds.map(
-    (id: number) => tags.find((tag: TagInfo) => tag.id == id).color,
-  );
+  const colors = tagIds.map((id: number) => tags[id].color);
   const empty = date === undefined || toggle === undefined;
 
   return (
@@ -85,8 +83,8 @@ export default function TagsPage() {
 
       <View className="mb-2 border-b border-gray-200 flex-row items-center flex-wrap h-max-[100px]">
         {Object.values(tags).map((tag: TagInfo, index: number) => (
-          <Tag key={index} tag={tag} selected={selectedTag == index}
-            setSelected={() => setSelectedTag(selectedTag == index ? -1 : index)} />
+          <Tag key={index} tag={tag} selected={selectedTag == tag.id}
+            setSelected={() => setSelectedTag(selectedTag == tag.id ? -1 : tag.id)} />
         ))}
       </View>
 
