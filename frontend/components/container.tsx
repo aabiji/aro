@@ -4,9 +4,7 @@ import { useStore } from "@/lib/state";
 import { request } from "@/lib/utils";
 
 import React from "react";
-import {
-  AppState, NativeEventSubscription, Platform,
-  useWindowDimensions, Text, View } from "react-native";
+import { AppState, NativeEventSubscription, Platform,Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import DumbellsIcon from "@/assets/dumbells.svg";

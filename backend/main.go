@@ -83,7 +83,7 @@ func main() {
 	r.POST("/login", server.Login)
 	r.POST("/signup", server.Signup)
 
-	auth.GET("/user", server.GetUserInfo)
+	auth.POST("/userInfo", server.GetUserInfo)
 	auth.POST("/user", server.UpdateUserSettings)
 	auth.DELETE("/user", server.DeleteUser)
 

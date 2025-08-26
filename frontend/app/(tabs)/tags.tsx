@@ -24,7 +24,7 @@ function CalendarTile({ date, disabled, toggle }: CalendarTileProps) {
     <Pressable
       onPress={toggle}
       disabled={disabled || empty}
-      className="w-full p-[5px] aspect-square bg-neutral-100"
+      className="w-full p-[5px] aspect-square bg-default-background"
     >
       {!empty && (
         <View className="flex-column h-full gap-[3px]">
@@ -74,7 +74,7 @@ export default function TagsPage() {
 
   return (
     <ScrollContainer syncState>
-      <View className="flex-row justify-between w-[50%] m-auto">
+      <View className="flex-row mb-[-15px] justify-between w-[50%] m-auto">
         <Text className="text-xl">Tag dates</Text>
         <Pressable onPress={() => setModalVisible(true)}>
           <Feather name="command" color="black" size={18} />

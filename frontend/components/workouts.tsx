@@ -117,7 +117,7 @@ function WorkoutRecord({ workout, disabled }: {workout: WorkoutInfo, disabled: b
             className="flex-row justify-between items-center p-2 border-t border-neutral-100"
           >
             <View className="items-center flex-row max-w-[40%]">
-              <Text className="text-l font-bold mr-2 mr-5">{str}</Text>
+              <Text className="text-l mr-2 mr-5">{str}</Text>
             </View>
 
             <View className="flex-row items-center">
@@ -137,7 +137,7 @@ function WorkoutRecord({ workout, disabled }: {workout: WorkoutInfo, disabled: b
                   onPress={() => updateExercise(workout.id, eIndex, {
                     reps: [...workout.exercises[eIndex].reps!, 0] })}
                   className="bg-transparent px-4 px-2 rounded">
-                  <Feather name="plus" color="blue" size={20} />
+                  <Feather name="plus" color="grey" size={20} />
                 </Pressable>
               )}
             </View>

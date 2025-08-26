@@ -54,7 +54,10 @@ export default function Index() {
 
     try {
       const jwtJson = await request("POST", endpoint, body);
-      const dataJson = await request("GET", "/auth/user", undefined, jwtJson.jwt);
+      const payload = {
+        page: 0, includeSettings: true, includeWorkouts: true,
+        includeTags: true, includeTaggedDates: true };
+      const dataJson = await request("POST", "/auth/userInfo", payload, jwtJson.jwt);
       setAllData(jwtJson.jwt, dataJson);
     } catch (err: any) {
       setErrMsg(err.message);

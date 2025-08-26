@@ -111,15 +111,45 @@ func (s *Server) Signup(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"jwt": token})
 }
 
+type UserInfoOptions struct {
+	Page               int  `json:"page"`
+	IncludeSettings    bool `json:"includeSettings"`
+	IncludeWorkouts    bool `json:"includeWorkouts"`
+	IncludeTags        bool `json:"includeTags"`
+	IncludeTaggedDates bool `json:"includeTaggedDates"`
+}
+
 func (s *Server) GetUserInfo(c *gin.Context) {
 	var fullUser User
 	user := c.MustGet("user").(*User)
 
-	r := s.db.Preload("Settings").
-		Preload("Workouts.Exercises").
-		Preload("TaggedDates").
-		Preload("Tags").
-		First(&fullUser, user.ID)
+	var req UserInfoOptions
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	limit := 10
+	query := s.db
+
+	if req.IncludeSettings {
+		query = query.Preload("Settings")
+	}
+	if req.IncludeWorkouts {
+		query = query.Preload("Workouts", func(db *gorm.DB) *gorm.DB {
+			return db.Offset(req.Page * limit).Limit(limit)
+		}).Preload("Workouts.Exercises")
+	}
+	if req.IncludeTags {
+		query = query.Preload("Tags")
+	}
+	if req.IncludeTaggedDates {
+		query = query.Preload("TaggedDates", func(db *gorm.DB) *gorm.DB {
+			return db.Offset(req.Page * limit).Limit(limit)
+		})
+	}
+
+	r := query.First(&fullUser, user.ID)
 	if r.Error != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to get user"})
 		return
@@ -158,29 +188,33 @@ func (s *Server) UpdateUserSettings(c *gin.Context) {
 func (s *Server) DeleteUser(c *gin.Context) {
 	user := c.MustGet("user").(*User)
 
-	// get all workout ids
-	subQuery := s.db.Model(&Workout{}).Select("id").Where("user_id = ?", user.ID)
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		// get all workout ids
+		subQuery := tx.Model(&Workout{}).Select("id").Where("user_id = ?", user.ID)
 
-	if err := s.db.Where("workout_id IN (?)", subQuery).Delete(&Exercise{}).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete exercises"})
+		if err := tx.Where("workout_id IN (?)", subQuery).Delete(&Exercise{}).Error; err != nil {
+			return fmt.Errorf("Failed to delete exercises")
+		}
+
+		if err := tx.Where(&Workout{UserID: user.ID}).Delete(&Workout{}).Error; err != nil {
+			return fmt.Errorf("Failed to delete workouts")
+		}
+
+		if err := tx.Where(&Settings{UserID: user.ID}).Delete(&Settings{}).Error; err != nil {
+			return fmt.Errorf("Failed to delete settings")
+		}
+
+		if err := tx.Delete(&User{}, user.ID).Error; err != nil {
+			return fmt.Errorf("Failed to delete user")
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-
-	if err := s.db.Where(&Workout{UserID: user.ID}).Delete(&Workout{}).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete workouts"})
-		return
-	}
-
-	if err := s.db.Where(&Settings{UserID: user.ID}).Delete(&Settings{}).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete settings"})
-		return
-	}
-
-	if err := s.db.Delete(&User{}, user.ID).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
-		return
-	}
-
 	c.JSON(http.StatusOK, gin.H{})
 }
 
@@ -211,36 +245,42 @@ func (s *Server) CreateWorkout(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
 	user := c.MustGet("user").(*User)
 	arr := []Workout{}
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		for _, w := range req.Workouts {
+			workout := Workout{UserID: user.ID, Template: w.Template, Tag: w.Tag}
 
-	for _, w := range req.Workouts {
-		workout := Workout{UserID: user.ID, Template: w.Template, Tag: w.Tag}
+			for _, exercise := range w.Exercises {
+				workout.Exercises = append(workout.Exercises, Exercise{
+					Name:         exercise.Name,
+					ExerciseType: exercise.ExerciseType,
+					Weight:       exercise.Weight,
+					Duration:     exercise.Duration,
+					Distance:     exercise.Distance,
+					Reps:         datatypes.NewJSONSlice(exercise.Reps),
+				})
+			}
 
-		for _, exercise := range w.Exercises {
-			workout.Exercises = append(workout.Exercises, Exercise{
-				Name:         exercise.Name,
-				ExerciseType: exercise.ExerciseType,
-				Weight:       exercise.Weight,
-				Duration:     exercise.Duration,
-				Distance:     exercise.Distance,
-				Reps:         datatypes.NewJSONSlice(exercise.Reps),
-			})
+			if result := tx.Create(&workout); result.Error != nil {
+				return fmt.Errorf("Error creating workout")
+			}
+
+			var full Workout
+			if err := tx.Preload("Exercises").First(&full, workout.ID).Error; err != nil {
+				return fmt.Errorf("Failed to load workout")
+			}
+			arr = append(arr, full)
 		}
 
-		if result := s.db.Create(&workout); result.Error != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating workout"})
-			return
-		}
+		return nil
+	})
 
-		var full Workout
-		if err := s.db.Preload("Exercises").First(&full, workout.ID).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load workout"})
-			return
-		}
-		arr = append(arr, full)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
-
 	c.JSON(http.StatusOK, gin.H{"workouts": arr})
 }
 
@@ -254,29 +294,33 @@ func (s *Server) DeleteWorkout(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
 	user := c.MustGet("user").(*User)
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		for _, id := range req.Ids {
+			// verify workout exists and belongs to the user
+			var workout Workout
+			if err := tx.Where("id = ? AND user_id = ?", id, user.ID).First(&workout).Error; err != nil {
+				return fmt.Errorf("Workout not found")
+			}
 
-	for _, id := range req.Ids {
-		// verify workout exists and belongs to the user
-		var workout Workout
-		if err := s.db.Where("id = ? AND user_id = ?", id, user.ID).First(&workout).Error; err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Workout not found"})
-			return
-		}
+			// delete exercises
+			if err := tx.Where("workout_id = ?", workout.ID).Delete(&Exercise{}).Error; err != nil {
+				return fmt.Errorf("Error deleting exercises")
+			}
 
-		// delete exercises
-		if err := s.db.Where("workout_id = ?", workout.ID).Delete(&Exercise{}).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error deleting exercises"})
-			return
+			// delete workout
+			if err := tx.Delete(&workout).Error; err != nil {
+				return fmt.Errorf("Error deleting workout")
+			}
 		}
+		return nil
+	})
 
-		// delete workout
-		if err := s.db.Delete(&workout).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error deleting workout"})
-			return
-		}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
-
 	c.JSON(http.StatusOK, gin.H{})
 }
 
@@ -298,19 +342,26 @@ func (s *Server) SetTag(c *gin.Context) {
 	}
 
 	arr := []Tag{}
-	for _, t := range req.Tags {
-		user := c.MustGet("user").(*User)
-		tag := Tag{
-			BaseModel: BaseModel{ID: uint(t.Id)},
-			UserID:    user.ID, Name: t.Name, Color: t.Color}
+	user := c.MustGet("user").(*User)
 
-		if result := s.db.Save(&tag); result.Error != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating/updating tag"})
-			return
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		for _, t := range req.Tags {
+			tag := Tag{
+				BaseModel: BaseModel{ID: uint(t.Id)},
+				UserID:    user.ID, Name: t.Name, Color: t.Color}
+
+			if result := tx.Save(&tag); result.Error != nil {
+				return fmt.Errorf("Error creating/updating tag")
+			}
+			arr = append(arr, tag)
 		}
-		arr = append(arr, tag)
-	}
+		return nil
+	})
 
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"tags": arr})
 }
 
@@ -349,22 +400,27 @@ func (s *Server) UpdateTaggedDates(c *gin.Context) {
 	}
 	user := c.MustGet("user").(*User)
 
-	for date, tags := range req.Dates {
-		// insert/update the row or remove it when the date no longer has any corresponding tags
-		if len(tags) == 0 {
-			clause := &TaggedDate{UserID: user.ID, Date: date}
-			if err := s.db.Where(clause).Delete(&TaggedDate{}).Error; err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete tagged date"})
-				return
-			}
-		} else {
-			row := TaggedDate{UserID: user.ID, Date: date, Tags: datatypes.NewJSONSlice(tags)}
-			if result := s.db.Save(&row); result.Error != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating/updating tagged date"})
-				return
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		for date, tags := range req.Dates {
+			// insert/update the row or remove it when the date no longer has any corresponding tags
+			if len(tags) == 0 {
+				clause := &TaggedDate{UserID: user.ID, Date: date}
+				if err := tx.Where(clause).Delete(&TaggedDate{}).Error; err != nil {
+					return fmt.Errorf("Failed to delete tagged date")
+				}
+			} else {
+				row := TaggedDate{UserID: user.ID, Date: date, Tags: datatypes.NewJSONSlice(tags)}
+				if result := tx.Save(&row); result.Error != nil {
+					return fmt.Errorf("Error creating/updating tagged date")
+				}
 			}
 		}
-	}
+		return nil
+	})
 
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{})
 }

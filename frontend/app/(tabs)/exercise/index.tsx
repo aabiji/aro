@@ -47,11 +47,16 @@ export default function Index() {
     }
   };
 
+  const fetchMore = () => {
+    console.log("infinite scroll!");
+  }
+
   return (
     <ScrollContainer syncState>
       <FlatList
         data={sortedWorkouts}
         keyExtractor={(item: WorkoutInfo) => String(item.id)}
+        onEndReached={fetchMore}
         ListHeaderComponent={
           <Section>
             <Text className="font-bold text-xl mb-2">{today}</Text>
@@ -74,7 +79,9 @@ export default function Index() {
           return (
             <View>
               {showDate && (
-                <Text className="font-bold text-xl mb-2">{item.tag}</Text>
+                <View className="m-auto w-[50%]">
+                  <Text className="font-bold text-xl mb-2">{item.tag}</Text>
+                </View>
               )}
               <WorkoutRecordMemo disabled={item.tag != today} workout={item} />
             </View>
