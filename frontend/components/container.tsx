@@ -11,12 +11,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import DumbellsIcon from "@/assets/dumbells.svg";
 
-export function Section({ children }: { children: React.ReactNode} ) {
-  return (
-    <View className="w-[100%] m-auto border border-gray-200 p-2 bg-white mb-5">
-      {children}
-    </View>
-  );
+export function Section({ children, className }:
+  { children: React.ReactNode, className?: string } ) {
+  const style = `
+    w-[50%] m-auto border border-neutral-200
+    p-2 bg-default-background mb-5 ${className ?? ""}
+  `;
+  return <View className={style}>{children}</View>;
 }
 
 export function Empty({ messages }: { messages: string[] }) {
@@ -24,7 +25,7 @@ export function Empty({ messages }: { messages: string[] }) {
     <View className="items-center">
       <DumbellsIcon width={125} height={125} />
       {messages.map((_, i) => (
-        <Text className="text-xl text-gray-500" key={i}>
+        <Text className="text-xl text-neutral-500" key={i}>
           {messages[i]}
         </Text>
       ))}
@@ -111,12 +112,9 @@ export function ScrollContainer(
     }, []),
   );
 
-  const { width } = useWindowDimensions();
-  const containerWidth = width > 1024 ? "40%" : "60%";
-
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      <View className="m-auto h-[100%] mt-5" style={{ width: containerWidth }}>
+      <View className="h-[100%] w-[100%] pt-5 bg-default-background">
         {children}
       </View>
     </SafeAreaView>

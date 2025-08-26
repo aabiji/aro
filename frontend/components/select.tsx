@@ -23,7 +23,7 @@ export function Dropdown({ choices, choice, setChoice }) {
       onChange={(item) => setChoice(item.value)}
       renderRightIcon={() => <Feather name="chevron-down" size={20} color="black" />}
       renderItem={(item) => (
-        <Text className="text-center text-black text-sm py-1">{item.label}</Text>
+        <Text className="text-center text-default-font text-sm py-1">{item.label}</Text>
       )}
     />
   );
@@ -33,14 +33,14 @@ export function SelectButton({ choices, defaultChoice, message, handlePress, ico
   const [choice, setChoice] = useState(defaultChoice);
 
   return (
-    <View className="w-full items-center justify-center border border-gray-100">
+    <View className="w-full items-center justify-center border border-neutral-100">
       <Dropdown choices={choices} choice={choice} setChoice={setChoice} />
       <Pressable
-        className="flex-row items-center justify-center w-full bg-blue-500 py-2"
+        className="flex-row items-center justify-center w-full bg-primary-500 py-2"
         onPress={() => handlePress(choice)}
       >
         {icon && <Feather name={icon} size={20} color="white" />}
-        <Text className="text-white font-bold text-base ml-2">{message}</Text>
+        <Text className="text-default-background font-bold text-base ml-2">{message}</Text>
       </Pressable>
     </View>
   );
@@ -55,12 +55,12 @@ export function Selection({ choices, icons, handleChoice, className }) {
   const extra = className ?? "";
 
   return (
-    <View className="flex-row justify-between bg-white border-gray-100 border-2">
+    <View className="flex-row justify-between bg-default-background border-neutral-100 border-2">
       {choices.map((_, index) => {
         const color = index == selected ? "white" : "blue";
-        const textColor = index == selected ? "text-white" : "text-black";
+        const textColor = index == selected ? "text-default-background" : "text-default-font";
         const style =
-          index == selected ? "bg-blue-500 text-white p-1" : "bg-transparent p-1";
+          index == selected ? "bg-primary-500 text-default-background p-1" : "bg-transparent p-1";
         const Icon = icons ? icons[index] : undefined;
         return (
           <Pressable

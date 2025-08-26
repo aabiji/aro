@@ -206,10 +206,19 @@ const storageBackend: StateStorage = {
   setItem: (key, value) => { mmvkStorage.set(key, value) },
 };
 
+
+const excludedFields = ["changedWorkoutIds", "changedTaggedDates", "changedTagIds", "settingsChanged"];
+
 export const useStore = create<AppStore>()(
   persist(createAppStore, {
     name: "app-data",
-    storage: createJSONStorage(() => storageBackend)
+    storage: createJSONStorage(() => storageBackend),
+    partialize: (state) => {
+      let clone = {...state};
+      for (const key of excludedFields)
+        delete clone[key];
+      return clone;
+    }
   })
 );
 

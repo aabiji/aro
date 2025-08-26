@@ -3,7 +3,7 @@ import { ExerciseType, useStore } from "@/lib/state";
 
 import { FlatList, Pressable, Text, View } from "react-native";
 import { LineGraph, Heatmap } from "@/components/graph";
-import { Empty, ScrollContainer } from "@/components/container";
+import { Empty, ScrollContainer, Section } from "@/components/container";
 import { Dropdown, Selection } from "@/components/select";
 import Feather from "@expo/vector-icons/Feather";
 
@@ -152,7 +152,8 @@ function ResistancePlot({ name, group }: { name: string; group: PlotGroup }) {
   const getValue = (v: PlotPoint) => (showWeight ? v.weight : v.averageReps);
 
   return (
-    <View className="bg-white px-4 py-2 w-full mb-4">
+    <Section>
+    {/*<View className="bg-default-background px-4 py-2 w-full mb-4">*/}
       <View className="items-center flex-row justify-between items-center">
         <Text className="text-xl">{name}</Text>
 
@@ -176,7 +177,7 @@ function ResistancePlot({ name, group }: { name: string; group: PlotGroup }) {
         getValue={getValue}
         update={update}
       />
-    </View>
+    </Section>
   );
 }
 
@@ -227,7 +228,8 @@ function CardioPlot({ name, group }: { name: string; group: PlotGroup }) {
   useEffect(() => changeYear(0), []);
 
   return (
-    <View className="bg-white px-3 w-full mb-4">
+    <Section>
+    {/*<View className="bg-default-background px-3 w-full mb-4">*/}
       <View className="flex-row justify-between items-center">
         <Text className="text-xl">{name}</Text>
 
@@ -241,7 +243,7 @@ function CardioPlot({ name, group }: { name: string; group: PlotGroup }) {
             <Feather
               name="arrow-left"
               size={18}
-              color={prevDisabled ? "gray" : "black"}
+              color={prevDisabled ? "neutral" : "black"}
             />
           </Pressable>
           <Text className="text-base"> {year} </Text>
@@ -249,7 +251,7 @@ function CardioPlot({ name, group }: { name: string; group: PlotGroup }) {
             <Feather
               name="arrow-right"
               size={18}
-              color={nextDisabled ? "gray" : "black"}
+              color={nextDisabled ? "neutral" : "black"}
             />
           </Pressable>
         </View>
@@ -262,7 +264,7 @@ function CardioPlot({ name, group }: { name: string; group: PlotGroup }) {
         getValue={getValue}
         update={update}
       />
-    </View>
+    </Section>
   );
 }
 

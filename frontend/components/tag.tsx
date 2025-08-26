@@ -24,8 +24,8 @@ export function Tag({ tag, selected, setSelected, showPicker, setName, removeTag
   const style = !editable
     ? `
       p-2 border-2 rounded-xl w-fit h-fit flex-row items-center cursor-pointer
-      ${selected ? "border-gray-400" : "border-gray-200"}`
-    : `w-[100%] p-2 border-b border-t border-gray-200`;
+      ${selected ? "border-neutral-400" : "border-neutral-200"}`
+    : `w-[100%] p-2 border-b border-t border-neutral-200`;
   const pickerSize = editable ? 30 : 25;
 
   return (
@@ -37,7 +37,7 @@ export function Tag({ tag, selected, setSelected, showPicker, setName, removeTag
           onPress={(event) =>
             showPicker(event.nativeEvent.pageX, event.nativeEvent.pageY)
           }
-          className="border-1 border-gray-200"
+          className="border-1 border-neutral-200"
           style={{
             backgroundColor: tag.color,
             borderRadius: "50%",
@@ -48,7 +48,7 @@ export function Tag({ tag, selected, setSelected, showPicker, setName, removeTag
 
         {editable ? (
           <TextInput
-            className="flex-1 text-base bg-white rounded-sm px-3 py-1 outline-none"
+            className="flex-1 text-base bg-default-background rounded-sm px-3 py-1 outline-none"
             value={tag.name}
             onChangeText={(value) => setName(value)}
           />
@@ -125,7 +125,7 @@ export function TagManager({ visible, close }: { visible: boolean; close: () => 
           </View>
 
           {Object.keys(tags).length == 0 && (
-            <Text className="text-center mt-4 text-base text-gray-400"> No tags </Text>
+            <Text className="text-center mt-4 text-base text-neutral-400"> No tags </Text>
           )}
 
           <FlatList
@@ -153,7 +153,7 @@ export function TagManager({ visible, close }: { visible: boolean; close: () => 
             height: 150,
             zIndex: 9999,
           }}
-          className="rounded-xl bg-white p-2 border-2 border-gray-200"
+          className="rounded-xl bg-default-background p-2 border-2 border-neutral-200"
         >
           <ColorPicker
             style={{ width: "100%", height: "100%" }}

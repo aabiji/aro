@@ -23,20 +23,20 @@ export default function TemplatesPage() {
 
   return (
     <ScrollContainer syncState>
-      <View className="flex-row mb-5">
+      <View className="flex-row mb-5 w-[50%] m-auto">
         <TextInput
           value={templateName}
           placeholder="Template name"
-          className="bg-white p-3 grow outline-none placeholder-gray-500"
+          className="bg-default-background p-3 grow outline-none border border-neutral-200 placeholder-neutral-500"
           onChangeText={(value) => setWorkoutName(value)}
         />
         <Pressable
           disabled={templateName.trim().length == 0}
           onPress={() => createTemplate()}
-          className="flex-row gap-1 bg-blue-500 p-2 items-center"
+          className="flex-row gap-1 bg-primary-500 p-2 items-center"
         >
           <Feather name="plus" color="white" size={20} />
-          <Text className="text-white"> New template </Text>
+          <Text className="text-default-background"> New template </Text>
         </Pressable>
       </View>
 

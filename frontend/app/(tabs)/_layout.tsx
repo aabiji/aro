@@ -28,7 +28,7 @@ export default function TabLayout() {
           tabBarStyle: isIndex
             ? { display: "none" }
             : {
-              backgroundColor: "transparent",
+              backgroundColor: "white",
               borderTopColor: "#d1d5db",
               elevation: 0,
             },

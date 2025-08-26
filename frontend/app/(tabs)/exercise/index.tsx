@@ -53,22 +53,19 @@ export default function Index() {
         data={sortedWorkouts}
         keyExtractor={(item: WorkoutInfo) => String(item.id)}
         ListHeaderComponent={
-          <View>
+          <Section>
             <Text className="font-bold text-xl mb-2">{today}</Text>
             {choices.length == 0 ? (
               <Empty messages={["You have no workout templates"]} />
             ) : (
-              <Section>
-                <SelectButton
-                  choices={choices}
-                  defaultChoice={choices[0].value}
-                  message="Add workout"
-                  handlePress={(choice: string) => addWorkout(choice)}
-                />
-              </Section>
+              <SelectButton
+                choices={choices}
+                defaultChoice={choices[0].value}
+                message="Add workout"
+                handlePress={(choice: string) => addWorkout(choice)}
+              />
             )}
-            <View className="mt-2 mb-2 border-b-2 border-gray-200"></View>
-          </View>
+          </Section>
         }
         renderItem={({ item, index }) => {
           const prevTag = sortedWorkouts[index - 1]?.tag;

@@ -117,7 +117,7 @@ export function LineGraph({ data, height, getDate, getValue, update, tooltipLabe
   return (
     <View>
       <View style={tooltipStyle}>
-        <Text className="text-white font-bold text-center">
+        <Text className="text-default-background font-bold text-center">
           {value} {tooltipLabel} - {date}
         </Text>
       </View>
@@ -214,7 +214,7 @@ export function Heatmap({ data, height, getDate, getValue, update, tooltipLabel 
   return (
     <View>
       <View style={tooltipStyle}>
-        <Text className="text-white font-bold text-center">
+        <Text className="text-default-background font-bold text-center">
           {value} {tooltipLabel} - {date}
         </Text>
       </View>

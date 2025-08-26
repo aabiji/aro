@@ -5,7 +5,7 @@ import { request } from "@/lib/utils";
 
 import { Redirect } from "expo-router";
 import { Pressable, Text, TextInput, View } from "react-native";
-import { ScrollContainer } from "@/components/container";
+import { ScrollContainer, Section } from "@/components/container";
 
 export default function Index() {
   // TODO: what to do when the jwt expires?
@@ -62,17 +62,17 @@ export default function Index() {
   };
 
   const inputStyle =
-    "bg-white outline-blue-400 border-2 border-gray-200\
-    placeholder-gray-400 p-2 mb-4 rounded text-base";
+    "bg-default-background outline-primary-400 border-2 border-neutral-200\
+    placeholder-neutral-400 p-2 mb-4 rounded text-base";
 
   if (authenticated) return <Redirect href="/exercise" />;
 
   return (
     <ScrollContainer>
-      <View className="m-auto w-[65%]">
-        <Text className="text-center text-2xl font-bold mb-4">aro</Text>
+      <Section className="absolute left-[25%] top-[25%]">
+        <Text className="text-center text-2xl font-bold">aro</Text>
 
-        <View className="bg-white p-4">
+        <View className="bg-default-background p-4">
           {errMsg.length > 0 && (
             <Text className="mb-2 text-center text-red-500 text-base">{errMsg}</Text>
           )}
@@ -94,7 +94,7 @@ export default function Index() {
 
           <Pressable
             onPress={auth}
-            className="p-3 bg-blue-500 m-auto rounded w-[100%] mb-2"
+            className="p-3 bg-primary-500 m-auto rounded w-[100%] mb-2"
           >
             <Text className="font-bold text-center text-white text-lg">
               {isLogin ? "Login" : "Create account"}
@@ -105,7 +105,7 @@ export default function Index() {
             <Text className="text-[15]">{isLogin ? "Create account" : "Login"}</Text>
           </Pressable>
         </View>
-      </View>
+      </Section>
     </ScrollContainer>
   );
 }

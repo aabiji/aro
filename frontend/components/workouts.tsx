@@ -49,7 +49,7 @@ function WorkoutTemplate({ workout }: {workout: WorkoutInfo}) {
     <Section>
       <View className="flex-row">
         <TextInput
-          className="flex-1 text-xl bg-gray-100 rounded-sm px-3 py-1 outline-none"
+          className="flex-1 text-xl bg-neutral-100 rounded-sm px-3 py-1 outline-none"
           value={workout.tag}
           onChangeText={(value) => upsertWorkout({ id: workout.id, name: value })}
         />
@@ -61,12 +61,12 @@ function WorkoutTemplate({ workout }: {workout: WorkoutInfo}) {
       {workout.exercises.map((e: Exercise, i: number) => (
         <View
           key={i}
-          className="flex-row w-[100%] justify-between border-t border-gray-100 p-2"
+          className="flex-row w-[100%] justify-between border-t border-neutral-100 p-2"
         >
           <TextInput
             value={e.name}
             placeholder="Exercise name"
-            className="outline-none bg-gray-100 px-2"
+            className="outline-none bg-neutral-100 px-2"
             onChangeText={(name) => updateExercise(workout.id, i, { name })}
           />
 
@@ -114,7 +114,7 @@ function WorkoutRecord({ workout, disabled }: {workout: WorkoutInfo, disabled: b
         return (
           <View
             key={eIndex}
-            className="flex-row justify-between items-center p-2 border-t border-gray-100"
+            className="flex-row justify-between items-center p-2 border-t border-neutral-100"
           >
             <View className="items-center flex-row max-w-[40%]">
               <Text className="text-l font-bold mr-2 mr-5">{str}</Text>

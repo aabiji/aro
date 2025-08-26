@@ -7,9 +7,9 @@ export default function Navbar({ routes, panes, icons, route }) {
   const router = useRouter();
 
   return (
-    <View className="flex-row w-full">
+    <View className="flex-row w-full bg-default-background">
       {panes.map((_, i) => {
-        const extra = routes[i] == route ? "border-b-4 border-blue-200" : "";
+        const extra = routes[i] == route ? "border-b-2 border-primary-600" : "";
         return (
           <View key={i} className={`${extra} grow justify-evenly items-center`}>
             <Pressable
