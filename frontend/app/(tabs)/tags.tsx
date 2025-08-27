@@ -29,9 +29,14 @@ function CalendarTile({ date, disabled, toggle }: CalendarTileProps) {
       {!empty && (
         <View className="flex-column h-full gap-[3px]">
           {colors.map((c: string, index: number) => (
-            <View key={index} style={{ flex: 1, backgroundColor: c, opacity: 0.5 }} />
+            <View
+              key={index}
+              style={{ flex: 1, backgroundColor: c, opacity: 0.5 }}
+            />
           ))}
-          <Text className="absolute right-[10px] top-[10px]">{date.getDate()}</Text>
+          <Text className="absolute right-[10px] top-[10px]">
+            {date.getDate()}
+          </Text>
         </View>
       )}
     </Pressable>
@@ -50,7 +55,11 @@ export default function TagsPage() {
   const [numTiles, setNumTiles] = useState(0);
 
   useEffect(() => {
-    const length = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+    const length = new Date(
+      date.getFullYear(),
+      date.getMonth() + 1,
+      0,
+    ).getDate();
     const start = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
     const total = Math.ceil((start + length) / 7) * 7; // round it to the nearest multiple of 7
     setMonthLength(length);
@@ -58,6 +67,10 @@ export default function TagsPage() {
     setNumTiles(total);
   }, [date]);
 
+  // TODO: how to lazily fetch tagged dates that we didn't initially get
+  // (either in the past or in the future)
+  // we initially got the first 10 most recent tags,
+  // but now what ...
   const changeMonth = (delta: number) => {
     setDate((prev) => {
       const next = new Date(prev);
@@ -81,11 +94,16 @@ export default function TagsPage() {
         </Pressable>
       </View>
 
-      <View
-        className="w-[50%] m-auto mb-2 border-b border-neutral-200 flex-row items-center flex-wrap h-max-[100px] pb-5">
+      <View className="w-[50%] m-auto mb-2 border-b border-neutral-200 flex-row items-center flex-wrap h-max-[100px] pb-5">
         {Object.values(tags).map((tag: TagInfo, index: number) => (
-          <Tag key={index} tag={tag} selected={selectedTag == tag.id}
-            setSelected={() => setSelectedTag(selectedTag == tag.id ? -1 : tag.id)} />
+          <Tag
+            key={index}
+            tag={tag}
+            selected={selectedTag == tag.id}
+            setSelected={() =>
+              setSelectedTag(selectedTag == tag.id ? -1 : tag.id)
+            }
+          />
         ))}
       </View>
 

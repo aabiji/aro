@@ -113,10 +113,11 @@ func (s *Server) Signup(c *gin.Context) {
 
 type UserInfoOptions struct {
 	Page               int  `json:"page"`
-	IncludeSettings    bool `json:"includeSettings"`
-	IncludeWorkouts    bool `json:"includeWorkouts"`
-	IncludeTags        bool `json:"includeTags"`
-	IncludeTaggedDates bool `json:"includeTaggedDates"`
+	IncludeSettings    bool `json:"includeSettings,omitempty"`
+	IncludeWorkouts    bool `json:"includeWorkouts,omitempty"`
+	IncludeTemplates   bool `json:"includeTemplates,omitempty"`
+	IncludeTags        bool `json:"includeTags,omitempty"`
+	IncludeTaggedDates bool `json:"includeTaggedDates,omitempty"`
 }
 
 func (s *Server) GetUserInfo(c *gin.Context) {
@@ -131,21 +132,25 @@ func (s *Server) GetUserInfo(c *gin.Context) {
 
 	limit := 10
 	query := s.db
-
+	for i, value := range []bool{req.IncludeTemplates, req.IncludeWorkouts} {
+		if value {
+			query = query.Preload("Workouts", func(db *gorm.DB) *gorm.DB {
+				return db.Where("workouts.template = ?", i == 0).
+					Offset(req.Page * limit).
+					Limit(limit + 1).
+					Order("workouts.created_at DESC") // newest to oldest
+			}).Preload("Workouts.Exercises")
+		}
+	}
 	if req.IncludeSettings {
 		query = query.Preload("Settings")
-	}
-	if req.IncludeWorkouts {
-		query = query.Preload("Workouts", func(db *gorm.DB) *gorm.DB {
-			return db.Offset(req.Page * limit).Limit(limit)
-		}).Preload("Workouts.Exercises")
 	}
 	if req.IncludeTags {
 		query = query.Preload("Tags")
 	}
 	if req.IncludeTaggedDates {
 		query = query.Preload("TaggedDates", func(db *gorm.DB) *gorm.DB {
-			return db.Offset(req.Page * limit).Limit(limit)
+			return db.Offset(req.Page * limit).Limit(limit + 1).Order("tagged_dates.created_at DESC")
 		})
 	}
 
@@ -155,7 +160,22 @@ func (s *Server) GetUserInfo(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"user": fullUser})
+	templatesCount := 0
+	workoutsCount := 0
+	for _, w := range fullUser.Workouts {
+		if w.Template {
+			templatesCount += 1
+		} else {
+			workoutsCount += 1
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"user":            fullUser,
+		"moreTemplates":   templatesCount > limit,
+		"moreWorkouts":    workoutsCount > limit,
+		"moreTaggedDates": len(fullUser.TaggedDates) > limit,
+	})
 }
 
 type SettingsInfo struct {

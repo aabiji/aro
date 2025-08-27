@@ -8,16 +8,43 @@ import { ScrollContainer, Empty } from "@/components/container";
 import Feather from "@expo/vector-icons/Feather";
 
 export default function TemplatesPage() {
-  const { upsertWorkout, jwt, workouts } = useStore();
+  const {
+    jwt,
+    moreTemplates,
+    templatesPage,
+    updateUserData,
+    upsertWorkout,
+    workouts,
+  } = useStore();
   const [templateName, setWorkoutName] = useState("");
 
   const createTemplate = async () => {
     try {
       const data = { isTemplate: true, tag: templateName, exercises: [] };
-      const json = await request("POST", "/auth/workout", {workouts: [data]}, jwt);
+      const json = await request(
+        "POST",
+        "/auth/workout",
+        { workouts: [data] },
+        jwt,
+      );
       upsertWorkout(json.workouts[0]);
     } catch (err: any) {
       console.log("ERROR!", err.message);
+    }
+  };
+
+  const fetchMore = async () => {
+    if (!moreTemplates) return;
+    try {
+      const payload = { page: templatesPage, includeTemplates: true };
+      const json = await request("POST", "/auth/userInfo", payload, jwt);
+      for (const w of json.user.workouts) upsertWorkout(w, true);
+      updateUserData({
+        moreTemplates: json.moreTemplates,
+        templatesPage: templatesPage + 1,
+      });
+    } catch (err: any) {
+      console.log("ERROR!", err);
     }
   };
 
@@ -40,12 +67,14 @@ export default function TemplatesPage() {
         </Pressable>
       </View>
 
-      {!Object.values(workouts).some((w: WorkoutInfo) => w.isTemplate) &&
-        <Empty messages={["You have no workout templates"]} />}
+      {!Object.values(workouts).some((w: WorkoutInfo) => w.isTemplate) && (
+        <Empty messages={["You have no workout templates"]} />
+      )}
 
       <FlatList
         data={Object.values(workouts).filter((w: WorkoutInfo) => w.isTemplate)}
         className="w-[100%]"
+        onEndReached={fetchMore}
         keyExtractor={(w: WorkoutInfo) => String(w.id)}
         renderItem={({ item }) => <WorkoutTemplateMemo workout={item} />}
       />

@@ -9,12 +9,22 @@ import { SelectButton } from "@/components/select";
 
 export default function Index() {
   const today = formatDate(new Date());
-  const { jwt, upsertWorkout, workouts } = useStore();
+  const {
+    jwt,
+    moreWorkouts,
+    updateUserData,
+    upsertWorkout,
+    workouts,
+    workoutsPage,
+  } = useStore();
 
   const sortedWorkouts = useMemo(() => {
     return Object.values(workouts)
       .filter((w: WorkoutInfo) => !w.isTemplate)
-      .sort((a: WorkoutInfo, b: WorkoutInfo) => new Date(b.tag).getTime() - new Date(a.tag).getTime());
+      .sort(
+        (a: WorkoutInfo, b: WorkoutInfo) =>
+          new Date(b.tag).getTime() - new Date(a.tag).getTime(),
+      );
   }, [workouts]);
 
   const choices = useMemo(() => {
@@ -24,9 +34,14 @@ export default function Index() {
   }, [workouts]);
 
   const addWorkout = async (templateName: string) => {
-    const template: WorkoutInfo =
-      Object.values(workouts).find((w: WorkoutInfo) => w.tag == templateName)!;
-    let data = { isTemplate: false, tag: today, exercises: [] as ExerciseInfo[] };
+    const template: WorkoutInfo = Object.values(workouts).find(
+      (w: WorkoutInfo) => w.tag == templateName,
+    )!;
+    let data = {
+      isTemplate: false,
+      tag: today,
+      exercises: [] as ExerciseInfo[],
+    };
 
     for (const e of template.exercises) {
       data.exercises.push({
@@ -40,16 +55,32 @@ export default function Index() {
     }
 
     try {
-      const json = await request("POST", "/auth/workout", {workouts: [data]}, jwt);
-      upsertWorkout(json.workouts[0]);
+      const json = await request(
+        "POST",
+        "/auth/workout",
+        { workouts: [data] },
+        jwt,
+      );
+      upsertWorkout(json.workouts[0], true);
     } catch (err: any) {
       console.log("ERROR!", err.message);
     }
   };
 
-  const fetchMore = () => {
-    console.log("infinite scroll!");
-  }
+  const fetchMore = async () => {
+    if (!moreWorkouts) return;
+    try {
+      const payload = { page: workoutsPage, includeWorkouts: true };
+      const json = await request("POST", "/auth/userInfo", payload, jwt);
+      for (const w of json.user.workouts) upsertWorkout(w, true);
+      updateUserData({
+        moreWorkouts: json.moreWorkouts,
+        workoutsPage: workoutsPage + 1,
+      });
+    } catch (err: any) {
+      console.log("ERROR!", err);
+    }
+  };
 
   return (
     <ScrollContainer syncState>
