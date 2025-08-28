@@ -98,5 +98,14 @@ func main() {
 		gin.SetMode(gin.DebugMode)
 		r.Run(":8080")
 	*/
-	RunScanner()
+	paths := []string{
+		"/home/aabiji/Downloads/train/20149482_2_jpg.rf.7310026d202343bdc2b84114d5e2aa54.jpg",
+		"/home/aabiji/Downloads/train/11888560_3_jpg.rf.ade4e15fc7688cb95f43e71424a1dfd8.jpg",
+		"/home/aabiji/Downloads/train/00287678_2_jpg.rf.7b5aadcaa92a588562b480142acef813.jpg",
+		"/home/aabiji/Downloads/train/20083014_4_jpg.rf.3c881f5d781659ee6e0caa958628011d.jpg",
+		"/home/aabiji/Downloads/train/20004163_5_jpg.rf.fc90c2cf88d7c1951c22de0c345f5404.jpg",
+	}
+	if err := RunScanner(paths[1]); err != nil {
+		panic(err)
+	}
 }

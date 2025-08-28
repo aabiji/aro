@@ -11,8 +11,13 @@ tech stack:
 - golang backend
 
 ```bash
-bunx expo run android # run android
-bunx expo start # run web
+# run the backend
+cd backend
+go run .
+
+cd frontend
+bunx expo run android # for android
+bunx expo start # for web
 ```
 
 icons:
