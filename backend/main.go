@@ -69,31 +69,34 @@ func AuthMiddleware(s *Server) gin.HandlerFunc {
 }
 
 func main() {
-	server, err := NewServer()
-	if err != nil {
-		panic(err)
-	}
+	/*
+		server, err := NewServer()
+		if err != nil {
+			panic(err)
+		}
 
-	r := gin.Default()
-	r.Use(CORSMiddleware())
+		r := gin.Default()
+		r.Use(CORSMiddleware())
 
-	auth := r.Group("/auth")
-	auth.Use(AuthMiddleware(&server))
+		auth := r.Group("/auth")
+		auth.Use(AuthMiddleware(&server))
 
-	r.POST("/login", server.Login)
-	r.POST("/signup", server.Signup)
+		r.POST("/login", server.Login)
+		r.POST("/signup", server.Signup)
 
-	auth.POST("/userInfo", server.GetUserInfo)
-	auth.POST("/user", server.UpdateUserSettings)
-	auth.DELETE("/user", server.DeleteUser)
+		auth.POST("/userInfo", server.GetUserInfo)
+		auth.POST("/user", server.UpdateUserSettings)
+		auth.DELETE("/user", server.DeleteUser)
 
-	auth.POST("/workout", server.CreateWorkout)
-	auth.DELETE("/workout", server.DeleteWorkout)
+		auth.POST("/workout", server.CreateWorkout)
+		auth.DELETE("/workout", server.DeleteWorkout)
 
-	auth.POST("/tag", server.SetTag)
-	auth.DELETE("/tag/:id", server.DeleteTag)
-	auth.POST("/taggedDates", server.UpdateTaggedDates)
+		auth.POST("/tag", server.SetTag)
+		auth.DELETE("/tag/:id", server.DeleteTag)
+		auth.POST("/taggedDates", server.UpdateTaggedDates)
 
-	gin.SetMode(gin.DebugMode)
-	r.Run(":8080")
+		gin.SetMode(gin.DebugMode)
+		r.Run(":8080")
+	*/
+	RunScanner()
 }
