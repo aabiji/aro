@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"slices"
 	"strconv"
@@ -105,7 +106,10 @@ func main() {
 		"/home/aabiji/Downloads/train/20083014_4_jpg.rf.3c881f5d781659ee6e0caa958628011d.jpg",
 		"/home/aabiji/Downloads/train/20004163_5_jpg.rf.fc90c2cf88d7c1951c22de0c345f5404.jpg",
 	}
-	if err := RunScanner(paths[1]); err != nil {
-		panic(err)
+	for i := 0; i < len(paths); i++ {
+		if err := RunScanner(paths[i], fmt.Sprintf("%d.jpg", i)); err != nil {
+			panic(err)
+		}
+		fmt.Println()
 	}
 }

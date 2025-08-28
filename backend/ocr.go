@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -77,25 +78,40 @@ func parseEasyOcrResult(line string) (string, float64, []float64, error) {
 	return text, confidence, boundingBox, nil
 }
 
-func drawRect(img draw.Image, c color.RGBA, thickness int,
-	topLeftX, topLeftY, topRightX, bottomLeftY int) {
-	// draw top and bottom sides
-	for x := topLeftX; x <= topRightX; x++ {
-		for i := 0; i < thickness; i++ {
-			img.Set(x, topLeftY+i, c)
-			img.Set(x, bottomLeftY-i, c)
-		}
-	}
-	// draw left and right sides
-	for y := topLeftY; y <= bottomLeftY; y++ {
-		for i := 0; i < thickness; i++ {
-			img.Set(topLeftX+i, y, c)
-			img.Set(topRightX-i, y, c)
-		}
-	}
+type Detection struct {
+	Text       string
+	MinX, MaxX float64
+	MinY, MaxY float64
+	CenterY    float64
 }
 
-func visualizeImage(inputImage string, outputImage string, boundingBoxes [][]float64) error {
+func getDetections(imagePath string) ([]Detection, error) {
+	result, err := runEasyOCR(imagePath)
+	if err != nil {
+		return nil, err
+	}
+	detections := []Detection{}
+
+	for _, line := range strings.Split(strings.TrimSpace(result), "\n") {
+		text, confidence, box, err := parseEasyOcrResult(line)
+		if err != nil {
+			log.Printf("Failed to parse EasyOCR result: %s\n", err.Error())
+			continue
+		}
+		if confidence < 0.1 {
+			continue
+		}
+		// box order: top left, top right, bottom right, bottom left
+		detections = append(detections, Detection{
+			Text: text, MinX: box[0], MaxX: box[2],
+			MinY: box[1], MaxY: box[5],
+			CenterY: (box[1] + box[7]) / 2,
+		})
+	}
+	return detections, nil
+}
+
+func visualizeDetections(inputImage string, outputImage string, detections []Detection) error {
 	reader, err := os.Open(inputImage)
 	if err != nil {
 		return err
@@ -109,9 +125,19 @@ func visualizeImage(inputImage string, outputImage string, boundingBoxes [][]flo
 	img := image.NewRGBA(original.Bounds())
 	draw.Draw(img, img.Bounds(), original, image.Point{}, draw.Src)
 
-	for _, boundingBox := range boundingBoxes {
-		drawRect(img, color.RGBA{0, 255, 0, 255}, 1, int(boundingBox[0]),
-			int(boundingBox[1]), int(boundingBox[2]), int(boundingBox[7]))
+	// draw bounding boxes
+	c := color.RGBA{0, 255, 0, 255}
+	for _, d := range detections {
+		// draw top and bottom sides
+		for x := d.MinX; x <= d.MaxX; x++ {
+			img.Set(int(x), int(d.MinY), c)
+			img.Set(int(x), int(d.MaxY), c)
+		}
+		// draw left and right sides
+		for y := d.MinY; y <= d.MaxY; y++ {
+			img.Set(int(d.MinX), int(y), c)
+			img.Set(int(d.MaxX), int(y), c)
+		}
 	}
 
 	output, err := os.Create(outputImage)
@@ -122,41 +148,57 @@ func visualizeImage(inputImage string, outputImage string, boundingBoxes [][]flo
 	return jpeg.Encode(output, img, nil)
 }
 
-// TODO: how to map nutrient info to value -- what are some good general heuristics?
-func RunScanner(imagePath string) error {
-	result, err := runEasyOCR(imagePath)
+func getDetectionRows(detections []Detection) [][]int {
+	sort.Slice(detections, func(i, j int) bool { // sort top to bottom
+		return detections[i].CenterY < detections[j].CenterY
+	})
+
+	// assign detections to rows that they vertically overlap with
+	rows := [][]int{}
+	row := []int{0}
+	rowTop, rowBottom := detections[0].MinY, detections[0].MaxY
+
+	for i := 1; i < len(detections); i++ {
+		// check if the detection overlaps with the row
+		top, bottom := detections[i].MinY, detections[i].MaxY
+		yOverlap := min(rowBottom, bottom) - max(rowTop, top)
+		threshold := min(rowBottom-rowTop, bottom-top) * 0.5
+
+		if yOverlap >= threshold {
+			// same row
+			rowTop, rowBottom = min(rowTop, top), max(rowBottom, bottom)
+			row = append(row, i)
+		} else {
+			// new row
+			rowTop, rowBottom = top, bottom
+			sort.Slice(row, func(i, j int) bool { // sort left to right
+				return detections[row[i]].MinX < detections[row[j]].MinX
+			})
+			rows = append(rows, row)
+			row = []int{i}
+		}
+	}
+
+	rows = append(rows, row)
+	return rows
+}
+
+func RunScanner(inputImage, outputImage string) error {
+	detections, err := getDetections(inputImage)
 	if err != nil {
 		return err
 	}
+	rows := getDetectionRows(detections)
 
-	boundingBoxes := [][]float64{}
-	rows := map[int][]string{}
-
-	for _, line := range strings.Split(strings.TrimSpace(result), "\n") {
-		text, confidence, box, err := parseEasyOcrResult(line)
-		if err != nil {
-			log.Printf("Failed to parse EasyOCR result: %s\n", err.Error())
-			continue
+	for _, row := range rows {
+		for _, j := range row {
+			fmt.Printf("%s ", detections[j].Text)
 		}
-		if confidence < 0.1 {
-			continue
-		}
-		boundingBoxes = append(boundingBoxes, box)
-
-		topLeft := int(box[1])
-		rounded := topLeft - (topLeft % 10)
-
-		existing, ok := rows[rounded]
-		if !ok {
-			rows[rounded] = []string{text}
-		} else {
-			existing = append(existing, text)
-			rows[rounded] = existing
-		}
+		fmt.Printf("\n")
+	}
+	if err := visualizeDetections(inputImage, outputImage, detections); err != nil {
+		return err
 	}
 
-	for topLeft, texts := range rows {
-		log.Println("Row Y:", topLeft, "Values:", texts)
-	}
-	return visualizeImage(imagePath, "output.jpg", boundingBoxes)
+	return nil
 }
