@@ -30,28 +30,27 @@ export function Tag({ tag, selected, setSelected, showPicker, setName, removeTag
 
   return (
     <Pressable className={style}
-      onPress={() => { if (!showPicker && !editable) setSelected() }}>
+      onPress={() => {
+        if (!showPicker && !editable) setSelected();
+      }}>
       <View className="relative h-fit flex-row gap-2 items-center">
         <Pressable
-          disabled={!editable}
+          disabled={!editable} className="border-1 border-neutral-200"
           onPress={(event) =>
             showPicker(event.nativeEvent.pageX, event.nativeEvent.pageY)
           }
-          className="border-1 border-neutral-200"
           style={{
             backgroundColor: tag.color,
             borderRadius: "50%",
             width: pickerSize,
             height: pickerSize,
-          }}
-        ></Pressable>
+          }}>
+        </Pressable>
 
         {editable ? (
           <TextInput
             className="flex-1 text-base bg-default-background rounded-sm px-3 py-1 outline-none"
-            value={tag.name}
-            onChangeText={(value) => setName(value)}
-          />
+            value={tag.name} onChangeText={(value) => setName(value)} />
         ) : (
           <Text className={`ml-2 text-base ${selected ? "font-bold" : ""}`}>
             {tag.name}
@@ -69,7 +68,7 @@ export function Tag({ tag, selected, setSelected, showPicker, setName, removeTag
 }
 
 export function TagManager({ visible, close }: { visible: boolean; close: () => void }) {
-  const { jwt, tags, removeTag, upsertTag } = useStore();
+  const store = useStore();
 
   const [showPicker, setShowPicker] = useState(false);
   const [currentTag, setCurrentTag] = useState(-1);
@@ -82,55 +81,53 @@ export function TagManager({ visible, close }: { visible: boolean; close: () => 
   };
 
   const updateTag = async (name: string, id: number) => {
-    if (id == -1) { // create tag
+    if (id === -1) {
+      // create tag
       try {
         const body = { tags: [{ name, color: "#000000" }] };
-        const json = await request("POST", "/auth/tag", body, jwt);
-        upsertTag(json.tags[0]);
+        const json = await request("POST", "/auth/tag", body, store.jwt);
+        store.upsertTag(json.tags[0]);
       } catch (err: any) {
         console.log(err.message);
       }
       return;
     }
 
-    upsertTag({ id, name });
-    // TODO: unified way to sync tag updates??
-  }
+    store.upsertTag({ id, name });
+  };
 
   const deleteTag = async (id: number) => {
     try {
-      await request("DELETE", `/auth/tag?id=${id}`, undefined, jwt);
-      removeTag(id);
+      await request("DELETE", `/auth/tag?id=${id}`, undefined, store.jwt);
+      store.removeTag(id);
     } catch (err: any) {
       console.log(err.message);
     }
     // TODO: remove tag from tagged dates efficiently
-  }
+  };
 
   return (
     <Modal transparent animationType="fade" visible={visible} onRequestClose={close}>
-      <Pressable
-        onPress={close}
-        className="flex-1"
+      <Pressable onPress={close} className="flex-1"
         style={{ backgroundColor: "rgba(0, 0, 0, 0.3)", cursor: "default" }}>
         <Pressable
           onPress={(e) => e.stopPropagation()}
-          className="w-full h-[50%] absolute bottom-0 bg-neutral-50 shadow-md py-2 cursor-default"
-        >
+          className="w-full h-[50%] absolute bottom-0 bg-neutral-50 shadow-md py-2 cursor-default">
+
           <View className="flex-row justify-between w-[55%] m-auto">
             <Text className="text-xl">Manage tags</Text>
+
             <Pressable onPress={() => updateTag("New tag", -1)}>
               <Feather name="plus" size={25} color="black" />
             </Pressable>
           </View>
 
-          {Object.keys(tags).length == 0 && (
+          {Object.keys(store.tags).length == 0 && (
             <Text className="text-center mt-4 text-base text-neutral-400"> No tags </Text>
           )}
 
           <FlatList
-            data={Object.values(tags)}
-            className="w-[55%] m-auto"
+            data={Object.values(store.tags)} className="w-[55%] m-auto"
             renderItem={({ item }) => (
               <Tag
                 tag={item}
@@ -138,8 +135,7 @@ export function TagManager({ visible, close }: { visible: boolean; close: () => 
                 setName={(name: string) => updateTag(name, item.id)}
                 removeTag={() => deleteTag(item.id)}
               />
-            )}
-          />
+            )} />
         </Pressable>
       </Pressable>
 
@@ -149,12 +145,10 @@ export function TagManager({ visible, close }: { visible: boolean; close: () => 
             position: "absolute",
             left: pickerPos.x - 75,
             top: pickerPos.y - 75,
-            width: 150,
-            height: 150,
+            width: 150, height: 150,
             zIndex: 9999,
           }}
-          className="rounded-xl bg-default-background p-2 border-2 border-neutral-200"
-        >
+          className="rounded-xl bg-default-background p-2 border-2 border-neutral-200">
           <ColorPicker
             style={{ width: "100%", height: "100%" }}
             onComplete={(color) => {

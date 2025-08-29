@@ -71,7 +71,7 @@ module.exports = {
         "default-font": "rgb(15, 23, 42)",
         "subtext-color": "rgb(100, 116, 139)",
         "neutral-border": "rgb(226, 232, 240)",
-        "white": "rgb(255, 255, 255)",
+        white: "rgb(255, 255, 255)",
         "default-background": "rgb(255, 255, 255)",
       },
       fontSize: {

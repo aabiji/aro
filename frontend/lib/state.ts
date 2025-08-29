@@ -2,10 +2,7 @@ import { MMKV } from "react-native-mmkv";
 import { createJSONStorage, persist, StateStorage } from "zustand/middleware";
 import { create, StateCreator } from "zustand";
 
-export enum ExerciseType {
-  Resistance,
-  Cardio,
-}
+export enum ExerciseType { Resistance, Cardio };
 
 export interface ExerciseInfo {
   id?: number;
@@ -222,9 +219,7 @@ const createAppStore: StateCreator<AppStore> = (set, _get) => ({
   toggleTaggedDate: (date, tagId) =>
     set((state: AppStore) => {
       let tagIds =
-        state.taggedDates[date] !== undefined
-          ? [...state.taggedDates[date]]
-          : [];
+        state.taggedDates[date] !== undefined ? [...state.taggedDates[date]] : [];
       const index = tagIds.findIndex((id) => id == tagId);
       if (index != -1) tagIds.splice(index, 1);
       else tagIds.push(tagId);

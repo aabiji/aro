@@ -3,7 +3,7 @@ import { ExerciseType, useStore } from "@/lib/state";
 
 import { FlatList, Pressable, Text, View } from "react-native";
 import { LineGraph, Heatmap } from "@/components/graph";
-import { Empty, ScrollContainer, Section } from "@/components/container";
+import { Empty, Container, Card } from "@/components/container";
 import { Dropdown, Selection } from "@/components/select";
 import Feather from "@expo/vector-icons/Feather";
 
@@ -13,19 +13,14 @@ type ToVec2 = (v: any) => Vec2;
 // Get the perpendicular distance from a point (p0), to a line segment (p1 to p2)
 // Taken from [here](https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line)
 function perpendicularDistance(p0: Vec2, p1: Vec2, p2: Vec2) {
-  const num =
-    (p2.y - p1.y) * p0.x - (p2.x - p1.x) * p0.y + p2.x * p1.y - p2.y * p1.x;
+  const num = (p2.y - p1.y) * p0.x - (p2.x - p1.x) * p0.y + p2.x * p1.y - p2.y * p1.x;
   const den = (p2.y - p1.y) * (p2.y - p1.y) + (p2.x - p1.x) * (p2.x - p1.x);
   return Math.abs(num) / Math.sqrt(den);
 }
 
 // Algorithm to simplify a curve by removing points
 // Taken from [here](https://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm)
-function ramerDouglasPeuker(
-  points: any[],
-  epsilon: number,
-  toVec2: (v: any) => Vec2,
-): any[] {
+function ramerDouglasPeuker(points: any[], epsilon: number, toVec2: (v: any) => Vec2): any[] {
   // find the point with the max distance to the current line segment
   let maxDistance = 0;
   let index = 0;
@@ -55,11 +50,7 @@ function ramerDouglasPeuker(
   return resultingPoints;
 }
 
-function simplifyGraph(
-  points: any[],
-  targetLength: number,
-  toVec2: ToVec2,
-): Promise<any[]> {
+function simplifyGraph(points: any[], targetLength: number, toVec2: ToVec2): Promise<any[]> {
   if (points.length <= targetLength) return Promise.resolve(points);
 
   const epsilon = Math.floor(points.length / targetLength / 2);
@@ -109,7 +100,6 @@ function getMonthIndex(monthIntervals: MonthInterval[], n: number): number {
 
 function ResistancePlot({ name, group }: { name: string; group: PlotGroup }) {
   const [update, setUpdate] = useState(true);
-  const forceRerender = (ret: void) => setUpdate(!update);
 
   const viewRanges = [
     { label: "This month", value: 1 },
@@ -118,10 +108,7 @@ function ResistancePlot({ name, group }: { name: string; group: PlotGroup }) {
     { label: "Last 5 years", value: 60 },
     {
       label: "All time",
-      value: monthDiff(
-        group.data[0].date,
-        group.data[group.data.length - 1].date,
-      ),
+      value: monthDiff(group.data[0].date, group.data[group.data.length - 1].date),
     },
   ];
 
@@ -140,50 +127,42 @@ function ResistancePlot({ name, group }: { name: string; group: PlotGroup }) {
 
     simplifyGraph(points, targetPoints, toVec2).then((simplified) => {
       setSimplifiedGraph(simplified);
-      forceRerender();
+      setUpdate(!update); // force rerender
     });
-  }, [startIndex, showWeight]);
+  }, [startIndex, showWeight, group.data, update]);
 
   const changeViewRange = (numMonths: number) => {
     // the dates are in ascending order, so by changing the index at which
     // we slice the plot points, we change what the oldest plot point will be (change range)
     setStartIndex(getMonthIndex(group.months, numMonths));
     setViewRange(numMonths);
-    forceRerender();
+    setUpdate(!update); // force rerender
   };
 
   const getDate = (v: PlotPoint) => v.date;
   const getValue = (v: PlotPoint) => (showWeight ? v.weight : v.averageReps);
 
   return (
-    <Section>
-      {/*<View className="bg-default-background px-4 py-2 w-full mb-4">*/}
-      <View className="items-center flex-row justify-between items-center">
+    <Card border>
+      <View className="flex-row justify-between items-center">
         <Text className="text-xl">{name}</Text>
 
         <View className="flex-column w-[25%]">
           <Selection
             choices={["Weight", "Reps"]}
-            handleChoice={(index: number) =>
-              forceRerender(setShowWeight(index == 0))
-            }
-          />
+            handleChoice={(index: number) => {
+              setUpdate(!update); // force rerender
+              setShowWeight(index === 0);
+            }} />
           <Dropdown
-            choices={viewRanges}
-            choice={viewRange}
-            setChoice={(value: number) => changeViewRange(value)}
-          />
+            choices={viewRanges} choice={viewRange}
+            setChoice={(value: number) => changeViewRange(value)} />
         </View>
       </View>
       <LineGraph
-        data={simplifiedGraph}
-        tooltipLabel={showWeight ? "lbs" : "reps"}
-        height={400}
-        getDate={getDate}
-        getValue={getValue}
-        update={update}
-      />
-    </Section>
+        data={simplifiedGraph} tooltipLabel={showWeight ? "lbs" : "reps"}
+        height={400} getDate={getDate} getValue={getValue} update={update} />
+    </Card>
   );
 }
 
@@ -208,12 +187,11 @@ function CardioPlot({ name, group }: { name: string; group: PlotGroup }) {
   useEffect(() => {
     setPrevDisabled(year <= earliest.getFullYear());
     setNextDisabled(year >= latest.getFullYear());
-  }, [year]);
+  }, [year, latest, earliest]);
 
   const changeYear = (delta: number) => {
     const nextYear = year + delta;
-    if (nextYear < earliest.getFullYear() || nextYear > latest.getFullYear())
-      return;
+    if (nextYear < earliest.getFullYear() || nextYear > latest.getFullYear()) return;
     setYear(nextYear);
 
     // Set the start and end indexes for the slice of plot points
@@ -225,9 +203,7 @@ function CardioPlot({ name, group }: { name: string; group: PlotGroup }) {
     setStartIndex(getMonthIndex(group.months, startDiff));
 
     const rangeEnd =
-      nextYear + 1 > latest.getFullYear()
-        ? latest
-        : new Date(nextYear + 1, 0, 1);
+      nextYear + 1 > latest.getFullYear() ? latest : new Date(nextYear + 1, 0, 1);
     const endDiff = monthDiff(rangeEnd, latest);
     setEndIndex(getMonthIndex(group.months, endDiff));
 
@@ -237,54 +213,42 @@ function CardioPlot({ name, group }: { name: string; group: PlotGroup }) {
   useEffect(() => changeYear(0), []);
 
   return (
-    <Section>
-      {/*<View className="bg-default-background px-3 w-full mb-4">*/}
+    <Card border>
       <View className="flex-row justify-between items-center">
         <Text className="text-xl">{name}</Text>
 
         <Selection
           choices={["Distance", "Duration"]}
-          handleChoice={(index: number) =>
-            forceRerender(setShowDistance(index == 0))
-          }
-        />
+          handleChoice={(index: number) => forceRerender(setShowDistance(index === 0))} />
 
         <View className="flex-row gap-2 items-center">
           <Pressable onPress={() => changeYear(-1)} disabled={prevDisabled}>
             <Feather
-              name="arrow-left"
-              size={18}
-              color={prevDisabled ? "neutral" : "black"}
-            />
+              name="arrow-left" size={18}
+              color={prevDisabled ? "neutral" : "black"} />
           </Pressable>
           <Text className="text-base"> {year} </Text>
           <Pressable onPress={() => changeYear(1)} disabled={nextDisabled}>
             <Feather
-              name="arrow-right"
-              size={18}
-              color={nextDisabled ? "neutral" : "black"}
-            />
+              name="arrow-right" size={18}
+              color={nextDisabled ? "neutral" : "black"} />
           </Pressable>
         </View>
       </View>
       <Heatmap
         data={group.data.slice(startIndex, endIndex + 1)}
-        tooltipLabel={showDistance ? "km" : "min"}
-        height={150}
-        getDate={getDate}
-        getValue={getValue}
-        update={update}
-      />
-    </Section>
+        tooltipLabel={showDistance ? "km" : "min"} height={150}
+        getDate={getDate} getValue={getValue} update={update} />
+    </Card>
   );
 }
 
 export default function ProgressPage() {
-  const { workouts } = useStore();
+  const store = useStore();
 
   // map the data into a set of plot points, and group by exercise
   let exercises: Record<string, PlotGroup> = {};
-  for (const w of Object.values(workouts)) {
+  for (const w of Object.values(store.workouts)) {
     if (w.isTemplate) continue;
     for (const e of w.exercises) {
       const point = {
@@ -316,13 +280,13 @@ export default function ProgressPage() {
     for (let index = 1; index < exercises[name].data.length; index++) {
       const date = exercises[name].data[index].date;
       const prev = exercises[name].data[index - 1].date;
-      if (date.getMonth() != prev.getMonth())
+      if (date.getMonth() !== prev.getMonth())
         exercises[name].months.push({ elapsed: monthDiff(prev, date), index });
     }
   }
 
   return (
-    <ScrollContainer>
+    <Container>
       {Object.keys(exercises).length == 0 && (
         <Empty messages={["You have no exercises"]} />
       )}
@@ -333,8 +297,7 @@ export default function ProgressPage() {
           if (exercises[item].exerciseType == ExerciseType.Resistance)
             return <ResistancePlot group={exercises[item]} name={item} />;
           return <CardioPlot group={exercises[item]} name={item} />;
-        }}
-      />
-    </ScrollContainer>
+        }} />
+    </Container>
   );
 }

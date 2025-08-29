@@ -3,18 +3,12 @@ import { resetStore, useStore } from "@/lib/state";
 import { request } from "@/lib/utils";
 
 import { Pressable, Text, View } from "react-native";
-import { ScrollContainer, Section } from "@/components/container";
+import { Container, Card } from "@/components/container";
 
 import Feather from "@expo/vector-icons/Feather";
 
-function Checkbox({
-  label,
-  handleToggle,
-  value,
-}: {
-  label: string;
-  handleToggle: () => void;
-  value: boolean;
+function Checkbox({ label, handleToggle, value }: {
+  label: string; handleToggle: () => void; value: boolean;
 }) {
   const bg = value ? "bg-primary-500" : "bg-default-background";
   return (
@@ -22,8 +16,7 @@ function Checkbox({
       <Text className="text-base"> {label} </Text>
       <Pressable
         className={`${bg} w-[20] h-[20] rounded items-center border-2 border-primary-500`}
-        onPress={() => handleToggle()}
-      >
+        onPress={() => handleToggle()}>
         {value && <Feather name="check" color="white" size={15} />}
       </Pressable>
     </View>
@@ -31,14 +24,14 @@ function Checkbox({
 }
 
 export default function Settings() {
-  const { jwt, useImperial, updateUserData } = useStore();
+  const store = useStore();
   const router = useRouter();
 
   const logout = async (deleteAccount: boolean) => {
     await resetStore();
     if (deleteAccount) {
       try {
-        await request("DELETE", "/auth/user", undefined, jwt);
+        await request("DELETE", "/auth/user", undefined, store.jwt);
       } catch (err: any) {
         console.log("ERROR!", err.message);
       }
@@ -47,34 +40,23 @@ export default function Settings() {
   };
 
   return (
-    <ScrollContainer syncState>
-      <Section className="absolute top-[10px] left-[25%]">
+    <Container syncState padTop>
+      <Card>
         <Checkbox
-          label="Use imperial units"
-          value={useImperial}
-          handleToggle={() =>
-            updateUserData({ useImperial: !useImperial }, true)
-          }
+          label="Use imperial units" value={store.useImperial}
+          handleToggle={() => store.updateUserData({ useImperial: !store.useImperial }, true)}
         />
 
-        <Pressable
-          className="bg-warning-500 p-2 rounded"
-          onPress={() => logout(false)}
-        >
+        <Pressable className="bg-warning-500 p-2 rounded" onPress={() => logout(false)}>
           <Text className="text-default-background text-center">Logout</Text>
         </Pressable>
 
-        <Pressable
-          className="bg-error-500 p-2 rounded"
-          onPress={() => logout(true)}
-        >
-          <Text className="text-default-background text-center">
-            Delete account
-          </Text>
+        <Pressable className="bg-error-500 p-2 rounded" onPress={() => logout(true)}>
+          <Text className="text-default-background text-center">Delete account</Text>
         </Pressable>
 
         <Text className="text-center mt-2"> Athena, © Abigail A. 2025- </Text>
-      </Section>
-    </ScrollContainer>
+      </Card>
+    </Container>
   );
 }

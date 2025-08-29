@@ -1,12 +1,8 @@
 import { useState } from "react";
-import {
-  BarcodeScanningResult,
-  CameraView,
-  useCameraPermissions,
-} from "expo-camera";
+import { BarcodeScanningResult, CameraView, useCameraPermissions } from "expo-camera";
 import { request } from "@/lib/utils";
 
-import { ScrollContainer } from "@/components/container";
+import { Card, Container } from "@/components/container";
 import { Platform, Pressable, Text, View } from "react-native";
 
 export default function SearchPage() {
@@ -15,10 +11,14 @@ export default function SearchPage() {
   if (!permission) return <View />;
   if (!permission.granted) {
     return (
-      <ScrollContainer>
-        <Text>We need your permission to use the camera</Text>
-        <Pressable onPress={requestPermission}>Grant permission</Pressable>
-      </ScrollContainer>
+      <Container>
+        <Card>
+          <Text>We need your permission to use the camera</Text>
+          <Pressable onPress={requestPermission} className="bg-primary-500 text-white p-2 text-xl">
+            <Text>Grant permission</Text>
+          </Pressable>
+        </Card>
+      </Container>
     );
   }
 
@@ -46,18 +46,16 @@ export default function SearchPage() {
   };
 
   return (
-    <ScrollContainer>
+    <Container>
       <Pressable
         className="bg-primary-500 text-white p-2 text-xl"
-        onPress={() => CameraView.launchScanner()}
-      >
-        Open barcode scanner
+        onPress={() => CameraView.launchScanner()}>
+        <Text>Open barcode scanner</Text>
       </Pressable>
       <CameraView
         className="flex-1"
         onBarcodeScanned={handleBarcode}
-        enableTorch={true}
-      />
-    </ScrollContainer>
+        enableTorch={true} />
+    </Container>
   );
 }

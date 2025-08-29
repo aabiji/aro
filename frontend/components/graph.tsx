@@ -5,16 +5,8 @@ import { formatDate } from "@/lib/utils";
 import { useWindowDimensions, Text, View } from "react-native";
 
 function handleMouseMove(
-  event,
-  point,
-  xScale,
-  yScale,
-  getDate,
-  getValue,
-  setDate,
-  setValue,
-  setTooltipStyle,
-) {
+  event, point, xScale, yScale, getDate, getValue,
+  setDate, setValue, setTooltipStyle) {
   const coord = d3.pointer(event);
   if (point !== undefined) {
     setDate(formatDate(getDate(point)));
@@ -112,7 +104,7 @@ export function LineGraph({ data, height, getDate, getValue, update, tooltipLabe
         ),
       )
       .on("mouseleave", (event: MouseEvent) => handleMouseLeave(event, setTooltipStyle));
-  }, [windowSize, update]);
+  }, [windowSize, update, h, value, getDate, data, py, getValue]);
 
   return (
     <View>
@@ -137,7 +129,6 @@ export function Heatmap({ data, height, getDate, getValue, update, tooltipLabel 
 
   const [h, py] = [height, height / 6];
 
-  const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const monthTicks = d3.timeMonth.every(1).range(oldest, newest);
 
   const [date, setDate] = useState("");
@@ -145,6 +136,7 @@ export function Heatmap({ data, height, getDate, getValue, update, tooltipLabel 
   const [tooltipStyle, setTooltipStyle] = useState({ display: "none" });
 
   useEffect(() => {
+    const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const svg = d3.select(ref.current);
     ref.current.innerHTML = ""; // clear
 
@@ -197,19 +189,11 @@ export function Heatmap({ data, height, getDate, getValue, update, tooltipLabel 
       .attr("cursor", "pointer")
       .on("mousemove", (event: MouseEvent, d) =>
         handleMouseMove(
-          event,
-          d,
-          undefined,
-          undefined,
-          getDate,
-          getValue,
-          setDate,
-          setValue,
-          setTooltipStyle,
-        ),
+          event, d, undefined, undefined, getDate,
+          getValue, setDate, setValue, setTooltipStyle),
       )
       .on("mouseleave", (event: MouseEvent) => handleMouseLeave(event, setTooltipStyle));
-  }, [windowSize, update]);
+  }, [windowSize, update, h, value, getDate, data, py, getValue, newest, oldest, monthTicks, weeks]);
 
   return (
     <View>

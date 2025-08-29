@@ -2,7 +2,6 @@ import { Stack } from "expo-router";
 import Navbar from "@/components/navbar";
 
 export default function NutritionStackLayout() {
-  const icons = ["search"];
   const panes = ["Search"];
   const routes = ["index"];
 
@@ -13,15 +12,9 @@ export default function NutritionStackLayout() {
         options={{
           title: "Search",
           header: ({ route }) => (
-            <Navbar
-              icons={icons}
-              routes={routes}
-              panes={panes}
-              route={route.name}
-            />
+            <Navbar routes={routes} panes={panes} route={route.name} />
           ),
-        }}
-      />
+        }} />
     </Stack>
   );
 }

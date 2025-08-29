@@ -8,30 +8,24 @@ import GearIcon from "@/assets/gear.svg";
 
 export default function TabLayout() {
   // TODO: more secure check, see (tabs)/index.tsx also
-  const { jwt } = useStore();
-  const authenticated = jwt.length > 0;
+  const store = useStore();
+  const authenticated = store.jwt.length > 0;
 
   return (
     <Tabs
       screenOptions={({ route }) => {
         const icons = {
-          index: DumbellIcon,
-          exercise: DumbellIcon,
-          nutrition: FoodIcon,
-          tags: CalendarIcon,
+          index: DumbellIcon, exercise: DumbellIcon,
+          nutrition: FoodIcon, tags: CalendarIcon,
           settings: GearIcon,
         };
-        const isIndex = route.name == "index";
+        const isIndex = route.name === "index";
 
         return {
           tabBarShowLabel: false,
           tabBarStyle: isIndex
             ? { display: "none" }
-            : {
-                backgroundColor: "white",
-                borderTopColor: "#d1d5db",
-                elevation: 0,
-              },
+            : { backgroundColor: "white", borderTopColor: "#d1d5db", elevation: 0, paddingTop: 6 },
           tabBarActiveTintColor: "#60a5fa",
           tabBarInactiveTintColor: "#6b7280",
           tabBarIcon: ({ color }) => {
@@ -39,32 +33,21 @@ export default function TabLayout() {
             return <Icon fill={color} stroke={color} />;
           },
         };
-      }}
-    >
+      }}>
       <Tabs.Screen
         name="index"
-        options={{
-          headerShown: false,
-          tabBarItemStyle: { display: "none" },
-        }}
-      />
+        options={{ headerShown: false, tabBarItemStyle: { display: "none" } }} />
       <Tabs.Protected guard={authenticated}>
         <Tabs.Screen
           name="exercise"
-          options={{ title: "Exercise", headerShown: false }}
-        />
+          options={{ title: "Exercise", headerShown: false }} />
         <Tabs.Screen
           name="nutrition"
-          options={{ title: "Nutrition", headerShown: false }}
-        />
-        <Tabs.Screen
-          name="tags"
-          options={{ title: "Tags", headerShown: false }}
-        />
+          options={{ title: "Nutrition", headerShown: false }} />
+        <Tabs.Screen name="tags" options={{ title: "Tags", headerShown: false }} />
         <Tabs.Screen
           name="settings"
-          options={{ title: "Settings", headerShown: false }}
-        />
+          options={{ title: "Settings", headerShown: false }} />
       </Tabs.Protected>
     </Tabs>
   );

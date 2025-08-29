@@ -1,22 +1,16 @@
-import { useCallback, useRef } from "react";
+import React, { useCallback, useRef } from "react";
 import { useFocusEffect } from "expo-router";
 import { useStore } from "@/lib/state";
 import { request } from "@/lib/utils";
 
-import React from "react";
-import { AppState, NativeEventSubscription, Platform,Text, View } from "react-native";
+import {
+  AppState, NativeEventSubscription, Platform,
+  Text, View, useWindowDimensions
+} from "react-native";
+
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import DumbellsIcon from "@/assets/dumbells.svg";
-
-export function Section({ children, className }:
-  { children: React.ReactNode, className?: string } ) {
-  const style = `
-    w-[50%] m-auto border border-neutral-200
-    p-2 bg-default-background mb-5 ${className ?? ""}
-  `;
-  return <View className={style}>{children}</View>;
-}
 
 export function Empty({ messages }: { messages: string[] }) {
   return (
@@ -31,66 +25,82 @@ export function Empty({ messages }: { messages: string[] }) {
   );
 }
 
-export function ScrollContainer(
-  { children, syncState }: { children: React.ReactNode, syncState?: boolean }) {
+export function Card({ children, className, border }:
+  { children: React.ReactNode; className?: string; border?: boolean; }) {
+  const { width } = useWindowDimensions();
+  const style = `
+    mx-auto ${border ? "border border-neutral-200" : ""}
+    p-2 bg-default-background mb-5 ${className ?? ""}
+  `;
+
+  return (
+    <View style={{ width: width < 400 ? "92%" : "50%" }} className={style}>
+      {children}
+    </View>
+  );
+}
+
+export function Container({ children, syncState, padTop }:
+  { children: React.ReactNode; syncState?: boolean; padTop?: boolean; }) {
   const syncUserData = async () => {
-    const {
-      jwt, useImperial, settingsChanged, workouts, tags, taggedDates,
-      changedWorkoutIds, changedTagIds, changedTaggedDates,
-      removeWorkout, upsertWorkout, clearChangeSets,
-    } = useStore.getState();
+    const store = useStore.getState();
 
     try {
       // update the workouts
-      if (changedWorkoutIds.size > 0) {
-        const changed1 = [...changedWorkoutIds].filter(id => workouts[id] !== undefined);
-        const payload1 = { workouts: changed1.map(id => workouts[id]) };
-        await request("DELETE", "/auth/workout", { ids: changed1 }, jwt);
+      if (store.changedWorkoutIds.size > 0) {
+        const changed1 = [...store.changedWorkoutIds].filter((id) => store.workouts[id] !== undefined);
+        const payload1 = { workouts: changed1.map((id) => store.workouts[id]) };
+        await request("DELETE", "/auth/workout", { ids: changed1 }, store.jwt);
 
-        const json1 = await request("POST", "/auth/workout", payload1, jwt);
-        for (const w of json1.workouts) upsertWorkout(w, false);
-        for (const id of changed1) removeWorkout(id);
+        const json1 = await request("POST", "/auth/workout", payload1, store.jwt);
+        for (const w of json1.workouts) store.upsertWorkout(w, false);
+        for (const id of changed1) store.removeWorkout(id);
       }
 
       // update the tags
-      if (changedTagIds.size > 0) {
-        const changed2 = [...changedTagIds].filter(id => tags[id] !== undefined);
-        const payload2 = { tags: changed2.map(id => tags[id]) };
-        await request("POST", "/auth/tag", payload2, jwt);
+      if (store.changedTagIds.size > 0) {
+        const changed2 = [...store.changedTagIds].filter((id) => store.tags[id] !== undefined);
+        const payload2 = { tags: changed2.map((id) => store.tags[id]) };
+        await request("POST", "/auth/tag", payload2, store.jwt);
       }
 
       // update the tagged dates
-      if (changedTaggedDates.size > 0) {
-        const dates = [...changedTaggedDates].filter(date => taggedDates[date] !== undefined);
-        const data = dates.reduce((acc, date) => {
-          acc[date] = taggedDates[date];
-          return acc;
-        }, {} as Record<string, number[]>);
-        await request("POST", "/auth/taggedDates", {taggedDates: data}, jwt);
+      if (store.changedTaggedDates.size > 0) {
+        const dates = [...store.changedTaggedDates].filter((date) => store.taggedDates[date] !== undefined);
+        const data = dates.reduce(
+          (acc, date) => {
+            acc[date] = store.taggedDates[date];
+            return acc;
+          }, {} as Record<string, number[]>);
+        await request("POST", "/auth/taggedDates", { taggedDates: data }, store.jwt);
       }
 
       // update user settings
-      if (settingsChanged)
-        await request("POST", "/auth/user", { useImperial }, jwt);
-      clearChangeSets();
+      if (store.settingsChanged)
+        await request("POST", "/auth/user", { useImperial: store.useImperial }, store.jwt);
+      store.clearChangeSets();
     } catch (error: any) {
       console.log("ERROR!", error.message);
     }
-  }
+  };
 
   const appState = useRef(AppState.currentState);
-  let subscription: NativeEventSubscription;
-  const handleHidden = () => { if (document.hidden) syncUserData(); };
-  const handleClose = () => syncUserData();
 
   // sync when the app is closed or in the background
   useFocusEffect(
     useCallback(() => {
-      if (!syncState) return () => {};
+      if (!syncState) return () => { };
 
+      const handleHidden = () => { if (document.hidden) syncUserData(); };
+      const handleClose = () => syncUserData();
+
+      let subscription: NativeEventSubscription;
       if (Platform.OS !== "web") {
         subscription = AppState.addEventListener("change", (nextAppState) => {
-          if (appState.current === "active" && nextAppState.match(/inactive|background/))
+          if (
+            appState.current === "active" &&
+            nextAppState.match(/inactive|background/)
+          )
             syncUserData(); // app has gone to the background
           appState.current = nextAppState;
         });
@@ -107,12 +117,15 @@ export function ScrollContainer(
           document.removeEventListener("visibilitychange", handleHidden);
         }
       };
-    }, []),
+    }, [syncState]),
   );
 
+  const { width, height } = useWindowDimensions();
+  const edges = padTop ? ["top", "bottom", "left", "right"] : ["left", "right", "bottom"];
+
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <View className="h-[100%] w-[100%] pt-5 bg-default-background">
+    <SafeAreaView style={{ height, flex: 1 }} edges={edges}>
+      <View style={{ width, height }} className="bg-default-background">
         {children}
       </View>
     </SafeAreaView>

@@ -17,13 +17,9 @@ export default function NumInput({ num, setNum, label, disabled }: InputProps) {
     <View className="items-center flex-row">
       <TextInput
         editable={disabled !== undefined ? !disabled : true}
-        inputMode="numeric"
-        value={String(num)}
-        placeholder="0"
-        onChangeText={update}
-        maxLength={4}
-        className="bg-neutral-100 rounded-sm px-2 py-1 outline-none inline-block w-[50px] text-center"
-      />
+        inputMode="numeric" placeholder="0" maxLength={4}
+        value={String(num)} onChangeText={update}
+        className="bg-neutral-100 rounded-sm px-2 py-1 outline-none inline-block w-[50px] text-center" />
       {label && <Text className="ml-2">{label}</Text>}
     </View>
   );

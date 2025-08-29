@@ -3,7 +3,7 @@ import { useStore, TagInfo } from "@/lib/state";
 import { formatDate } from "@/lib/utils";
 
 import { Pressable, Text, View } from "react-native";
-import { ScrollContainer } from "@/components/container";
+import { Container, Card } from "@/components/container";
 import { Tag, TagManager } from "@/components/tag";
 
 import Feather from "@expo/vector-icons/Feather";
@@ -15,28 +15,21 @@ interface CalendarTileProps {
 }
 
 function CalendarTile({ date, disabled, toggle }: CalendarTileProps) {
-  const { tags, taggedDates } = useStore();
-  const tagIds = taggedDates[formatDate(date!)] ?? [];
-  const colors = tagIds.map((id: number) => tags[id].color);
+  const store = useStore();
+  const tagIds = store.taggedDates[formatDate(date!)] ?? [];
+  const colors = tagIds.map((id: number) => store.tags[id].color);
   const empty = date === undefined || toggle === undefined;
 
   return (
     <Pressable
-      onPress={toggle}
-      disabled={disabled || empty}
-      className="w-full p-[5px] aspect-square bg-default-background"
-    >
+      onPress={toggle} disabled={disabled || empty}
+      className="w-full p-[5px] aspect-square bg-default-background">
       {!empty && (
         <View className="flex-column h-full gap-[3px]">
           {colors.map((c: string, index: number) => (
-            <View
-              key={index}
-              style={{ flex: 1, backgroundColor: c, opacity: 0.5 }}
-            />
+            <View key={index} style={{ flex: 1, backgroundColor: c, opacity: 0.5 }} />
           ))}
-          <Text className="absolute right-[10px] top-[10px]">
-            {date.getDate()}
-          </Text>
+          <Text className="absolute right-[10px] top-[10px]">{date.getDate()}</Text>
         </View>
       )}
     </Pressable>
@@ -44,7 +37,7 @@ function CalendarTile({ date, disabled, toggle }: CalendarTileProps) {
 }
 
 export default function TagsPage() {
-  const { tags, toggleTaggedDate } = useStore();
+  const store = useStore();
 
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedTag, setSelectedTag] = useState(-1);
@@ -55,11 +48,7 @@ export default function TagsPage() {
   const [numTiles, setNumTiles] = useState(0);
 
   useEffect(() => {
-    const length = new Date(
-      date.getFullYear(),
-      date.getMonth() + 1,
-      0,
-    ).getDate();
+    const length = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
     const start = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
     const total = Math.ceil((start + length) / 7) * 7; // round it to the nearest multiple of 7
     setMonthLength(length);
@@ -82,34 +71,29 @@ export default function TagsPage() {
   // add/remove tag to a calendar date
   const tagDay = (date: Date) => {
     if (selectedTag == -1) return;
-    toggleTaggedDate(formatDate(date), selectedTag);
+    store.toggleTaggedDate(formatDate(date), selectedTag);
   };
 
   return (
-    <ScrollContainer syncState>
-      <View className="flex-row mb-[-15px] justify-between w-[50%] m-auto">
+    <Container syncState padTop>
+      <Card className="flex-row justify-betweenx">
         <Text className="text-xl">Tag dates</Text>
         <Pressable onPress={() => setModalVisible(true)}>
           <Feather name="command" color="black" size={18} />
         </Pressable>
-      </View>
+      </Card>
 
-      <View className="w-[50%] m-auto mb-2 border-b border-neutral-200 flex-row items-center flex-wrap h-max-[100px] pb-5">
-        {Object.values(tags).map((tag: TagInfo, index: number) => (
+      <Card className="mb-2 pb-2 border-b border-neutral-200 flex-row items-center flex-wrap h-max-[100px]">
+        {Object.values(store.tags).map((tag: TagInfo, index: number) => (
           <Tag
-            key={index}
-            tag={tag}
-            selected={selectedTag == tag.id}
-            setSelected={() =>
-              setSelectedTag(selectedTag == tag.id ? -1 : tag.id)
-            }
-          />
+            key={index} tag={tag} selected={selectedTag === tag.id}
+            setSelected={() => setSelectedTag(selectedTag === tag.id ? -1 : tag.id)} />
         ))}
-      </View>
+      </Card>
 
       <TagManager visible={modalVisible} close={() => setModalVisible(false)} />
 
-      <View className="w-[50%] m-auto">
+      <Card>
         <View className="flex-row justify-between items-center mb-4">
           <Pressable onPress={() => changeMonth(-1)}>
             <Feather name="arrow-left" size={26} color="black" />
@@ -131,15 +115,13 @@ export default function TagsPage() {
             const empty = index < 0 || index >= monthLength;
             return (
               <CalendarTile
-                date={empty ? undefined : d}
-                key={i}
+                date={empty ? undefined : d} key={i}
                 disabled={empty || selectedTag == -1}
-                toggle={() => tagDay(d)}
-              />
+                toggle={() => tagDay(d)} />
             );
           })}
         </View>
-      </View>
-    </ScrollContainer>
+      </Card>
+    </Container>
   );
 }

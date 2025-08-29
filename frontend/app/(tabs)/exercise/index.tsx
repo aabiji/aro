@@ -3,79 +3,59 @@ import { ExerciseInfo, useStore, WorkoutInfo } from "@/lib/state";
 import { formatDate, request } from "@/lib/utils";
 
 import { FlatList, Text, View } from "react-native";
-import { Section, ScrollContainer, Empty } from "@/components/container";
+import { Card, Container, Empty } from "@/components/container";
 import { WorkoutRecordMemo } from "@/components/workouts";
 import { SelectButton } from "@/components/select";
 
 export default function Index() {
   const today = formatDate(new Date());
-  const {
-    jwt,
-    moreWorkouts,
-    updateUserData,
-    upsertWorkout,
-    workouts,
-    workoutsPage,
-  } = useStore();
+  const store = useStore();
 
   const sortedWorkouts = useMemo(() => {
-    return Object.values(workouts)
+    return Object.values(store.workouts)
       .filter((w: WorkoutInfo) => !w.isTemplate)
       .sort(
         (a: WorkoutInfo, b: WorkoutInfo) =>
           new Date(b.tag).getTime() - new Date(a.tag).getTime(),
       );
-  }, [workouts]);
+  }, [store.workouts]);
 
   const choices = useMemo(() => {
-    return Object.values(workouts)
+    return Object.values(store.workouts)
       .filter((w: WorkoutInfo) => w.isTemplate && w.exercises.length > 0)
       .map((w: WorkoutInfo) => ({ label: w.tag, value: w.tag }));
-  }, [workouts]);
+  }, [store.workouts]);
 
   const addWorkout = async (templateName: string) => {
-    const template: WorkoutInfo = Object.values(workouts).find(
-      (w: WorkoutInfo) => w.tag == templateName,
-    )!;
-    let data = {
-      isTemplate: false,
-      tag: today,
-      exercises: [] as ExerciseInfo[],
-    };
+    const template: WorkoutInfo = Object.values(store.workouts).find(
+      (w: WorkoutInfo) => w.tag == templateName)!;
+    let data = { isTemplate: false, tag: today, exercises: [] as ExerciseInfo[] };
 
     for (const e of template.exercises) {
       data.exercises.push({
-        name: e.name,
-        exerciseType: e.exerciseType,
-        reps: [],
-        duration: 0,
-        distance: 0,
+        name: e.name, exerciseType: e.exerciseType,
+        reps: [], duration: 0, distance: 0,
         weight: e.weight ?? 0,
       });
     }
 
     try {
-      const json = await request(
-        "POST",
-        "/auth/workout",
-        { workouts: [data] },
-        jwt,
-      );
-      upsertWorkout(json.workouts[0], true);
+      const json = await request("POST", "/auth/workout", { workouts: [data] }, store.jwt);
+      store.upsertWorkout(json.workouts[0], true);
     } catch (err: any) {
       console.log("ERROR!", err.message);
     }
   };
 
   const fetchMore = async () => {
-    if (!moreWorkouts) return;
+    if (!store.moreWorkouts) return;
     try {
-      const payload = { page: workoutsPage, includeWorkouts: true };
-      const json = await request("POST", "/auth/userInfo", payload, jwt);
-      for (const w of json.user.workouts) upsertWorkout(w, true);
-      updateUserData({
+      const payload = { page: store.workoutsPage, includeWorkouts: true };
+      const json = await request("POST", "/auth/userInfo", payload, store.jwt);
+      for (const w of json.user.workouts) store.upsertWorkout(w, true);
+      store.updateUserData({
         moreWorkouts: json.moreWorkouts,
-        workoutsPage: workoutsPage + 1,
+        workoutsPage: store.workoutsPage + 1,
       });
     } catch (err: any) {
       console.log("ERROR!", err);
@@ -83,25 +63,22 @@ export default function Index() {
   };
 
   return (
-    <ScrollContainer syncState>
+    <Container syncState>
       <FlatList
-        data={sortedWorkouts}
+        data={sortedWorkouts} onEndReached={fetchMore}
         keyExtractor={(item: WorkoutInfo) => String(item.id)}
-        onEndReached={fetchMore}
         ListHeaderComponent={
-          <Section>
+          <Card>
             <Text className="font-bold text-xl mb-2">{today}</Text>
             {choices.length == 0 ? (
               <Empty messages={["You have no workout templates"]} />
             ) : (
               <SelectButton
-                choices={choices}
+                choices={choices} message="Add workout"
                 defaultChoice={choices[0].value}
-                message="Add workout"
-                handlePress={(choice: string) => addWorkout(choice)}
-              />
+                handlePress={(choice: string) => addWorkout(choice)} />
             )}
-          </Section>
+          </Card>
         }
         renderItem={({ item, index }) => {
           const prevTag = sortedWorkouts[index - 1]?.tag;
@@ -110,15 +87,14 @@ export default function Index() {
           return (
             <View>
               {showDate && (
-                <View className="m-auto w-[50%]">
+                <Card>
                   <Text className="font-bold text-xl mb-2">{item.tag}</Text>
-                </View>
+                </Card>
               )}
-              <WorkoutRecordMemo disabled={item.tag != today} workout={item} />
+              <WorkoutRecordMemo disabled={item.tag !== today} workout={item} />
             </View>
           );
-        }}
-      />
-    </ScrollContainer>
+        }} />
+    </Container>
   );
 }

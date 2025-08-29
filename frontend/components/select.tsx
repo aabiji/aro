@@ -24,8 +24,7 @@ export function Dropdown({ choices, choice, setChoice }) {
       renderRightIcon={() => <Feather name="chevron-down" size={20} color="black" />}
       renderItem={(item) => (
         <Text className="text-center text-default-font text-sm py-1">{item.label}</Text>
-      )}
-    />
+      )} />
   );
 }
 
@@ -37,10 +36,11 @@ export function SelectButton({ choices, defaultChoice, message, handlePress, ico
       <Dropdown choices={choices} choice={choice} setChoice={setChoice} />
       <Pressable
         className="flex-row items-center justify-center w-full bg-primary-500 py-2"
-        onPress={() => handlePress(choice)}
-      >
+        onPress={() => handlePress(choice)}>
         {icon && <Feather name={icon} size={20} color="white" />}
-        <Text className="text-default-background font-bold text-base ml-2">{message}</Text>
+        <Text className="text-default-background font-bold text-base ml-2">
+          {message}
+        </Text>
       </Pressable>
     </View>
   );
@@ -58,16 +58,17 @@ export function Selection({ choices, icons, handleChoice, className }) {
     <View className="flex-row justify-between bg-default-background border-neutral-100 border-2">
       {choices.map((_, index) => {
         const color = index == selected ? "white" : "blue";
-        const textColor = index == selected ? "text-default-background" : "text-default-font";
+        const textColor =
+          index == selected ? "text-default-background" : "text-default-font";
         const style =
-          index == selected ? "bg-primary-500 text-default-background p-1" : "bg-transparent p-1";
+          index == selected
+            ? "bg-primary-500 text-default-background p-1"
+            : "bg-transparent p-1";
         const Icon = icons ? icons[index] : undefined;
         return (
           <Pressable
-            onPress={() => select(index)}
-            key={index}
-            className={`items-center flex-1 flex-column p-2 ${style} ${extra}`}
-          >
+            onPress={() => select(index)} key={index}
+            className={`items-center flex-1 flex-column p-2 ${style} ${extra}`}>
             {Icon && <Icon fill={color} stroke={color} width={25} height={25} />}
             <Text className={textColor}>{choices[index]}</Text>
           </Pressable>

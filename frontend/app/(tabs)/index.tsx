@@ -5,12 +5,12 @@ import { request } from "@/lib/utils";
 
 import { Redirect } from "expo-router";
 import { Pressable, Text, TextInput, View } from "react-native";
-import { ScrollContainer, Section } from "@/components/container";
+import { Container, Card } from "@/components/container";
 
 export default function Index() {
   // TODO: what to do when the jwt expires?
-  const { jwt, setAllData } = useStore();
-  const authenticated = jwt.length > 0;
+  const store = useStore();
+  const authenticated = store.jwt.length > 0;
 
   const [isLogin, setIsLogin] = useState(true);
   const [errMsg, setErrMsg] = useState("");
@@ -57,10 +57,10 @@ export default function Index() {
       const payload = {
         page: 0, includeSettings: true,
         includeTemplates: true, includeWorkouts: true,
-        includeTags: true, includeTaggedDates: true
+        includeTags: true, includeTaggedDates: true,
       };
       const dataJson = await request("POST", "/auth/userInfo", payload, jwtJson.jwt);
-      setAllData(jwtJson.jwt, dataJson);
+      store.setAllData(jwtJson.jwt, dataJson);
     } catch (err: any) {
       setErrMsg(err.message);
     }
@@ -73,8 +73,8 @@ export default function Index() {
   if (authenticated) return <Redirect href="/exercise" />;
 
   return (
-    <ScrollContainer>
-      <Section className="absolute left-[25%] top-[25%]">
+    <Container>
+      <Card className="">
         <Text className="text-center text-2xl font-bold">aro</Text>
 
         <View className="bg-default-background p-4">
@@ -83,34 +83,29 @@ export default function Index() {
           )}
 
           <TextInput
-            value={email}
-            placeholder="Email"
-            onChangeText={(txt) => setEmail(txt)}
-            className={inputStyle}
-          />
+            value={email} placeholder="Email" autoCapitalize="none"
+            onChangeText={(txt: string) => setEmail(txt)}
+            className={inputStyle} />
 
           <TextInput
-            value={password}
-            placeholder="Password"
-            secureTextEntry
-            onChangeText={(txt) => setPassword(txt)}
-            className={inputStyle}
-          />
+            value={password} placeholder="Password"
+            secureTextEntry autoCapitalize="none"
+            onChangeText={(txt: string) => setPassword(txt)}
+            className={inputStyle} />
 
           <Pressable
             onPress={auth}
-            className="p-3 bg-primary-500 m-auto rounded w-[100%] mb-2"
-          >
+            className="p-3 bg-primary-500 m-auto rounded w-[100%] mb-2">
             <Text className="font-bold text-center text-white text-lg">
               {isLogin ? "Login" : "Create account"}
             </Text>
           </Pressable>
 
           <Pressable className="m-auto" onPress={toggle}>
-            <Text className="text-[15]">{isLogin ? "Create account" : "Login"}</Text>
+            <Text className="text-[15px] text-default-font">{isLogin ? "Create account" : "Login"}</Text>
           </Pressable>
         </View>
-      </Section>
-    </ScrollContainer>
+      </Card>
+    </Container>
   );
 }

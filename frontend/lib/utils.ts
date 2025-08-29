@@ -1,9 +1,5 @@
-export async function request(
-  method: string,
-  endpoint: string,
-  body?: object,
-  jwt?: string,
-) {
+
+export async function request(method: string, endpoint: string, body?: object, jwt?: string) {
   let headers: HeadersInit = { "Content-Type": "application/json" };
   if (jwt) headers["Authorization"] = `Bearer ${jwt}`;
   let payload: RequestInit = { method, headers };
