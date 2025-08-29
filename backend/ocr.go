@@ -9,17 +9,26 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 )
 
-func runEasyOCR(imagePath string) (string, error) {
+func runOCR(imagePath string) (string, error) {
+	base := filepath.Base(imagePath)
+	extension := filepath.Ext(imagePath)[1:]
+	tempFile1 := fmt.Sprintf("/tmp/%s-1.%s", base, extension)
+	tempFile2 := fmt.Sprintf("/tmp/%s-2.%s", base, extension)
+
+	// preprocess the image using imagemagick,
 	// run the easyocr command, installing it if needed, and return the output
 	commands := []string{
 		"python3", "-m venv .venv",
 		"pip", "install easyocr",
-		"./.venv/bin/easyocr", fmt.Sprintf("-l en -f %s", imagePath),
+		"magick", fmt.Sprintf("%s -colorspace Gray %s", imagePath, tempFile1),
+		"magick", fmt.Sprintf("%s -despeckle %s", tempFile1, tempFile2),
+		"./.venv/bin/easyocr", fmt.Sprintf("-l en -f %s", tempFile2),
 	}
 
 	start := 4
@@ -39,13 +48,20 @@ func runEasyOCR(imagePath string) (string, error) {
 		output += string(stdout)
 	}
 
+	if err := os.Remove(tempFile1); err != nil {
+		return "", err
+	}
+	if err := os.Remove(tempFile2); err != nil {
+		return "", err
+	}
+
 	return output, nil
 }
 
 func parseEasyOcrResult(line string) (string, float64, []float64, error) {
 	// parse the list of coordinates for the bounding box
 	// example input: [[a, b], [c, d], [e, f], [g, h]]
-	list := line[strings.Index(line, "["):strings.LastIndex(line, "]")]
+	list := line[strings.Index(line, "["):strings.LastIndex(line, "]]")]
 
 	ignored := []string{"np.int32(", "np.float32(", "np.float64(", ")", "[", "]"}
 	for _, ignore := range ignored {
@@ -69,7 +85,7 @@ func parseEasyOcrResult(line string) (string, float64, []float64, error) {
 	text := strings.TrimSpace(textPart)
 
 	// parse the confidence level, example input: ', np.float32(1.10101))'
-	numStr := ending[strings.Index(ending, "(")+1 : len(ending)-2]
+	numStr := ending[strings.LastIndex(ending, "(")+1 : len(ending)-2]
 	confidence, err := strconv.ParseFloat(numStr, 64)
 	if err != nil {
 		return "", -1, nil, err
@@ -78,19 +94,19 @@ func parseEasyOcrResult(line string) (string, float64, []float64, error) {
 	return text, confidence, boundingBox, nil
 }
 
-type Detection struct {
-	Text       string
-	MinX, MaxX float64
-	MinY, MaxY float64
-	CenterY    float64
+type detection struct {
+	text       string
+	minx, maxX float64
+	minY, maxY float64
+	centerY    float64
 }
 
-func getDetections(imagePath string) ([]Detection, error) {
-	result, err := runEasyOCR(imagePath)
+func getDetections(imagePath string) ([]detection, error) {
+	result, err := runOCR(imagePath)
 	if err != nil {
 		return nil, err
 	}
-	detections := []Detection{}
+	detections := []detection{}
 
 	for _, line := range strings.Split(strings.TrimSpace(result), "\n") {
 		text, confidence, box, err := parseEasyOcrResult(line)
@@ -102,28 +118,28 @@ func getDetections(imagePath string) ([]Detection, error) {
 			continue
 		}
 		// box order: top left, top right, bottom right, bottom left
-		detections = append(detections, Detection{
-			Text: text, MinX: box[0], MaxX: box[2],
-			MinY: box[1], MaxY: box[5],
-			CenterY: (box[1] + box[7]) / 2,
+		detections = append(detections, detection{
+			text: text, minx: box[0], maxX: box[2],
+			minY: box[1], maxY: box[5],
+			centerY: (box[1] + box[7]) / 2,
 		})
 	}
 	return detections, nil
 }
 
-func getDetectionRows(detections []Detection) [][]int {
+func getDetectionRows(detections []detection) [][]int {
 	sort.Slice(detections, func(i, j int) bool { // sort top to bottom
-		return detections[i].CenterY < detections[j].CenterY
+		return detections[i].centerY < detections[j].centerY
 	})
 
 	// assign detections to rows that they vertically overlap with
 	rows := [][]int{}
 	row := []int{0}
-	rowTop, rowBottom := detections[0].MinY, detections[0].MaxY
+	rowTop, rowBottom := detections[0].minY, detections[0].maxY
 
 	for i := 1; i < len(detections); i++ {
 		// check if the detection overlaps with the row
-		top, bottom := detections[i].MinY, detections[i].MaxY
+		top, bottom := detections[i].minY, detections[i].maxY
 		yOverlap := min(rowBottom, bottom) - max(rowTop, top)
 		threshold := min(rowBottom-rowTop, bottom-top) * 0.5
 
@@ -135,7 +151,7 @@ func getDetectionRows(detections []Detection) [][]int {
 			// new row
 			rowTop, rowBottom = top, bottom
 			sort.Slice(row, func(i, j int) bool { // sort left to right
-				return detections[row[i]].MinX < detections[row[j]].MinX
+				return detections[row[i]].minx < detections[row[j]].minx
 			})
 			rows = append(rows, row)
 			row = []int{i}
@@ -147,7 +163,7 @@ func getDetectionRows(detections []Detection) [][]int {
 }
 
 // NOTE: will eventually remove the 2 following functions
-func visualizeDetections(inputImage string, outputImage string, detections []Detection) error {
+func visualizeDetections(inputImage string, outputImage string, detections []detection) error {
 	reader, err := os.Open(inputImage)
 	if err != nil {
 		return err
@@ -165,14 +181,14 @@ func visualizeDetections(inputImage string, outputImage string, detections []Det
 	c := color.RGBA{0, 255, 0, 255}
 	for _, d := range detections {
 		// draw top and bottom sides
-		for x := d.MinX; x <= d.MaxX; x++ {
-			img.Set(int(x), int(d.MinY), c)
-			img.Set(int(x), int(d.MaxY), c)
+		for x := d.minx; x <= d.maxX; x++ {
+			img.Set(int(x), int(d.minY), c)
+			img.Set(int(x), int(d.maxY), c)
 		}
 		// draw left and right sides
-		for y := d.MinY; y <= d.MaxY; y++ {
-			img.Set(int(d.MinX), int(y), c)
-			img.Set(int(d.MaxX), int(y), c)
+		for y := d.minY; y <= d.maxY; y++ {
+			img.Set(int(d.minx), int(y), c)
+			img.Set(int(d.maxX), int(y), c)
 		}
 	}
 
@@ -192,11 +208,16 @@ func RunScanner(inputPath, outputPath string) error {
 	rows := getDetectionRows(detections)
 
 	for _, row := range rows {
-		for _, j := range row {
-			fmt.Printf("%s ", detections[j].Text)
+		for _, i := range row {
+			item := strings.ToLower(detections[i].text)
+			fmt.Println(item)
 		}
-		fmt.Printf("\n")
 	}
+
+	// for now we'll need:
+	// serving size ("per x"), calories, lipids, carbs, protein
+	// (will fill out the rest later)
+
 	if err := visualizeDetections(inputPath, outputPath, detections); err != nil {
 		return err
 	}

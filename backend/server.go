@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -40,29 +39,16 @@ func NewServer() (Server, error) {
 	return server, err
 }
 
-func (s *Server) ProcessNutritionalImage(c *gin.Context) {
+func (s *Server) ProcessFoodBarcode(c *gin.Context) {
 	reader, err := c.FormFile("image")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Image not found"})
 		return
 	}
 
-	path := fmt.Sprintf("/tmp/%s", reader.Filename)
-	c.SaveUploadedFile(reader, path)
+	fmt.Println(reader.Filename)
 
-	info, err := ExtractnutritionalInfo(path)
-	if err != nil {
-		fmt.Println(err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process the image"})
-		return
-	}
-
-	if err := os.Remove(path); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process the image"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"results": info})
+	c.JSON(http.StatusOK, gin.H{"results": "TODO!"})
 }
 
 type AuthInfo struct {

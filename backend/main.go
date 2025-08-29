@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"slices"
 	"strconv"
@@ -70,48 +69,33 @@ func AuthMiddleware(s *Server) gin.HandlerFunc {
 }
 
 func main() {
-	/*
-		server, err := NewServer()
-		if err != nil {
-			panic(err)
-		}
-
-		r := gin.Default()
-		r.MaxMultipartMemory = 8 << 20 // max form size = 8 megabytes
-		r.Use(CORSMiddleware())
-
-		auth := r.Group("/auth")
-		auth.Use(AuthMiddleware(&server))
-
-		r.POST("/login", server.Login)
-		r.POST("/signup", server.Signup)
-		r.POST("/nutrition/image", server.ProcessNutritionalImage)
-
-		auth.POST("/userInfo", server.GetUserInfo)
-		auth.POST("/user", server.UpdateUserSettings)
-		auth.DELETE("/user", server.DeleteUser)
-
-		auth.POST("/workout", server.CreateWorkout)
-		auth.DELETE("/workout", server.DeleteWorkout)
-
-		auth.POST("/tag", server.SetTag)
-		auth.DELETE("/tag/:id", server.DeleteTag)
-		auth.POST("/taggedDates", server.UpdateTaggedDates)
-
-		gin.SetMode(gin.DebugMode)
-		r.Run(":8080")
-	*/
-	paths := []string{
-		"/home/aabiji/Downloads/train/20149482_2_jpg.rf.7310026d202343bdc2b84114d5e2aa54.jpg",
-		"/home/aabiji/Downloads/train/11888560_3_jpg.rf.ade4e15fc7688cb95f43e71424a1dfd8.jpg",
-		"/home/aabiji/Downloads/train/00287678_2_jpg.rf.7b5aadcaa92a588562b480142acef813.jpg",
-		"/home/aabiji/Downloads/train/20083014_4_jpg.rf.3c881f5d781659ee6e0caa958628011d.jpg",
-		"/home/aabiji/Downloads/train/20004163_5_jpg.rf.fc90c2cf88d7c1951c22de0c345f5404.jpg",
+	server, err := NewServer()
+	if err != nil {
+		panic(err)
 	}
-	for i := 0; i < len(paths); i++ {
-		if err := RunScanner(paths[i], fmt.Sprintf("%d.jpg", i)); err != nil {
-			panic(err)
-		}
-		fmt.Println()
-	}
+
+	r := gin.Default()
+	r.MaxMultipartMemory = 8 << 20 // max form size = 8 megabytes
+	r.Use(CORSMiddleware())
+
+	auth := r.Group("/auth")
+	auth.Use(AuthMiddleware(&server))
+
+	r.POST("/login", server.Login)
+	r.POST("/signup", server.Signup)
+	r.POST("/nutrition/barcode", server.ProcessFoodBarcode)
+
+	auth.POST("/userInfo", server.GetUserInfo)
+	auth.POST("/user", server.UpdateUserSettings)
+	auth.DELETE("/user", server.DeleteUser)
+
+	auth.POST("/workout", server.CreateWorkout)
+	auth.DELETE("/workout", server.DeleteWorkout)
+
+	auth.POST("/tag", server.SetTag)
+	auth.DELETE("/tag/:id", server.DeleteTag)
+	auth.POST("/taggedDates", server.UpdateTaggedDates)
+
+	gin.SetMode(gin.DebugMode)
+	r.Run(":8080")
 }
