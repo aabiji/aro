@@ -77,6 +77,7 @@ func main() {
 		}
 
 		r := gin.Default()
+		r.MaxMultipartMemory = 8 << 20 // max form size = 8 megabytes
 		r.Use(CORSMiddleware())
 
 		auth := r.Group("/auth")
@@ -84,6 +85,7 @@ func main() {
 
 		r.POST("/login", server.Login)
 		r.POST("/signup", server.Signup)
+		r.POST("/nutrition/image", server.ProcessNutritionalImage)
 
 		auth.POST("/userInfo", server.GetUserInfo)
 		auth.POST("/user", server.UpdateUserSettings)

@@ -63,13 +63,13 @@ func parseEasyOcrResult(line string) (string, float64, []float64, error) {
 
 	// parse the detected text, example input: 'example'
 	ending := line[strings.LastIndex(line, "]")+2:]
-	parts := strings.Split(ending, ",")
+	comma := strings.LastIndex(ending, ",")
 
-	text := strings.TrimSpace(parts[0])
-	text = text[1 : len(text)-1] // remove quotes
+	textPart := strings.ReplaceAll(strings.ReplaceAll(ending[:comma], "'", ""), `"`, "")
+	text := strings.TrimSpace(textPart)
 
 	// parse the confidence level, example input: ', np.float32(1.10101))'
-	numStr := parts[1][strings.Index(parts[1], "(")+1 : len(parts[1])-2]
+	numStr := ending[strings.Index(ending, "(")+1 : len(ending)-2]
 	confidence, err := strconv.ParseFloat(numStr, 64)
 	if err != nil {
 		return "", -1, nil, err
@@ -111,6 +111,42 @@ func getDetections(imagePath string) ([]Detection, error) {
 	return detections, nil
 }
 
+func getDetectionRows(detections []Detection) [][]int {
+	sort.Slice(detections, func(i, j int) bool { // sort top to bottom
+		return detections[i].CenterY < detections[j].CenterY
+	})
+
+	// assign detections to rows that they vertically overlap with
+	rows := [][]int{}
+	row := []int{0}
+	rowTop, rowBottom := detections[0].MinY, detections[0].MaxY
+
+	for i := 1; i < len(detections); i++ {
+		// check if the detection overlaps with the row
+		top, bottom := detections[i].MinY, detections[i].MaxY
+		yOverlap := min(rowBottom, bottom) - max(rowTop, top)
+		threshold := min(rowBottom-rowTop, bottom-top) * 0.5
+
+		if yOverlap >= threshold {
+			// same row
+			rowTop, rowBottom = min(rowTop, top), max(rowBottom, bottom)
+			row = append(row, i)
+		} else {
+			// new row
+			rowTop, rowBottom = top, bottom
+			sort.Slice(row, func(i, j int) bool { // sort left to right
+				return detections[row[i]].MinX < detections[row[j]].MinX
+			})
+			rows = append(rows, row)
+			row = []int{i}
+		}
+	}
+
+	rows = append(rows, row)
+	return rows
+}
+
+// NOTE: will eventually remove the 2 following functions
 func visualizeDetections(inputImage string, outputImage string, detections []Detection) error {
 	reader, err := os.Open(inputImage)
 	if err != nil {
@@ -148,43 +184,8 @@ func visualizeDetections(inputImage string, outputImage string, detections []Det
 	return jpeg.Encode(output, img, nil)
 }
 
-func getDetectionRows(detections []Detection) [][]int {
-	sort.Slice(detections, func(i, j int) bool { // sort top to bottom
-		return detections[i].CenterY < detections[j].CenterY
-	})
-
-	// assign detections to rows that they vertically overlap with
-	rows := [][]int{}
-	row := []int{0}
-	rowTop, rowBottom := detections[0].MinY, detections[0].MaxY
-
-	for i := 1; i < len(detections); i++ {
-		// check if the detection overlaps with the row
-		top, bottom := detections[i].MinY, detections[i].MaxY
-		yOverlap := min(rowBottom, bottom) - max(rowTop, top)
-		threshold := min(rowBottom-rowTop, bottom-top) * 0.5
-
-		if yOverlap >= threshold {
-			// same row
-			rowTop, rowBottom = min(rowTop, top), max(rowBottom, bottom)
-			row = append(row, i)
-		} else {
-			// new row
-			rowTop, rowBottom = top, bottom
-			sort.Slice(row, func(i, j int) bool { // sort left to right
-				return detections[row[i]].MinX < detections[row[j]].MinX
-			})
-			rows = append(rows, row)
-			row = []int{i}
-		}
-	}
-
-	rows = append(rows, row)
-	return rows
-}
-
-func RunScanner(inputImage, outputImage string) error {
-	detections, err := getDetections(inputImage)
+func RunScanner(inputPath, outputPath string) error {
+	detections, err := getDetections(inputPath)
 	if err != nil {
 		return err
 	}
@@ -196,9 +197,21 @@ func RunScanner(inputImage, outputImage string) error {
 		}
 		fmt.Printf("\n")
 	}
-	if err := visualizeDetections(inputImage, outputImage, detections); err != nil {
+	if err := visualizeDetections(inputPath, outputPath, detections); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func ExtractnutritionalInfo(imagePath string) (map[string]int, error) {
+	detections, err := getDetections(imagePath)
+	if err != nil {
+		return nil, err
+	}
+	_ = getDetectionRows(detections)
+
+	// TODO: parse the rows!
+	results := map[string]int{"calories": 100}
+	return results, nil
 }
