@@ -1,5 +1,5 @@
 import { Stack } from "expo-router";
-import ExerciseNavbar from "@/components/navbar";
+import Navbar from "@/components/navbar";
 
 export default function ExerciseStackLayout() {
   const icons = ["list", "book", "pie-chart"];
@@ -13,7 +13,7 @@ export default function ExerciseStackLayout() {
         options={{
           title: "Workouts",
           header: ({ route }) => (
-            <ExerciseNavbar
+            <Navbar
               icons={icons}
               routes={routes}
               panes={panes}
@@ -27,7 +27,7 @@ export default function ExerciseStackLayout() {
         options={{
           title: "Progress",
           header: ({ route }) => (
-            <ExerciseNavbar
+            <Navbar
               icons={icons}
               routes={routes}
               panes={panes}
@@ -41,7 +41,7 @@ export default function ExerciseStackLayout() {
         options={{
           title: "Templates",
           header: ({ route }) => (
-            <ExerciseNavbar
+            <Navbar
               icons={icons}
               routes={routes}
               panes={panes}

@@ -9,7 +9,7 @@ export async function request(
   let payload: RequestInit = { method, headers };
   if (body) payload.body = JSON.stringify(body);
 
-  const url = `http://127.0.0.1:8080${endpoint}`;
+  const url = `${process.env.EXPO_PUBLIC_API_URL}:8080${endpoint}`;
   const response = await fetch(url, payload);
   const data = await response.json();
 

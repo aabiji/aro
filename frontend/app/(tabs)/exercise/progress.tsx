@@ -13,7 +13,8 @@ type ToVec2 = (v: any) => Vec2;
 // Get the perpendicular distance from a point (p0), to a line segment (p1 to p2)
 // Taken from [here](https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line)
 function perpendicularDistance(p0: Vec2, p1: Vec2, p2: Vec2) {
-  const num = (p2.y - p1.y) * p0.x - (p2.x - p1.x) * p0.y + p2.x * p1.y - p2.y * p1.x;
+  const num =
+    (p2.y - p1.y) * p0.x - (p2.x - p1.x) * p0.y + p2.x * p1.y - p2.y * p1.x;
   const den = (p2.y - p1.y) * (p2.y - p1.y) + (p2.x - p1.x) * (p2.x - p1.x);
   return Math.abs(num) / Math.sqrt(den);
 }
@@ -117,7 +118,10 @@ function ResistancePlot({ name, group }: { name: string; group: PlotGroup }) {
     { label: "Last 5 years", value: 60 },
     {
       label: "All time",
-      value: monthDiff(group.data[0].date, group.data[group.data.length - 1].date),
+      value: monthDiff(
+        group.data[0].date,
+        group.data[group.data.length - 1].date,
+      ),
     },
   ];
 
@@ -153,14 +157,16 @@ function ResistancePlot({ name, group }: { name: string; group: PlotGroup }) {
 
   return (
     <Section>
-    {/*<View className="bg-default-background px-4 py-2 w-full mb-4">*/}
+      {/*<View className="bg-default-background px-4 py-2 w-full mb-4">*/}
       <View className="items-center flex-row justify-between items-center">
         <Text className="text-xl">{name}</Text>
 
         <View className="flex-column w-[25%]">
           <Selection
             choices={["Weight", "Reps"]}
-            handleChoice={(index: number) => forceRerender(setShowWeight(index == 0))}
+            handleChoice={(index: number) =>
+              forceRerender(setShowWeight(index == 0))
+            }
           />
           <Dropdown
             choices={viewRanges}
@@ -206,7 +212,8 @@ function CardioPlot({ name, group }: { name: string; group: PlotGroup }) {
 
   const changeYear = (delta: number) => {
     const nextYear = year + delta;
-    if (nextYear < earliest.getFullYear() || nextYear > latest.getFullYear()) return;
+    if (nextYear < earliest.getFullYear() || nextYear > latest.getFullYear())
+      return;
     setYear(nextYear);
 
     // Set the start and end indexes for the slice of plot points
@@ -218,7 +225,9 @@ function CardioPlot({ name, group }: { name: string; group: PlotGroup }) {
     setStartIndex(getMonthIndex(group.months, startDiff));
 
     const rangeEnd =
-      nextYear + 1 > latest.getFullYear() ? latest : new Date(nextYear + 1, 0, 1);
+      nextYear + 1 > latest.getFullYear()
+        ? latest
+        : new Date(nextYear + 1, 0, 1);
     const endDiff = monthDiff(rangeEnd, latest);
     setEndIndex(getMonthIndex(group.months, endDiff));
 
@@ -229,13 +238,15 @@ function CardioPlot({ name, group }: { name: string; group: PlotGroup }) {
 
   return (
     <Section>
-    {/*<View className="bg-default-background px-3 w-full mb-4">*/}
+      {/*<View className="bg-default-background px-3 w-full mb-4">*/}
       <View className="flex-row justify-between items-center">
         <Text className="text-xl">{name}</Text>
 
         <Selection
           choices={["Distance", "Duration"]}
-          handleChoice={(index: number) => forceRerender(setShowDistance(index == 0))}
+          handleChoice={(index: number) =>
+            forceRerender(setShowDistance(index == 0))
+          }
         />
 
         <View className="flex-row gap-2 items-center">

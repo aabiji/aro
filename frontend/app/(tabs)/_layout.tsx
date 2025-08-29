@@ -17,7 +17,7 @@ export default function TabLayout() {
         const icons = {
           index: DumbellIcon,
           exercise: DumbellIcon,
-          food: FoodIcon,
+          nutrition: FoodIcon,
           tags: CalendarIcon,
           settings: GearIcon,
         };
@@ -28,10 +28,10 @@ export default function TabLayout() {
           tabBarStyle: isIndex
             ? { display: "none" }
             : {
-              backgroundColor: "white",
-              borderTopColor: "#d1d5db",
-              elevation: 0,
-            },
+                backgroundColor: "white",
+                borderTopColor: "#d1d5db",
+                elevation: 0,
+              },
           tabBarActiveTintColor: "#60a5fa",
           tabBarInactiveTintColor: "#6b7280",
           tabBarIcon: ({ color }) => {
@@ -53,7 +53,14 @@ export default function TabLayout() {
           name="exercise"
           options={{ title: "Exercise", headerShown: false }}
         />
-        <Tabs.Screen name="tags" options={{ title: "Tags", headerShown: false }} />
+        <Tabs.Screen
+          name="nutrition"
+          options={{ title: "Nutrition", headerShown: false }}
+        />
+        <Tabs.Screen
+          name="tags"
+          options={{ title: "Tags", headerShown: false }}
+        />
         <Tabs.Screen
           name="settings"
           options={{ title: "Settings", headerShown: false }}

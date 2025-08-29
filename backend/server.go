@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/datatypes"
@@ -40,14 +41,12 @@ func NewServer() (Server, error) {
 }
 
 func (s *Server) ProcessFoodBarcode(c *gin.Context) {
-	reader, err := c.FormFile("image")
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Image not found"})
+	barcodeStr := strings.TrimSpace(c.Param("barcode"))
+	if len(barcodeStr) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid barcode"})
 		return
 	}
-
-	fmt.Println(reader.Filename)
-
+	// TODO: call the openfood facts api...
 	c.JSON(http.StatusOK, gin.H{"results": "TODO!"})
 }
 
