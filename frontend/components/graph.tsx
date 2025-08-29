@@ -92,16 +92,9 @@ export function LineGraph({ data, height, getDate, getValue, update, tooltipLabe
       .attr("cursor", "pointer")
       .on("mousemove", (event: MouseEvent) =>
         handleMouseMove(
-          event,
-          undefined,
-          xScale,
-          yScale,
-          getDate,
-          getValue,
-          setDate,
-          setValue,
-          setTooltipStyle,
-        ),
+          event, undefined, xScale, yScale,
+          getDate, getValue, setDate, setValue,
+          setTooltipStyle),
       )
       .on("mouseleave", (event: MouseEvent) => handleMouseLeave(event, setTooltipStyle));
   }, [windowSize, update, h, value, getDate, data, py, getValue]);

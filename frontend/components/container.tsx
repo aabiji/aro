@@ -17,7 +17,7 @@ export function Empty({ messages }: { messages: string[] }) {
     <View className="items-center">
       <DumbellsIcon width={125} height={125} />
       {messages.map((_, i) => (
-        <Text className="text-xl text-neutral-500" key={i}>
+        <Text className="text-center text-xl text-neutral-500" key={i}>
           {messages[i]}
         </Text>
       ))}

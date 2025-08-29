@@ -41,7 +41,7 @@ func NewServer() (Server, error) {
 }
 
 func (s *Server) ProcessFoodBarcode(c *gin.Context) {
-	barcodeStr := strings.TrimSpace(c.Param("barcode"))
+	barcodeStr := strings.TrimSpace(c.Query("barcode"))
 	if len(barcodeStr) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid barcode"})
 		return
@@ -397,7 +397,7 @@ func (s *Server) SetTag(c *gin.Context) {
 }
 
 func (s *Server) DeleteTag(c *gin.Context) {
-	idInt, err := strconv.ParseUint(c.Param("id"), 10, strconv.IntSize)
+	idInt, err := strconv.ParseUint(c.Query("id"), 10, strconv.IntSize)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tag id"})
 		return
