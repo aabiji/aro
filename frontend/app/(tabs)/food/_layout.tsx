@@ -1,7 +1,7 @@
 import { Stack } from "expo-router";
 import Navbar from "@/components/navbar";
 
-export default function NutritionStackLayout() {
+export default function FoodStackLayout() {
   const panes = ["Search"];
   const routes = ["index"];
 

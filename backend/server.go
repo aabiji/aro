@@ -41,13 +41,20 @@ func NewServer() (Server, error) {
 }
 
 func (s *Server) ProcessFoodBarcode(c *gin.Context) {
-	barcodeStr := strings.TrimSpace(c.Query("barcode"))
-	if len(barcodeStr) == 0 {
+	barcode := strings.TrimSpace(c.Query("barcode"))
+	os := strings.TrimSpace(c.Query("os"))
+	if len(barcode) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid barcode"})
 		return
 	}
-	// TODO: call the openfood facts api...
-	c.JSON(http.StatusOK, gin.H{"results": "TODO!"})
+
+	food, err := getFoodInfo(barcode, os)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Food not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"food": food})
 }
 
 type AuthInfo struct {

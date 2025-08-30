@@ -30,12 +30,14 @@ export default function SearchPage() {
 
   const searchFood = async () => {
     try {
-      const url = `/food?barcode=${barcode}&os=${Platform.OS}`;
+      const url = `/food/barcode?barcode=${barcode}&os=${Platform.OS}`;
       const json = await request("GET", url, undefined, undefined);
-      console.log(json);
-      // TODO: handle the result!
+      console.log(json.food); // TODO: handle the result!
     } catch (err: any) {
-      console.log("ERROR!", err);
+      if (err.msg === "Food not found")
+        console.log(":(");
+      else
+        console.log("ERROR!", err);
     }
   };
 
