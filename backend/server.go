@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/datatypes"
-	"gorm.io/driver/sqlite"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
@@ -26,13 +26,14 @@ func NewServer() (Server, error) {
 		return Server{}, err
 	}
 
-	server.db, err = gorm.Open(sqlite.Open("database.db"), &gorm.Config{})
+	dsn := "host=localhost user=todo password=todo dbname=todo port=todo"
+	server.db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		return Server{}, err
 	}
 
 	err = server.db.AutoMigrate(&User{}, &Workout{}, &Exercise{},
-		&Settings{}, &Tag{}, &TaggedDate{})
+		&Settings{}, &Tag{}, &TaggedDate{}, &Nutrient{}, &Food{})
 	if err != nil {
 		return Server{}, err
 	}
@@ -65,6 +66,8 @@ func (s *Server) SearchFood(c *gin.Context) {
 		results = append(results, food)
 	}
 
+	// TODO: openfoodfacts pagination when searching by text
+	// search layer = elasticsearch?
 	c.JSON(http.StatusOK, gin.H{"results": results})
 }
 

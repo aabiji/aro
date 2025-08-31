@@ -9,19 +9,6 @@ import (
 	"strings"
 )
 
-type Nutriment struct {
-	Name  string  `json:"name"`
-	Unit  string  `json:"unit"`
-	Value float64 `json:"value"`
-}
-
-type Food struct {
-	Name        string      `json:"name"`
-	ServingSize int         `json:"serving_size"`
-	ServingUnit string      `json:"serving_unit"`
-	Nutriments  []Nutriment `json:"nutriments"`
-}
-
 // query the OpenFoodFacts api, either searching by term or by barcode
 // return a list product info objects
 func GetProducts(value, mobileOS string, valueIsBarcode bool) ([]map[string]any, error) {
@@ -108,24 +95,24 @@ func ParseProductInfo(info map[string]any) (Food, error) {
 		return food, fmt.Errorf("couldn't get serving size unit")
 	}
 
-	nutriments, ok := info["nutriments"].(map[string]any)
+	nutrients, ok := info["nutrients"].(map[string]any)
 	if !ok {
-		return food, fmt.Errorf("couldn't get nutriments")
+		return food, fmt.Errorf("couldn't get nutrients")
 	}
 
-	for n := range nutriments {
+	for n := range nutrients {
 		haveRequiredKeys := true
 		for _, s := range []string{"_unit", "_serving"} {
-			if _, ok := nutriments[fmt.Sprintf("%s%s", n, s)]; !ok {
+			if _, ok := nutrients[fmt.Sprintf("%s%s", n, s)]; !ok {
 				haveRequiredKeys = false
 			}
 		}
 
 		if len(strings.Split(n, "_")) == 1 && haveRequiredKeys {
-			food.Nutriments = append(food.Nutriments, Nutriment{
+			food.Nutrients = append(food.Nutrients, Nutrient{
 				Name:  strings.ToLower(n),
-				Unit:  nutriments[fmt.Sprintf("%s_unit", n)].(string),
-				Value: nutriments[fmt.Sprintf("%s_serving", n)].(float64),
+				Unit:  nutrients[fmt.Sprintf("%s_unit", n)].(string),
+				Value: nutrients[fmt.Sprintf("%s_serving", n)].(float64),
 			})
 		}
 	}
