@@ -40,21 +40,32 @@ func NewServer() (Server, error) {
 	return server, err
 }
 
-func (s *Server) ProcessFoodBarcode(c *gin.Context) {
-	barcode := strings.TrimSpace(c.Query("barcode"))
+func (s *Server) SearchFood(c *gin.Context) {
+	query := strings.TrimSpace(c.Query("query"))
 	os := strings.TrimSpace(c.Query("os"))
-	if len(barcode) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid barcode"})
+	barcodeFlag := strings.TrimSpace(c.Query("barcode"))
+
+	if len(os) == 0 || len(query) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request params"})
 		return
 	}
 
-	food, err := getFoodInfo(barcode, os)
+	productInfos, err := GetProducts(query, os, barcodeFlag == "1")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Food not found"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"food": food})
+	results := []Food{}
+	for _, info := range productInfos {
+		food, err := ParseProductInfo(info)
+		if err != nil {
+			continue
+		}
+		results = append(results, food)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"results": results})
 }
 
 type AuthInfo struct {

@@ -1,33 +1,41 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
-
-	"github.com/Jeffail/gabs"
 )
 
 type Nutriment struct {
-	Name            string  `json:"name"`
-	Unit            string  `json:"unit"`
-	ValuePer100g    float64 `json:"per_100g"`
-	ValuePerServing float64 `json:"per_serving"`
+	Name  string  `json:"name"`
+	Unit  string  `json:"unit"`
+	Value float64 `json:"value"`
 }
 
 type Food struct {
-	Name       string      `json:"name"`
-	Nutriments []Nutriment `json:"nutriments"`
+	Name        string      `json:"name"`
+	ServingSize int         `json:"serving_size"`
+	ServingUnit string      `json:"serving_unit"`
+	Nutriments  []Nutriment `json:"nutriments"`
 }
 
-func queryOpenFoodFacts(barcode, mobileOS string) (*gabs.Container, error) {
-	url := fmt.Sprintf("https://world.openfoodfacts.org/api/v2/product/%s", barcode)
-	request, err := http.NewRequest("GET", url, nil)
+// query the OpenFoodFacts api, either searching by term or by barcode
+// return a list product info objects
+func GetProducts(value, mobileOS string, valueIsBarcode bool) ([]map[string]any, error) {
+	// either for searching by term or for searching by barcode
+	base := "https://world.openfoodfacts.org/cgi/search.pl?search_terms=%s&search_simple=1&action=process&json=1"
+	if valueIsBarcode {
+		base = "https://world.openfoodfacts.org/api/v2/product/%s"
+	}
+
+	request, err := http.NewRequest("GET", fmt.Sprintf(base, value), nil)
 	if err != nil {
 		return nil, err
 	}
-	request.Header.Add("Content-Type", "application/json")
+	//request.Header.Add("Content-Type", "application/json")
 	request.Header.Add("User-Agent", fmt.Sprintf("aro - %s - Version 2.1 - https://aro.com - scan", mobileOS))
 
 	client := &http.Client{}
@@ -36,7 +44,6 @@ func queryOpenFoodFacts(barcode, mobileOS string) (*gabs.Container, error) {
 		return nil, err
 	}
 	defer response.Body.Close()
-
 	if response.StatusCode != 200 {
 		return nil, fmt.Errorf("failed to query OpenFoodFacts")
 	}
@@ -46,44 +53,82 @@ func queryOpenFoodFacts(barcode, mobileOS string) (*gabs.Container, error) {
 		return nil, err
 	}
 
-	json, err := gabs.ParseJSON(body)
-	return json, err
+	data := map[string]any{}
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	// searching by barcode returns 1 product
+	if valueIsBarcode {
+		info, ok := data["product"].(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("'product' key not found")
+		}
+		return []map[string]any{info}, nil
+	}
+
+	// searching by search terms return many products
+	list := []map[string]any{}
+	products, ok := data["products"].([]any)
+	if !ok {
+		return nil, fmt.Errorf("'products' key not found")
+	}
+	for _, obj := range products {
+		info, ok := obj.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("invalid response format")
+		}
+		list = append(list, info)
+	}
+
+	return list, err
 }
 
-func getFoodInfo(barcode, mobileOS string) (Food, error) {
-	// parse the openfoodfacts json response
-	json, err := queryOpenFoodFacts(barcode, mobileOS)
+func ParseProductInfo(info map[string]any) (Food, error) {
+	var err error
+	food, ok := Food{}, true
+
+	food.Name, ok = info["product_name"].(string)
+	if !ok {
+		return food, fmt.Errorf("couldn't get product name")
+	}
+
+	sizeStr, ok := info["serving_quantity"].(string)
+	if !ok {
+		return food, fmt.Errorf("couldn't get serving size")
+	}
+	food.ServingSize, err = strconv.Atoi(sizeStr)
 	if err != nil {
-		return Food{}, err
+		return food, fmt.Errorf("couldn't get serving size")
 	}
 
-	name, ok := json.Path("product.product_name").Data().(string)
+	food.ServingUnit, ok = info["serving_quantity_unit"].(string)
 	if !ok {
-		return Food{}, fmt.Errorf("couldn't get product name")
+		return food, fmt.Errorf("couldn't get serving size unit")
 	}
 
-	info, ok := json.Path("product.nutriments").Data().(map[string]any)
+	nutriments, ok := info["nutriments"].(map[string]any)
 	if !ok {
-		fmt.Println("couldn't get nutriments")
+		return food, fmt.Errorf("couldn't get nutriments")
 	}
 
-	nutrimentNames := []string{}
-	for key, _ := range info {
-		if len(strings.Split(key, "_")) == 1 {
-			nutrimentNames = append(nutrimentNames, key)
+	for n := range nutriments {
+		haveRequiredKeys := true
+		for _, s := range []string{"_unit", "_serving"} {
+			if _, ok := nutriments[fmt.Sprintf("%s%s", n, s)]; !ok {
+				haveRequiredKeys = false
+			}
+		}
+
+		if len(strings.Split(n, "_")) == 1 && haveRequiredKeys {
+			food.Nutriments = append(food.Nutriments, Nutriment{
+				Name:  strings.ToLower(n),
+				Unit:  nutriments[fmt.Sprintf("%s_unit", n)].(string),
+				Value: nutriments[fmt.Sprintf("%s_serving", n)].(float64),
+			})
 		}
 	}
 
-	nutriments := []Nutriment{}
-	for _, n := range nutrimentNames {
-		nutriment := Nutriment{
-			Name:            strings.ToLower(n),
-			Unit:            info[fmt.Sprintf("%s_unit", n)].(string),
-			ValuePer100g:    info[fmt.Sprintf("%s_100g", n)].(float64),
-			ValuePerServing: info[fmt.Sprintf("%s_serving", n)].(float64),
-		}
-		nutriments = append(nutriments, nutriment)
-	}
-
-	return Food{Name: name, Nutriments: nutriments}, nil
+	return food, nil
 }

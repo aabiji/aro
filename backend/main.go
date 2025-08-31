@@ -84,7 +84,7 @@ func main() {
 	r.POST("/login", server.Login)
 	r.POST("/signup", server.Signup)
 
-	r.GET("/food/barcode", server.ProcessFoodBarcode)
+	r.GET("/food", server.SearchFood)
 
 	auth.POST("/userInfo", server.GetUserInfo)
 	auth.POST("/user", server.UpdateUserSettings)
