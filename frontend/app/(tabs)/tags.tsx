@@ -6,7 +6,7 @@ import { Pressable, Text, View } from "react-native";
 import { Container, Card } from "@/components/container";
 import { Tag, TagManager } from "@/components/tag";
 
-import Feather from "@expo/vector-icons/Feather";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 interface CalendarTileProps {
   date?: Date;
@@ -23,7 +23,7 @@ function CalendarTile({ date, disabled, toggle }: CalendarTileProps) {
   return (
     <Pressable
       onPress={toggle} disabled={disabled || empty}
-      className="w-full p-[5px] aspect-square bg-default-background">
+      className="w-[14%] aspect-square bg-default-background border-l-[1px] border-gray-400 border-t-[1px]">
       {!empty && (
         <View className="flex-column h-full gap-[3px]">
           {colors.map((c: string, index: number) => (
@@ -75,28 +75,13 @@ export default function TagsPage() {
   };
 
   return (
-    <Container syncState padTop>
-      <Card className="flex-row justify-betweenx">
-        <Text className="text-xl">Tag dates</Text>
-        <Pressable onPress={() => setModalVisible(true)}>
-          <Feather name="command" color="black" size={18} />
-        </Pressable>
-      </Card>
-
-      <Card className="mb-2 pb-2 border-b border-neutral-200 flex-row items-center flex-wrap h-max-[100px]">
-        {Object.values(store.tags).map((tag: TagInfo, index: number) => (
-          <Tag
-            key={index} tag={tag} selected={selectedTag === tag.id}
-            setSelected={() => setSelectedTag(selectedTag === tag.id ? -1 : tag.id)} />
-        ))}
-      </Card>
-
+    <Container syncState>
       <TagManager visible={modalVisible} close={() => setModalVisible(false)} />
 
-      <Card>
+      <Card className="mb-0 pb-2 border-b border-neutral-200">
         <View className="flex-row justify-between items-center mb-4">
           <Pressable onPress={() => changeMonth(-1)}>
-            <Feather name="arrow-left" size={26} color="black" />
+            <Ionicons name="arrow-back" size={26} color="black" />
           </Pressable>
 
           <Text className="text-xl">
@@ -104,11 +89,12 @@ export default function TagsPage() {
           </Text>
 
           <Pressable onPress={() => changeMonth(1)}>
-            <Feather name="arrow-right" size={26} color="black" />
+            <Ionicons name="arrow-forward" size={26} color="black" />
           </Pressable>
         </View>
 
-        <View className="grid grid-cols-7 bg-neutral-400 gap-[1px] border-neutral-400 border-2 h-[70%]">
+        <View
+          className="border-r-2 border-b-2 border-l-[1px] border-t-[1px] border-neutral-400 flex-wrap flex-row">
           {[...Array(numTiles).keys()].map((i) => {
             const index = i - startWeekday;
             const d = new Date(date.getFullYear(), date.getMonth(), index + 1);
@@ -121,6 +107,18 @@ export default function TagsPage() {
             );
           })}
         </View>
+      </Card>
+
+      <Card className="flex-row items-center flex-wrap h-max-[100px]">
+        {Object.values(store.tags).map((tag: TagInfo, index: number) => (
+          <Tag
+            key={index} tag={tag} selected={selectedTag === tag.id}
+            setSelected={() => setSelectedTag(selectedTag === tag.id ? -1 : tag.id)} />
+        ))}
+
+        <Pressable onPress={() => setModalVisible(true)} className="ml-2">
+          <Ionicons name="cog" color="black" size={25} />
+        </Pressable>
       </Card>
     </Container>
   );

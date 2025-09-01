@@ -10,19 +10,12 @@ Tech stack:
 - React Native + Expo frontend, Nativewind for styling
 - OpenFoodFacts API to search by barcode and text
 
-Asset credits:
-- https://thenounproject.com/icon/dumbbells-44534/
-- https://thenounproject.com/icon/dumbbell-157388/
-- https://thenounproject.com/icon/settings-1337547/
-- https://thenounproject.com/icon/food-7742389/
-- https://www.svgrepo.com/collection/basicons-interface-line-icons/
-
 ### Build
 Fill out these values in a .env file in the root directory:
 ```
 POSTGRES_USER=TODO!
 POSTGRES_PASSWORD=TODO!
-POSTGRES_DB=TODO!
+POSTGRES_DB=db # same as docker service
 JWT_SECRET=TODO!
 POSTGRES_HOSTNAME=localhost
 APP_PORT=8080
@@ -32,6 +25,7 @@ DB_PORT=5432
 Fill out these values in a .env file in the frontend/ directory:
 ```
 EXPO_PUBLIC_API_URL=<API URL or IP ADDRESS>
+EXPO_PUBLIC_SUPPORT_EMAIL=<YOUR EMAIL>
 ```
 
 Then run:

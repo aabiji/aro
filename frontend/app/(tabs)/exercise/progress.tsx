@@ -3,9 +3,11 @@ import { ExerciseType, useStore } from "@/lib/state";
 
 import { FlatList, Pressable, Text, View } from "react-native";
 import { LineGraph, Heatmap } from "@/components/graph";
-import { Empty, Container, Card } from "@/components/container";
+import { Container, Card } from "@/components/container";
 import { Dropdown, Selection } from "@/components/select";
-import Feather from "@expo/vector-icons/Feather";
+import { BackHeader } from "@/components/header";
+
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 type Vec2 = { x: number; y: number };
 type ToVec2 = (v: any) => Vec2;
@@ -223,14 +225,14 @@ function CardioPlot({ name, group }: { name: string; group: PlotGroup }) {
 
         <View className="flex-row gap-2 items-center">
           <Pressable onPress={() => changeYear(-1)} disabled={prevDisabled}>
-            <Feather
-              name="arrow-left" size={18}
+            <Ionicons
+              name="arrow-back" size={18}
               color={prevDisabled ? "neutral" : "black"} />
           </Pressable>
           <Text className="text-base"> {year} </Text>
           <Pressable onPress={() => changeYear(1)} disabled={nextDisabled}>
-            <Feather
-              name="arrow-right" size={18}
+            <Ionicons
+              name="arrow-forward" size={18}
               color={nextDisabled ? "neutral" : "black"} />
           </Pressable>
         </View>
@@ -287,8 +289,10 @@ export default function ProgressPage() {
 
   return (
     <Container>
+      <BackHeader title={"Progress"} />
+
       {Object.keys(exercises).length == 0 && (
-        <Empty messages={["You have no exercises"]} />
+        <Text className="text-center text-xl text-neutral-500">You have no exercises</Text>
       )}
 
       <FlatList

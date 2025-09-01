@@ -2,10 +2,11 @@ import { useState } from "react";
 import { TagInfo, useStore } from "@/lib/state";
 import { request } from "@/lib/utils";
 
-import { FlatList, Modal, Pressable, Text, TextInput, View } from "react-native";
+import { FlatList, Pressable, Text, TextInput, View } from "react-native";
 import ColorPicker, { Panel3 } from "reanimated-color-picker";
+import { Popup } from "@/components/container";
 
-import Feather from "@expo/vector-icons/Feather";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 interface TagProps {
   tag: TagInfo;
@@ -59,7 +60,7 @@ export function Tag({ tag, selected, setSelected, showPicker, setName, removeTag
 
         {editable && (
           <Pressable onPress={removeTag} className="ml-auto">
-            <Feather name="trash" color="red" size={20} />
+            <Ionicons name="trash-outline" color="red" size={20} />
           </Pressable>
         )}
       </View>
@@ -107,58 +108,52 @@ export function TagManager({ visible, close }: { visible: boolean; close: () => 
   };
 
   return (
-    <Modal transparent animationType="fade" visible={visible} onRequestClose={close}>
-      <Pressable onPress={close} className="flex-1"
-        style={{ backgroundColor: "rgba(0, 0, 0, 0.3)", cursor: "default" }}>
-        <Pressable
-          onPress={(e) => e.stopPropagation()}
-          className="w-full h-[50%] absolute bottom-0 bg-neutral-50 shadow-md py-2 cursor-default">
+    <Popup visible={visible} close={close}>
+      <View>
+        <View className="flex-row justify-between w-[55%] m-auto">
+          <Text className="text-xl">Manage tags</Text>
 
-          <View className="flex-row justify-between w-[55%] m-auto">
-            <Text className="text-xl">Manage tags</Text>
-
-            <Pressable onPress={() => updateTag("New tag", -1)}>
-              <Feather name="plus" size={25} color="black" />
-            </Pressable>
-          </View>
-
-          {Object.keys(store.tags).length == 0 && (
-            <Text className="text-center mt-4 text-base text-neutral-400"> No tags </Text>
-          )}
-
-          <FlatList
-            data={Object.values(store.tags)} className="w-[55%] m-auto"
-            renderItem={({ item }) => (
-              <Tag
-                tag={item}
-                showPicker={(mouseX, mouseY) => showTagPicker(mouseX, mouseY, item.id)}
-                setName={(name: string) => updateTag(name, item.id)}
-                removeTag={() => deleteTag(item.id)}
-              />
-            )} />
-        </Pressable>
-      </Pressable>
-
-      {showPicker && (
-        <View
-          style={{
-            position: "absolute",
-            left: pickerPos.x - 75,
-            top: pickerPos.y - 75,
-            width: 150, height: 150,
-            zIndex: 9999,
-          }}
-          className="rounded-xl bg-default-background p-2 border-2 border-neutral-200">
-          <ColorPicker
-            style={{ width: "100%", height: "100%" }}
-            onComplete={(color) => {
-              upsertTag({ id: currentTag, color: color.hex });
-              setShowPicker(false);
-            }}>
-            <Panel3 thumbSize={15} />
-          </ColorPicker>
+          <Pressable onPress={() => updateTag("New tag", -1)}>
+            <Ionicons name="add" size={25} color="black" />
+          </Pressable>
         </View>
-      )}
-    </Modal>
+
+        {Object.keys(store.tags).length == 0 && (
+          <Text className="text-center mt-4 text-base text-neutral-400"> No tags </Text>
+        )}
+
+        <FlatList
+          data={Object.values(store.tags)} className="w-[55%] m-auto"
+          renderItem={({ item }) => (
+            <Tag
+              tag={item}
+              showPicker={(mouseX, mouseY) => showTagPicker(mouseX, mouseY, item.id)}
+              setName={(name: string) => updateTag(name, item.id)}
+              removeTag={() => deleteTag(item.id)}
+            />
+          )} />
+
+        {showPicker && (
+          <View
+            style={{
+              position: "absolute",
+              left: pickerPos.x - 75,
+              top: pickerPos.y - 75,
+              width: 150, height: 150,
+              zIndex: 9999,
+            }}
+            className="rounded-xl bg-default-background p-2 border-2 border-neutral-200">
+            <ColorPicker
+              style={{ width: "100%", height: "100%" }}
+              onComplete={(color) => {
+                store.upsertTag({ id: currentTag, color: color.hex });
+                setShowPicker(false);
+              }}>
+              <Panel3 thumbSize={15} />
+            </ColorPicker>
+          </View>
+        )}
+      </View>
+    </Popup>
   );
 }

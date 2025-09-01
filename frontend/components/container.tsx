@@ -4,26 +4,11 @@ import { useStore } from "@/lib/state";
 import { request } from "@/lib/utils";
 
 import {
-  AppState, NativeEventSubscription, Platform,
-  Text, View, useWindowDimensions
+  AppState, Modal, NativeEventSubscription, Platform,
+  Pressable, View, useWindowDimensions
 } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
-
-import DumbellsIcon from "@/assets/dumbells.svg";
-
-export function Empty({ messages }: { messages: string[] }) {
-  return (
-    <View className="items-center">
-      <DumbellsIcon width={125} height={125} />
-      {messages.map((_, i) => (
-        <Text className="text-center text-xl text-neutral-500" key={i}>
-          {messages[i]}
-        </Text>
-      ))}
-    </View>
-  );
-}
 
 export function Card({ children, className, border }:
   { children: React.ReactNode; className?: string; border?: boolean; }) {
@@ -40,8 +25,27 @@ export function Card({ children, className, border }:
   );
 }
 
-export function Container({ children, syncState, padTop }:
-  { children: React.ReactNode; syncState?: boolean; padTop?: boolean; }) {
+export function Popup({ visible, close, children }:
+  { visible: boolean, close: () => void; children: React.ReactNode }) {
+  return (
+    <Modal transparent animationType="fade" visible={visible} onRequestClose={close}>
+      <Pressable onPress={close} className="flex-1"
+        style={{ backgroundColor: "rgba(0, 0, 0, 0.3)", cursor: "default" }}>
+        <Pressable
+          onPress={(e) => e.stopPropagation()}
+          className="w-full h-[50%] absolute bottom-0 bg-neutral-50 shadow-md py-2 cursor-default">
+          {children}
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+export function Container({ children, syncState }:
+  { children: React.ReactNode; syncState?: boolean; }) {
+  const appState = useRef(AppState.currentState);
+  const { width, height } = useWindowDimensions();
+
   const syncUserData = async () => {
     const store = useStore.getState();
 
@@ -84,8 +88,6 @@ export function Container({ children, syncState, padTop }:
     }
   };
 
-  const appState = useRef(AppState.currentState);
-
   // sync when the app is closed or in the background
   useFocusEffect(
     useCallback(() => {
@@ -120,11 +122,8 @@ export function Container({ children, syncState, padTop }:
     }, [syncState]),
   );
 
-  const { width, height } = useWindowDimensions();
-  const edges = padTop ? ["top", "bottom", "left", "right"] : ["left", "right", "bottom"];
-
   return (
-    <SafeAreaView style={{ height, flex: 1 }} edges={edges}>
+    <SafeAreaView style={{ height, flex: 1 }} edges={["top", "bottom", "left", "right"]}>
       <View style={{ width, height }} className="bg-default-background">
         {children}
       </View>

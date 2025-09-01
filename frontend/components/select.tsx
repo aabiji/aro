@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { Dropdown as DropdownElement } from "react-native-element-dropdown";
-import Feather from "@expo/vector-icons/Feather";
+
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 export function Dropdown({ choices, choice, setChoice }) {
   return (
@@ -21,7 +22,7 @@ export function Dropdown({ choices, choice, setChoice }) {
       selectedTextStyle={{ color: "black", textAlign: "center", fontSize: 14 }}
       containerStyle={{ backgroundColor: "white", paddingVertical: 4 }}
       onChange={(item) => setChoice(item.value)}
-      renderRightIcon={() => <Feather name="chevron-down" size={20} color="black" />}
+      renderRightIcon={() => <Ionicons name="chevron-down" size={20} color="black" />}
       renderItem={(item) => (
         <Text className="text-center text-default-font text-sm py-1">{item.label}</Text>
       )} />
@@ -37,7 +38,7 @@ export function SelectButton({ choices, defaultChoice, message, handlePress, ico
       <Pressable
         className="flex-row items-center justify-center w-full bg-primary-500 py-2"
         onPress={() => handlePress(choice)}>
-        {icon && <Feather name={icon} size={20} color="white" />}
+        {icon && <Ionicons name={icon} size={20} color="white" />}
         <Text className="text-default-background font-bold text-base ml-2">
           {message}
         </Text>

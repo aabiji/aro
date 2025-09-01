@@ -7,7 +7,7 @@ import NumInput from "@/components/input";
 import { SelectButton } from "@/components/select";
 import { Card } from "@/components/container";
 
-import Feather from "@expo/vector-icons/Feather";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 function WorkoutTemplate({ workout }: { workout: WorkoutInfo }) {
   const store = useStore();
@@ -49,7 +49,7 @@ function WorkoutTemplate({ workout }: { workout: WorkoutInfo }) {
             store.upsertWorkout({ id: workout.id, name: value })
           } />
         <Pressable onPress={() => deleteTemplate()} className="bg-transparent p-2">
-          <Feather name="trash" color="red" size={18} />
+          <Ionicons name="trash-outline" color="red" size={18} />
         </Pressable>
       </View>
 
@@ -67,7 +67,7 @@ function WorkoutTemplate({ workout }: { workout: WorkoutInfo }) {
           )}
 
           <Pressable className="bg-transparent p-2" onPress={() => store.removeExercise(workout.id, i)}>
-            <Feather name="trash" color="red" size={18} />
+            <Ionicons name="trash-outline" color="red" size={18} />
           </Pressable>
         </View>
       ))}
@@ -116,7 +116,7 @@ function WorkoutRecord({ workout, disabled }: { workout: WorkoutInfo; disabled: 
                     })
                   }
                   className="bg-transparent px-2 rounded">
-                  <Feather name="plus" color="grey" size={20} />
+                  <Ionicons name="add" color="grey" size={20} />
                 </Pressable>
               )}
             </View>

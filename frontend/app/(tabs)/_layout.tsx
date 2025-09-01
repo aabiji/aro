@@ -1,10 +1,7 @@
 import { Tabs } from "expo-router";
 import { useStore } from "@/lib/state";
 
-import DumbellIcon from "@/assets/dumbell.svg";
-import FoodIcon from "@/assets/food.svg";
-import CalendarIcon from "@/assets/calendar.svg";
-import GearIcon from "@/assets/gear.svg";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 export default function TabLayout() {
   // TODO: more secure check, see (tabs)/index.tsx also
@@ -14,23 +11,20 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={({ route }) => {
-        const icons = {
-          index: DumbellIcon, exercise: DumbellIcon,
-          food: FoodIcon, tags: CalendarIcon,
-          settings: GearIcon,
-        };
-        const isIndex = route.name === "index";
-
         return {
           tabBarShowLabel: false,
-          tabBarStyle: isIndex
+          tabBarStyle: route.name === "index"
             ? { display: "none" }
             : { backgroundColor: "white", borderTopColor: "#d1d5db", elevation: 0, paddingTop: 6 },
           tabBarActiveTintColor: "#60a5fa",
           tabBarInactiveTintColor: "#6b7280",
           tabBarIcon: ({ color }) => {
-            const Icon = icons[route.name];
-            return <Icon fill={color} stroke={color} />;
+            const icons = {
+              index: "barbell-outline", exercise: "barbell-outline",
+              food: "fast-food-outline", tags: "calendar-clear-outline",
+              settings: "settings-outline", // weight: "scale-outline",
+            };
+            return <Ionicons name={icons[route.name]} color={color} size={24} />;
           },
         };
       }}>

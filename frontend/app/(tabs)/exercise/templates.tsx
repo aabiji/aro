@@ -2,10 +2,12 @@ import { useState } from "react";
 import { WorkoutInfo, useStore } from "@/lib/state";
 import { request } from "@/lib/utils";
 
-import { FlatList, Pressable, Text, TextInput, View } from "react-native";
+import { FlatList, Pressable, Text, TextInput } from "react-native";
 import { WorkoutTemplateMemo } from "@/components/workouts";
-import { Container, Empty, Card } from "@/components/container";
-import Feather from "@expo/vector-icons/Feather";
+import { Container, Card } from "@/components/container";
+import { BackHeader } from "@/components/header";
+
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 export default function TemplatesPage() {
   const store = useStore();
@@ -38,21 +40,22 @@ export default function TemplatesPage() {
 
   return (
     <Container syncState>
+      <BackHeader title={"Workout templates"} />
+
       <Card className="flex-row mb-5">
         <TextInput
-          value={templateName} placeholder="Template name"
+          value={templateName} placeholder="New template name"
           className="bg-default-background p-3 grow outline-none border border-neutral-200 placeholder-neutral-500"
           onChangeText={(value: string) => setWorkoutName(value)} />
         <Pressable
           disabled={templateName.trim().length === 0} onPress={() => createTemplate()}
           className="flex-row gap-1 bg-primary-500 p-2 items-center">
-          <Feather name="plus" color="white" size={20} />
-          <Text className="text-default-background"> New template </Text>
+          <Ionicons name="add" color="white" size={20} />
         </Pressable>
       </Card>
 
       {!Object.values(store.workouts).some((w: WorkoutInfo) => w.isTemplate) && (
-        <Empty messages={["You have no workout templates"]} />
+        <Text className="text-center text-sm text-neutral-500">You have no workout templates</Text>
       )}
 
       <FlatList

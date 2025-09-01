@@ -1,13 +1,17 @@
 import { useMemo } from "react";
+import { useRouter } from "expo-router";
 import { ExerciseInfo, useStore, WorkoutInfo } from "@/lib/state";
 import { formatDate, request } from "@/lib/utils";
 
-import { FlatList, Text, View } from "react-native";
-import { Card, Container, Empty } from "@/components/container";
+import { FlatList, Pressable, Text, View } from "react-native";
+import { Card, Container } from "@/components/container";
 import { WorkoutRecordMemo } from "@/components/workouts";
 import { SelectButton } from "@/components/select";
 
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+
 export default function Index() {
+  const router = useRouter();
   const today = formatDate(new Date());
   const store = useStore();
 
@@ -68,16 +72,40 @@ export default function Index() {
         data={sortedWorkouts} onEndReached={fetchMore}
         keyExtractor={(item: WorkoutInfo) => String(item.id)}
         ListHeaderComponent={
-          <Card>
+          <Card className="border-b-2 border-gray-200">
             <Text className="font-bold text-xl mb-2">{today}</Text>
+
+            <View className="flex-row justify-between">
+              <Pressable
+                onPress={() => router.push("/exercise/progress")}
+                className="flex-row items-center mb-2">
+                <Text className="text-gray-500 font-bold text-base mr-1">View progress</Text>
+                <MaterialCommunityIcons name="arrow-top-right" size={24} color="gray" />
+              </Pressable>
+
+              <Pressable
+                onPress={() => router.push("/exercise/templates")}
+                className="flex-row items-center mb-2">
+                <Text className="text-gray-500 font-bold text-base mr-1">Edit templates</Text>
+                <MaterialCommunityIcons name="arrow-top-right" size={24} color="gray" />
+              </Pressable>
+            </View>
+
             {choices.length == 0 ? (
-              <Empty messages={["You have no workout templates"]} />
+              <Text className="text-center text-sm text-neutral-500">
+                No workout templates
+              </Text>
             ) : (
               <SelectButton
                 choices={choices} message="Add workout"
                 defaultChoice={choices[0].value}
                 handlePress={(choice: string) => addWorkout(choice)} />
             )}
+
+            {sortedWorkouts.length == 0 &&
+              <Text className="text-center text-sm text-neutral-500">
+                No workouts
+              </Text>}
           </Card>
         }
         renderItem={({ item, index }) => {
