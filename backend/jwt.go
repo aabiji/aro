@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -23,28 +21,4 @@ func verifyToken(tokenStr string, secret string) (*jwt.Token, error) {
 		}
 		return []byte(secret), nil
 	})
-}
-
-func loadEnvVars(path string) (map[string]string, error) {
-	vars := make(map[string]string)
-
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	lines := strings.Split(string(data), "\n")
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue // skip comment
-		}
-
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) == 2 {
-			vars[parts[0]] = parts[1]
-		}
-	}
-
-	return vars, nil
 }

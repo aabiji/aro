@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -39,7 +40,7 @@ func AuthMiddleware(s *Server) gin.HandlerFunc {
 			return
 		}
 
-		token, err := verifyToken(parts[1], s.secrets["JWT_SECRET"])
+		token, err := verifyToken(parts[1], os.Getenv("JWT_SECRET"))
 		if err != nil || !token.Valid {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid jwt"})
 			return
@@ -98,5 +99,5 @@ func main() {
 	auth.POST("/taggedDates", server.UpdateTaggedDates)
 
 	gin.SetMode(gin.DebugMode)
-	r.Run(":8080")
+	r.Run("0.0.0.0:8080")
 }

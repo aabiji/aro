@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -13,27 +14,27 @@ import (
 )
 
 // server and routes
-type Server struct {
-	db      *gorm.DB
-	secrets map[string]string
-}
+type Server struct{ db *gorm.DB }
 
 func NewServer() (Server, error) {
 	var err error
 	server := Server{}
-	server.secrets, err = loadEnvVars(".env")
-	if err != nil {
-		return Server{}, err
-	}
 
-	dsn := "host=localhost user=todo password=todo dbname=todo port=todo"
+	dsn := fmt.Sprintf(
+		"host=%s user=%s password=%s dbname=%s port=%s",
+		os.Getenv("POSTGRES_HOSTNAME"),
+		os.Getenv("POSTGRES_USER"),
+		os.Getenv("POSTGRES_PASSWORD"),
+		os.Getenv("POSTGRES_DB"),
+		os.Getenv("DB_PORT"),
+	)
 	server.db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		return Server{}, err
 	}
 
 	err = server.db.AutoMigrate(&User{}, &Workout{}, &Exercise{},
-		&Settings{}, &Tag{}, &TaggedDate{}, &Nutrient{}, &Food{})
+		&Settings{}, &Tag{}, &TaggedDate{}, &Food{}, &Nutrient{})
 	if err != nil {
 		return Server{}, err
 	}
@@ -99,7 +100,7 @@ func (s *Server) Login(c *gin.Context) {
 		return
 	}
 
-	token, err := createToken(fmt.Sprintf("%d", user.ID), s.secrets["JWT_SECRET"])
+	token, err := createToken(fmt.Sprintf("%d", user.ID), os.Getenv("JWT_SECRET"))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't create the jwt"})
 		return
@@ -134,7 +135,7 @@ func (s *Server) Signup(c *gin.Context) {
 		return
 	}
 
-	token, err := createToken(fmt.Sprintf("%d", user.ID), s.secrets["JWT_SECRET"])
+	token, err := createToken(fmt.Sprintf("%d", user.ID), os.Getenv("JWT_SECRET"))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Coudln't create the JWT"})
 		return

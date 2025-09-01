@@ -63,18 +63,18 @@ type Settings struct {
 	ImperialUnits bool `json:"useImperial"`
 }
 
-type Nutrient struct {
-	BaseModel
-	FoodID uint    `json:"-"`
-	Name   string  `json:"name"`
-	Unit   string  `json:"unit"`
-	Value  float64 `json:"value"`
-}
-
 type Food struct {
 	BaseModel
 	Name        string     `json:"name"`
 	ServingSize int        `json:"serving_size"`
 	ServingUnit string     `json:"serving_unit"`
 	Nutrients   []Nutrient `json:"nutrients" gorm:"foreignKey:FoodID;constraint:OnDelete:CASCADE"`
+}
+
+type Nutrient struct {
+	BaseModel
+	FoodID uint    `json:"-"`
+	Name   string  `json:"name"`
+	Unit   string  `json:"unit"`
+	Value  float64 `json:"value"`
 }

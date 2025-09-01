@@ -1,0 +1,26 @@
+services:
+  db:
+    image: postgres:16
+    env_file:
+      - .env
+    ports:
+      - "${DB_PORT}:${DB_PORT}"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  app:
+    build:
+      context: ./backend
+      dockerfile: ${DOCKERFILE:-Dockerfile.dev}  # default to dev
+    volumes:
+      - ./backend:/app   # only needed for dev
+    depends_on:
+      - db
+    env_file:
+      - .env
+    ports:
+      - "${APP_PORT}:${APP_PORT}"
+
+volumes:
+  pgdata:
+
