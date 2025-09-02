@@ -1,9 +1,5 @@
-Our lives move like an arrow through time, twisting and changing course
-along the way. In the moment, it's easy to lose track or miss the details
-that help us understand ourselves better. That's where Aro comes in.
-Aro helps you track the key elements of your health, your nutrition,
-exercise, weight, periods and more, so your focus can stay where it belongs,
-on you.
+![app banner](frontend/assets/banner.png)
+aro helps you *track* your nutrition, exercise, weight, and period
 
 Tech stack:
 - Golang + Postgresql backend
