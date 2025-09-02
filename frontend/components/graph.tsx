@@ -1,8 +1,8 @@
-import { useRef, useEffect, useState } from "react";
-import * as d3 from "d3";
+import { useEffect, useState } from "react";
 import { formatDate } from "@/lib/utils";
 
-import { useWindowDimensions, Text, View } from "react-native";
+import { GestureResponderEvent, View } from "react-native";
+import { Line, Path, Svg, Text } from "react-native-svg";
 
 function handleMouseMove(
   event, point, xScale, yScale, getDate, getValue,
@@ -36,82 +36,109 @@ function handleMouseLeave(event, setTooltipStyle) {
   event.target.setAttribute("stroke", "none");
 }
 
-export function LineGraph({ data, height, getDate, getValue, update, tooltipLabel }) {
-  const windowSize = useWindowDimensions();
+export interface PlotPoint {
+  date: Date;
+  weight: number;
+  averageReps: number;
+  distance: number;
+  duration: number;
+}
 
-  const ref = useRef(null);
-  const [h, py] = [height, height / 10];
+interface PlotProps {
+  data: PlotPoint[];
+  height: number;
+  tooltipLabel: string;
+  getValue: (v: PlotPoint) => number;
+}
 
-  const [date, setDate] = useState("");
-  const [value, setValue] = useState("");
-  const [tooltipStyle, setTooltipStyle] = useState({ display: "none" });
+export function LineGraph({ data, height, getValue, tooltipLabel }: PlotProps) {
+  const [paddingX, paddingY, fontSize] = [25, 25, 12];
+  const [tickColor, lineColor, textColor] = ["#e8e8e8", "#046DF9", "#000000"];
+
+  const [width, setWidth] = useState(0);
+  const [numTicksX, numTicksY] = [3, 10];
+  const [xSpacing, setXSpacing] = useState(0);
+  const [ySpacing, setYSpacing] = useState(0);
+
+  const [minX, setMinX] = useState(0);
+  const [maxX, setMaxX] = useState(0);
+  const [minY, setMinY] = useState(0);
+  const [maxY, setMaxY] = useState(0);
+
+  const [pathData, setPathData] = useState("");
 
   useEffect(() => {
-    const svg = d3.select(ref.current);
-    ref.current.innerHTML = ""; // clear
+    if (data.length == 0) return;
 
-    const [w, px] = [ref.current.getBoundingClientRect().width, 25];
-    const xScale = d3
-      .scaleTime()
-      .domain(d3.extent(data, getDate))
-      .range([px, w - px]);
-    const xAxis = d3.axisBottom(xScale).ticks(5).tickFormat(d3.utcFormat("%B %d, %Y"));
-    svg
-      .append("g")
-      .attr("transform", `translate(0, ${h - py})`)
-      .call(xAxis);
+    const minX = Math.min(...data.map((p: PlotPoint) => p.date.getTime()));
+    const maxX = Math.max(...data.map((p: PlotPoint) => p.date.getTime()));
 
-    const yScale = d3
-      .scaleLinear()
-      .domain(d3.extent(data, getValue))
-      .range([h - py, py]);
-    svg.append("g").attr("transform", `translate(${px}, 0)`).call(d3.axisLeft(yScale));
+    const minY = Math.min(...data.map((p: PlotPoint) => getValue(p)));
+    const maxY = Math.max(...data.map((p: PlotPoint) => getValue(p)));
 
-    const line = d3
-      .line()
-      .x((d) => xScale(getDate(d)))
-      .y((d) => yScale(getValue(d)))
-      .curve(d3.curveLinear);
+    const pathStr = data.map((p: PlotPoint, i: number) => {
+      const xPercent = (p.date.getTime() - minX) / (maxX - minX);
+      const x = paddingX + (xPercent * (width - paddingX * 2));
 
-    svg
-      .append("path")
-      .datum(data)
-      .attr("fill", "none")
-      .attr("stroke", "steelblue")
-      .attr("stroke-width", 2)
-      .attr("d", line);
+      const yPercent = (getValue(p) - minY) / (maxY - minY);
+      const y = height - paddingY - (yPercent * (height - paddingY * 2));
 
-    svg
-      .append("path")
-      .datum(data)
-      .attr("fill", "none")
-      .attr("stroke", "transparent")
-      .attr("stroke-width", 35)
-      .attr("pointer-events", "stroke") // hover only on the stroke, not fill
-      .attr("d", line)
-      .attr("cursor", "pointer")
-      .on("mousemove", (event: MouseEvent) =>
-        handleMouseMove(
-          event, undefined, xScale, yScale,
-          getDate, getValue, setDate, setValue,
-          setTooltipStyle),
-      )
-      .on("mouseleave", (event: MouseEvent) => handleMouseLeave(event, setTooltipStyle));
-  }, [windowSize, update, h, value, getDate, data, py, getValue]);
+      return `${i === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
+    }).join(" ");
+    setPathData(pathStr);
+
+    setXSpacing((width - paddingX * 2) / numTicksX);
+    setYSpacing((height - paddingY * 2) / numTicksY);
+    setMinX(minX);
+    setMaxX(maxX);
+    setMinY(minY);
+    setMaxY(maxY);
+  }, [width, data, getValue]);
 
   return (
-    <View>
-      <View style={tooltipStyle}>
-        <Text className="text-default-background font-bold text-center">
-          {value} {tooltipLabel} - {date}
-        </Text>
-      </View>
-      <svg ref={ref} width="100%" height={h} />
+    <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+      <Svg width={width} height={height}>
+        {[...Array(numTicksY + 1).keys()].map((i) => (
+          <Line
+            x1={paddingX} y1={height - paddingY - i * ySpacing}
+            x2={width - paddingX} y2={height - paddingY - i * ySpacing}
+            stroke={tickColor} strokeWidth="1" />
+        ))}
+
+        {[...Array(numTicksY + 1).keys()].map((i) => {
+          const yValue = minY + i * ((maxY - minY) / numTicksY);
+          return (
+            <Text
+              fill={textColor} fontWeight="normal"
+              textAnchor="middle" fontSize={fontSize}
+              x={paddingX / 2} y={height - paddingY - i * ySpacing + (fontSize / 3)}>
+              {`${yValue.toFixed(1)}`}
+            </Text>
+          );
+        })}
+
+        {[...Array(numTicksX + 1).keys()].map((i) => {
+          const xValue = minX + i * ((maxX - minX) / numTicksX);
+          const str = formatDate(new Date(xValue));
+          return (
+            <Text
+              fill={textColor} fontWeight="normal"
+              textAnchor="middle" fontSize={fontSize}
+              x={paddingX + i * xSpacing} y={height - paddingY}>
+              {str}
+            </Text>
+          );
+        })}
+
+        <Path d={pathData} strokeWidth={15} fill="none" stroke="transparent" />
+        <Path d={pathData} pointerEvents="none" stroke={lineColor} strokeWidth={2} fill="none" />
+      </Svg>
     </View>
   );
 }
 
-export function Heatmap({ data, height, getDate, getValue, update, tooltipLabel }) {
+export function Heatmap({ data, height, getValue, tooltipLabel }: PlotProps) {
+  /*
   const windowSize = useWindowDimensions();
 
   const ref = useRef(null);
@@ -196,6 +223,14 @@ export function Heatmap({ data, height, getDate, getValue, update, tooltipLabel 
         </Text>
       </View>
       <svg ref={ref} width="100%" height={h} />
+    </View>
+  );
+  */
+  return (
+    <View>
+      <Svg>
+
+      </Svg>
     </View>
   );
 }

@@ -96,7 +96,7 @@ export function Dropdown(
 
   return (
     <View>
-      <View className="flex-row justify-between bg-primary-500 relative items-center rounded-xl">
+      <View className="flex-row justify-between bg-accent relative items-center rounded-xl">
         <View className="flex-1">{currentElement}</View>
         <Pressable onPress={() => setMenuOpen(!menuOpen)} className="pr-2">
           <Ionicons name={menuOpen ? "chevron-up" : "chevron-down"} size={25} color="white" />

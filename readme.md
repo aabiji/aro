@@ -1,4 +1,4 @@
-![app banner](frontend/assets/banner.png)
+![app banner](frontend/assets/banner-readme.png)
 aro helps you *track* your nutrition, exercise, weight, and period
 
 Tech stack:
