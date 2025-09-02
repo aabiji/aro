@@ -3,6 +3,7 @@ import { BarcodeScanningResult, CameraView, useCameraPermissions } from "expo-ca
 import { request } from "@/lib/utils";
 
 import { Card, Container } from "@/components/container";
+import { Button } from "@/components/elements";
 import { Platform, Pressable, Text, View } from "react-native";
 import { Svg, Polygon } from "react-native-svg";
 
@@ -46,10 +47,8 @@ export default function SearchPage() {
     return (
       <Container>
         <Card>
-          <Text>We need your permission to use the camera</Text>
-          <Pressable onPress={requestPermission} className="bg-primary-500 p-2">
-            <Text className="text-center text-white">Grant permission</Text>
-          </Pressable>
+          <Text className="text-center">We need your permission to use the camera</Text>
+          <Button text="Grant permission" onPress={requestPermission} />
         </Card>
       </Container>
     );

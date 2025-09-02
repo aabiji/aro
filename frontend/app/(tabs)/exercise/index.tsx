@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "expo-router";
 import { ExerciseInfo, useStore, WorkoutInfo } from "@/lib/state";
 import { formatDate, request } from "@/lib/utils";
@@ -6,7 +6,7 @@ import { formatDate, request } from "@/lib/utils";
 import { FlatList, Pressable, Text, View } from "react-native";
 import { Card, Container } from "@/components/container";
 import { WorkoutRecordMemo } from "@/components/workouts";
-import { SelectButton } from "@/components/select";
+import { Button, Dropdown } from "@/components/elements";
 
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
@@ -27,8 +27,9 @@ export default function Index() {
   const choices = useMemo(() => {
     return Object.values(store.workouts)
       .filter((w: WorkoutInfo) => w.isTemplate && w.exercises.length > 0)
-      .map((w: WorkoutInfo) => ({ label: w.tag, value: w.tag }));
+      .map((w: WorkoutInfo) => w.tag);
   }, [store.workouts]);
+  const [currentChoice, setCurrentChoice] = useState(0);
 
   const addWorkout = async (templateName: string) => {
     const template: WorkoutInfo = Object.values(store.workouts).find(
@@ -71,8 +72,11 @@ export default function Index() {
       <FlatList
         data={sortedWorkouts} onEndReached={fetchMore}
         keyExtractor={(item: WorkoutInfo) => String(item.id)}
+        ListEmptyComponent={
+          <Text className="text-xl text-gray-400 m-auto">No workouts</Text>
+        }
         ListHeaderComponent={
-          <Card className="border-b-2 border-gray-200">
+          <Card>
             <Text className="font-bold text-xl mb-2">{today}</Text>
 
             <View className="flex-row justify-between">
@@ -96,16 +100,18 @@ export default function Index() {
                 No workout templates
               </Text>
             ) : (
-              <SelectButton
-                choices={choices} message="Add workout"
-                defaultChoice={choices[0].value}
-                handlePress={(choice: string) => addWorkout(choice)} />
+              <Dropdown
+                options={choices}
+                current={currentChoice} setCurrent={setCurrentChoice}
+                currentElement={
+                  <Button text={`Add ${choices[currentChoice]}`}
+                    onPress={() => addWorkout(choices[currentChoice])} />
+                }
+                optionElement={(index: number) => (
+                  <Text className="text-surface-color">{choices[index]}</Text>
+                )}
+              />
             )}
-
-            {sortedWorkouts.length == 0 &&
-              <Text className="text-center text-sm text-neutral-500">
-                No workouts
-              </Text>}
           </Card>
         }
         renderItem={({ item, index }) => {

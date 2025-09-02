@@ -2,12 +2,11 @@ import { useState } from "react";
 import { WorkoutInfo, useStore } from "@/lib/state";
 import { request } from "@/lib/utils";
 
-import { FlatList, Pressable, Text, TextInput } from "react-native";
+import { FlatList, Text, View } from "react-native";
 import { WorkoutTemplateMemo } from "@/components/workouts";
-import { Container, Card } from "@/components/container";
+import { Container } from "@/components/container";
+import { Input, Button } from "@/components/elements";
 import { BackHeader } from "@/components/header";
-
-import Ionicons from "@expo/vector-icons/Ionicons";
 
 export default function TemplatesPage() {
   const store = useStore();
@@ -42,20 +41,19 @@ export default function TemplatesPage() {
     <Container syncState>
       <BackHeader title={"Workout templates"} />
 
-      <Card className="flex-row mb-5">
-        <TextInput
-          value={templateName} placeholder="New template name"
-          className="bg-default-background p-3 grow outline-none border border-neutral-200 placeholder-neutral-500"
-          onChangeText={(value: string) => setWorkoutName(value)} />
-        <Pressable
-          disabled={templateName.trim().length === 0} onPress={() => createTemplate()}
-          className="flex-row gap-1 bg-primary-500 p-2 items-center">
-          <Ionicons name="add" color="white" size={20} />
-        </Pressable>
-      </Card>
+      <View className="flex-row w-[90%] mx-auto mb-2">
+        <Input
+          className="w-[90%] bg-surface-color"
+          text={templateName} setText={setWorkoutName}
+          placeholder="New template name" />
+        <Button
+          icon="add"
+          disabled={templateName.trim().length === 0}
+          onPress={() => createTemplate()} />
+      </View>
 
       {!Object.values(store.workouts).some((w: WorkoutInfo) => w.isTemplate) && (
-        <Text className="text-center text-sm text-neutral-500">You have no workout templates</Text>
+        <Text className="text-center text-sm text-grey-400">No workout templates</Text>
       )}
 
       <FlatList

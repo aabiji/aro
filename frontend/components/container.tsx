@@ -10,13 +10,10 @@ import {
 
 import { SafeAreaView } from "react-native-safe-area-context";
 
-export function Card({ children, className, border }:
-  { children: React.ReactNode; className?: string; border?: boolean; }) {
+export function Card({ children, className }:
+  { children: React.ReactNode; className?: string }) {
   const { width } = useWindowDimensions();
-  const style = `
-    mx-auto ${border ? "border border-neutral-200" : ""}
-    p-2 bg-default-background mb-5 ${className ?? ""}
-  `;
+  const style = `mx-auto p-2 bg-surface-color mb-5 ${className ?? ""} rounded-xl`;
 
   return (
     <View style={{ width: width < 400 ? "92%" : "50%" }} className={style}>
@@ -124,7 +121,7 @@ export function Container({ children, syncState }:
 
   return (
     <SafeAreaView style={{ height, flex: 1 }} edges={["top", "bottom", "left", "right"]}>
-      <View style={{ width, height }} className="bg-default-background">
+      <View style={{ width, height }} className="bg-background-color">
         {children}
       </View>
     </SafeAreaView>

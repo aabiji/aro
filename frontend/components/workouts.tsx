@@ -1,13 +1,11 @@
+import React, { useState } from "react";
+
 import { ExerciseInfo, ExerciseType, useStore, WorkoutInfo } from "@/lib/state";
 import { request } from "@/lib/utils";
 
-import React from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
-import NumInput from "@/components/input";
-import { SelectButton } from "@/components/select";
+import { Text, View } from "react-native";
+import { Input, Button, Dropdown } from "@/components/elements";
 import { Card } from "@/components/container";
-
-import Ionicons from "@expo/vector-icons/Ionicons";
 
 function WorkoutTemplate({ workout }: { workout: WorkoutInfo }) {
   const store = useStore();
@@ -16,6 +14,7 @@ function WorkoutTemplate({ workout }: { workout: WorkoutInfo }) {
     { label: "Strength", value: ExerciseType.Resistance },
     { label: "Cardio", value: ExerciseType.Cardio },
   ];
+  const [currentChoice, setCurrentChoice] = useState(0);
 
   const insertExercise = (choice: ExerciseType) => {
     let [defaultName, count] = ["New exercise", 0];
@@ -41,40 +40,47 @@ function WorkoutTemplate({ workout }: { workout: WorkoutInfo }) {
   };
 
   return (
-    <Card border>
-      <View className="flex-row">
-        <TextInput value={workout.tag}
-          className="flex-1 text-xl bg-neutral-100 rounded-sm px-3 py-1 outline-none"
-          onChangeText={(value: string) =>
+    <Card>
+      <View className="flex-row items-center">
+        <Input
+          placeholder="Template name" className="w-[90%]"
+          text={workout.tag} setText={(value: string) =>
             store.upsertWorkout({ id: workout.id, name: value })
           } />
-        <Pressable onPress={() => deleteTemplate()} className="bg-transparent p-2">
-          <Ionicons name="trash-outline" color="red" size={18} />
-        </Pressable>
+        <Button
+          icon="trash-outline" transparent iconColor="red"
+          onPress={() => deleteTemplate()} />
       </View>
 
       {workout.exercises.map((e: ExerciseInfo, i: number) => (
         <View key={i} className="flex-row w-[100%] justify-between border-t border-neutral-100 p-2">
-          <TextInput value={e.name} placeholder="Exercise name"
-            className="outline-none bg-neutral-100 px-2"
-            onChangeText={(name: string) => store.updateExercise(workout.id, i, { name })} />
+          <Input text={e.name} placeholder="Exercise name"
+            setText={(name: string) => store.updateExercise(workout.id, i, { name })} />
 
           {e.exerciseType == ExerciseType.Resistance && (
-            <NumInput num={e.weight} label="lbs"
-              setNum={(weight: number) =>
-                store.updateExercise(workout.id, i, { weight })
+            <Input text={`${e.weight}`} label="lbs" placeholder="0"
+              setText={(txt: string) =>
+                store.updateExercise(workout.id, i, { weight: Number(txt) })
               } />
           )}
 
-          <Pressable className="bg-transparent p-2" onPress={() => store.removeExercise(workout.id, i)}>
-            <Ionicons name="trash-outline" color="red" size={18} />
-          </Pressable>
+          <Button
+            icon="trash-outline" transparent iconColor="red" iconSize={18}
+            onPress={() => store.removeExercise(workout.id, i)} />
         </View>
       ))}
 
-      <SelectButton defaultChoice={ExerciseType.Resistance}
-        choices={buttonChoices} icon="plus" message=""
-        handlePress={(choice: ExerciseType) => insertExercise(choice)} />
+      <Dropdown
+        options={buttonChoices}
+        current={currentChoice} setCurrent={setCurrentChoice}
+        currentElement={
+          <Button
+            onPress={() => insertExercise(buttonChoices[currentChoice].value)}
+            text={`Add ${buttonChoices[currentChoice].label}`} />
+        }
+        optionElement={(index: number) =>
+          <Text className="text-center">{buttonChoices[index].label}</Text>}
+      />
     </Card>
   );
 }
@@ -89,7 +95,7 @@ function WorkoutRecord({ workout, disabled }: { workout: WorkoutInfo; disabled: 
   };
 
   return (
-    <Card border>
+    <Card>
       {workout.exercises.map((e: ExerciseInfo, eIndex: number) => {
         const str = `${e.name} (${e.weight} lbs)`;
 
@@ -101,23 +107,21 @@ function WorkoutRecord({ workout, disabled }: { workout: WorkoutInfo; disabled: 
             </View>
 
             <View className="flex-row items-center">
-              <View className="grid grid-cols-4 grid-flow-row gap-2">
+              <View className="flex-row flex-wrap max-w-[100px] gap-x-2">
                 {e.reps!.map((r: number, i: number) => (
-                  <NumInput key={i} num={r} disabled={disabled}
-                    setNum={(n: number) => changeRep(n, i, eIndex)} />
+                  <Input key={i} text={`${r}`} disabled={disabled} placeholder="0" numeric
+                    setText={(str: string) => changeRep(Number(str), i, eIndex)} />
                 ))}
               </View>
 
               {!disabled && (
-                <Pressable
+                <Button
+                  icon="add" transparent iconColor="grey" iconSize={20}
                   onPress={() =>
                     store.updateExercise(workout.id, eIndex, {
                       reps: [...workout.exercises[eIndex].reps!, 0],
                     })
-                  }
-                  className="bg-transparent px-2 rounded">
-                  <Ionicons name="add" color="grey" size={20} />
-                </Pressable>
+                  } />
               )}
             </View>
           </View>

@@ -2,11 +2,10 @@ import { useState } from "react";
 import { TagInfo, useStore } from "@/lib/state";
 import { request } from "@/lib/utils";
 
-import { FlatList, Pressable, Text, TextInput, View } from "react-native";
+import { FlatList, Pressable, Text, View } from "react-native";
 import ColorPicker, { Panel3 } from "reanimated-color-picker";
 import { Popup } from "@/components/container";
-
-import Ionicons from "@expo/vector-icons/Ionicons";
+import { Button, Input } from "@/components/elements";
 
 interface TagProps {
   tag: TagInfo;
@@ -25,7 +24,7 @@ export function Tag({ tag, selected, setSelected, showPicker, setName, removeTag
   const style = !editable
     ? `
       p-2 border-2 rounded-xl w-fit h-fit flex-row items-center cursor-pointer
-      ${selected ? "border-neutral-400" : "border-neutral-200"}`
+      ${selected ? "border-neutral-400" : "border-neutral-200"} bg-surface-color`
     : `w-[100%] p-2 border-b border-t border-neutral-200`;
   const pickerSize = editable ? 30 : 25;
 
@@ -38,7 +37,7 @@ export function Tag({ tag, selected, setSelected, showPicker, setName, removeTag
         <Pressable
           disabled={!editable} className="border-1 border-neutral-200"
           onPress={(event) =>
-            showPicker(event.nativeEvent.pageX, event.nativeEvent.pageY)
+            showPicker(event.nativeEvent.locationX, event.nativeEvent.locationY)
           }
           style={{
             backgroundColor: tag.color,
@@ -49,9 +48,7 @@ export function Tag({ tag, selected, setSelected, showPicker, setName, removeTag
         </Pressable>
 
         {editable ? (
-          <TextInput
-            className="flex-1 text-base bg-default-background rounded-sm px-3 py-1 outline-none"
-            value={tag.name} onChangeText={(value) => setName(value)} />
+          <Input text={tag.name} setText={setName} placeholder="Tag name" />
         ) : (
           <Text className={`ml-2 text-base ${selected ? "font-bold" : ""}`}>
             {tag.name}
@@ -59,9 +56,8 @@ export function Tag({ tag, selected, setSelected, showPicker, setName, removeTag
         )}
 
         {editable && (
-          <Pressable onPress={removeTag} className="ml-auto">
-            <Ionicons name="trash-outline" color="red" size={20} />
-          </Pressable>
+          <Button icon="trash-outline" transparent iconSize={20}
+            iconColor="red" onPress={removeTag} className="ml-auto" />
         )}
       </View>
     </Pressable>
@@ -79,6 +75,7 @@ export function TagManager({ visible, close }: { visible: boolean; close: () => 
     setShowPicker(true);
     setCurrentTag(id);
     setPickerPos({ x, y });
+    console.log(x, y);
   };
 
   const updateTag = async (name: string, id: number) => {
@@ -110,12 +107,10 @@ export function TagManager({ visible, close }: { visible: boolean; close: () => 
   return (
     <Popup visible={visible} close={close}>
       <View>
-        <View className="flex-row justify-between w-[55%] m-auto">
+        <View className="flex-row justify-between w-[95%] m-auto">
           <Text className="text-xl">Manage tags</Text>
-
-          <Pressable onPress={() => updateTag("New tag", -1)}>
-            <Ionicons name="add" size={25} color="black" />
-          </Pressable>
+          <Button icon="add" transparent iconColor="black"
+            onPress={() => updateTag("New tag", -1)} />
         </View>
 
         {Object.keys(store.tags).length == 0 && (
@@ -123,7 +118,7 @@ export function TagManager({ visible, close }: { visible: boolean; close: () => 
         )}
 
         <FlatList
-          data={Object.values(store.tags)} className="w-[55%] m-auto"
+          data={Object.values(store.tags)} className="w-[95%] m-auto"
           renderItem={({ item }) => (
             <Tag
               tag={item}

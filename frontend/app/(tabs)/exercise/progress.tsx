@@ -4,7 +4,7 @@ import { ExerciseType, useStore } from "@/lib/state";
 import { FlatList, Pressable, Text, View } from "react-native";
 import { LineGraph, Heatmap } from "@/components/graph";
 import { Container, Card } from "@/components/container";
-import { Dropdown, Selection } from "@/components/select";
+import { Dropdown, Selection } from "@/components/elements";
 import { BackHeader } from "@/components/header";
 
 import Ionicons from "@expo/vector-icons/Ionicons";

@@ -4,8 +4,10 @@ import { useStore } from "@/lib/state";
 import { request } from "@/lib/utils";
 
 import { Redirect } from "expo-router";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { Image } from "expo-image";
+import { Text, View } from "react-native";
 import { Container, Card } from "@/components/container";
+import { Button, Input } from "@/components/elements";
 
 export default function Index() {
   // TODO: what to do when the jwt expires?
@@ -66,46 +68,35 @@ export default function Index() {
     }
   };
 
-  const inputStyle =
-    "bg-default-background outline-primary-400 border-2 border-neutral-200\
-    placeholder-neutral-400 p-2 mb-4 rounded text-base";
-
   if (authenticated) return <Redirect href="/exercise" />;
 
   return (
     <Container>
-      <Card className="">
-        <Text className="text-center text-2xl font-bold">aro</Text>
+      <View className="flex-1 justify-center">
+        <Image
+          source={require("@/assets/banner.png")}
+          style={{ width: "65%", height: "10%", marginHorizontal: "auto" }} />
 
-        <View className="bg-default-background p-4">
-          {errMsg.length > 0 && (
-            <Text className="mb-2 text-center text-red-500 text-base">{errMsg}</Text>
-          )}
+        <Card>
+          <View className="p-4 flex-column gap-4">
+            {errMsg.length > 0 && (
+              <Text className="text-center text-error text-base">{errMsg}</Text>
+            )}
 
-          <TextInput
-            value={email} placeholder="Email" autoCapitalize="none"
-            onChangeText={(txt: string) => setEmail(txt)}
-            className={inputStyle} />
+            <Input text={email} placeholder="Email"
+              setText={(txt: string) => setEmail(txt.trim())} />
 
-          <TextInput
-            value={password} placeholder="Password"
-            secureTextEntry autoCapitalize="none"
-            onChangeText={(txt: string) => setPassword(txt)}
-            className={inputStyle} />
+            <Input text={password} placeholder="Password" password
+              setText={(txt: string) => setPassword(txt.trim())} />
 
-          <Pressable
-            onPress={auth}
-            className="p-3 bg-primary-500 m-auto rounded w-[100%] mb-2">
-            <Text className="font-bold text-center text-white text-lg">
-              {isLogin ? "Login" : "Create account"}
-            </Text>
-          </Pressable>
+            <Button
+              onPress={toggle} className="ml-auto" textStyle="text-xs" transparent
+              text={isLogin ? "Create account" : "Login"} />
 
-          <Pressable className="m-auto" onPress={toggle}>
-            <Text className="text-[15px] text-default-font">{isLogin ? "Create account" : "Login"}</Text>
-          </Pressable>
-        </View>
-      </Card>
+            <Button onPress={auth} text={isLogin ? "Login" : "Create account"} />
+          </View>
+        </Card>
+      </View>
     </Container>
   );
 }
