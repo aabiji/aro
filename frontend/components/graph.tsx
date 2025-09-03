@@ -1,40 +1,8 @@
 import { useEffect, useState } from "react";
 import { formatDate } from "@/lib/utils";
 
-import { GestureResponderEvent, View } from "react-native";
-import { Line, Path, Svg, Text } from "react-native-svg";
-
-function handleMouseMove(
-  event, point, xScale, yScale, getDate, getValue,
-  setDate, setValue, setTooltipStyle) {
-  const coord = d3.pointer(event);
-  if (point !== undefined) {
-    setDate(formatDate(getDate(point)));
-    setValue(getValue(point));
-
-    event.target.setAttribute("stroke", "white");
-    event.target.setAttribute("stroke-width", 2);
-  } else {
-    setDate(formatDate(xScale.invert(coord[0])));
-    setValue(Math.round((yScale.invert(coord[1]) * 10) / 10).toFixed(1));
-  }
-
-  setTooltipStyle({
-    display: "flex",
-    flexDirection: "column",
-    position: "absolute",
-    left: Math.floor(coord[0]),
-    top: Math.floor(coord[1]) + 10,
-    backgroundColor: "grey",
-    pointerEvents: "none", // avoid flickering
-    padding: 6,
-  });
-}
-
-function handleMouseLeave(event, setTooltipStyle) {
-  setTooltipStyle({ display: "none" });
-  event.target.setAttribute("stroke", "none");
-}
+import { Text, View } from "react-native";
+import { Line, Rect, Path, Svg, Text as SvgText } from "react-native-svg";
 
 export interface PlotPoint {
   date: Date;
@@ -50,6 +18,53 @@ interface PlotProps {
   tooltipLabel: string;
   getValue: (v: PlotPoint) => number;
 }
+
+interface TooltipProps {
+  data: PlotPoint[];
+  tooltipX: number;
+  minX: number;
+  maxX: number;
+  width: number;
+  paddingX: number;
+  tooltipLabel: string;
+  getValue: (v: PlotPoint) => number;
+}
+
+function Tooltip({ data, tooltipX, minX, maxX, width,
+  paddingX, tooltipLabel, getValue }: TooltipProps) {
+  if (tooltipX == -1) return null;
+
+  // get the data point closest to the hovered point
+  let xPercent = (tooltipX - paddingX * 2) / (width - paddingX * 2);
+  xPercent = Math.min(Math.max(0, xPercent), 1);
+
+  const xValue = Math.round(minX + xPercent * (maxX - minX));
+  let closestPoint = 0;
+  for (let i = 0; i < data.length; i++) {
+    if (data[i].date.getTime() >= xValue) {
+      closestPoint = i;
+      break;
+    }
+  }
+
+  const tooltipWidth = 100; // estimate
+  const left = tooltipX >= width - tooltipWidth - paddingX
+    ? width - tooltipWidth : tooltipX
+
+  return (
+    <View
+      className="bg-primary-500 p-2 rounded-xl"
+      style={{ position: "absolute", top: 0, left }}>
+      <Text className="text-center text-[8px] text-surface-color">
+        {getValue(data[closestPoint])} {tooltipLabel}
+      </Text>
+      <Text className="text-center text-[8px] text-surface-color">
+        {formatDate(data[closestPoint].date)}
+      </Text>
+    </View>
+  );
+}
+
 
 export function LineGraph({ data, height, getValue, tooltipLabel }: PlotProps) {
   const [paddingX, paddingY, fontSize] = [25, 25, 12];
@@ -95,6 +110,8 @@ export function LineGraph({ data, height, getValue, tooltipLabel }: PlotProps) {
     setMaxY(maxY);
   }, [width, data, getValue]);
 
+  const [tooltipX, setTooltipX] = useState(-1);
+
   return (
     <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
       <Svg width={width} height={height}>
@@ -102,18 +119,18 @@ export function LineGraph({ data, height, getValue, tooltipLabel }: PlotProps) {
           <Line
             x1={paddingX} y1={height - paddingY - i * ySpacing}
             x2={width - paddingX} y2={height - paddingY - i * ySpacing}
-            stroke={tickColor} strokeWidth="1" />
+            stroke={tickColor} strokeWidth="1" key={i} />
         ))}
 
         {[...Array(numTicksY + 1).keys()].map((i) => {
           const yValue = minY + i * ((maxY - minY) / numTicksY);
           return (
-            <Text
-              fill={textColor} fontWeight="normal"
+            <SvgText
+              fill={textColor} fontWeight="normal" key={i}
               textAnchor="middle" fontSize={fontSize}
               x={paddingX / 2} y={height - paddingY - i * ySpacing + (fontSize / 3)}>
               {`${yValue.toFixed(1)}`}
-            </Text>
+            </SvgText>
           );
         })}
 
@@ -121,115 +138,94 @@ export function LineGraph({ data, height, getValue, tooltipLabel }: PlotProps) {
           const xValue = minX + i * ((maxX - minX) / numTicksX);
           const str = formatDate(new Date(xValue));
           return (
-            <Text
-              fill={textColor} fontWeight="normal"
+            <SvgText
+              fill={textColor} fontWeight="normal" key={i}
               textAnchor="middle" fontSize={fontSize}
               x={paddingX + i * xSpacing} y={height - paddingY}>
               {str}
-            </Text>
+            </SvgText>
           );
         })}
 
-        <Path d={pathData} strokeWidth={15} fill="none" stroke="transparent" />
-        <Path d={pathData} pointerEvents="none" stroke={lineColor} strokeWidth={2} fill="none" />
+        <Tooltip data={data} tooltipX={tooltipX} minX={minX}
+          maxX={maxX} width={width} paddingX={paddingX}
+          tooltipLabel={tooltipLabel} getValue={getValue} />
+
+        <Path
+          onStartShouldSetResponder={() => true}
+          onMoveShouldSetResponder={() => true}
+          onResponderGrant={() => { }}
+          onResponderRelease={() => setTooltipX(-1)}
+          onResponderMove={e => setTooltipX(e.nativeEvent.locationX)}
+          onResponderStart={e => setTooltipX(e.nativeEvent.locationX)}
+          d={pathData} stroke={lineColor} strokeWidth={2}
+          fill="none" />
       </Svg>
     </View>
   );
 }
 
 export function Heatmap({ data, height, getValue, tooltipLabel }: PlotProps) {
-  /*
-  const windowSize = useWindowDimensions();
+  const [width, setWidth] = useState(0);
+  const [paddingX, paddingY, fontSize] = [25, 25, 12];
 
-  const ref = useRef(null);
-  const oldest = d3.min(data, getDate);
-  const newest = d3.max(data, getDate);
-  const weeks = d3.timeWeek.count(d3.timeWeek.floor(oldest), newest) + 1;
-  const weekLength = 7;
+  // map dates (string) to indexes inside `data`
+  const [dateMap, setDateMap] = useState<Record<string, number>>({});
+  const [year, setYear] = useState(0);
+  const [yearLength, setYearLength] = useState(0);
+  const [minY, setMinY] = useState(0);
+  const [maxY, setMaxY] = useState(0);
 
-  const [h, py] = [height, height / 6];
-
-  const monthTicks = d3.timeMonth.every(1).range(oldest, newest);
-
-  const [date, setDate] = useState("");
-  const [value, setValue] = useState("");
-  const [tooltipStyle, setTooltipStyle] = useState({ display: "none" });
+  const tileColor = (percentage: number) => {
+    const min = [200, 100, 49];
+    const max = [214, 97, 50];
+    const color = [
+      min[0] + percentage * (max[0] - min[0]),
+      min[1] + percentage * (max[1] - min[1]),
+      min[2] + percentage * (max[2] - min[2])
+    ];
+    return `hsl(${color[0]},${color[1]}%,${color[2]}%)`;
+  }
 
   useEffect(() => {
-    const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const svg = d3.select(ref.current);
-    ref.current.innerHTML = ""; // clear
+    const year = data[0].date.getFullYear();
+    setYearLength(((year % 4 === 0 && year % 100 > 0) || year % 400 == 0) ? 366 : 365);
+    setYear(year);
 
-    const [width, px] = [ref.current.getBoundingClientRect().width, 25];
-    const cellX = (width - px * 2) / weeks;
-    const cellY = cellX * 1.5;
+    const minY = Math.min(...data.map((p: PlotPoint) => getValue(p)));
+    const maxY = Math.max(...data.map((p: PlotPoint) => getValue(p)));
+    setMinY(minY);
+    setMaxY(maxY);
 
-    const xScale = d3
-      .scaleTime()
-      .domain([oldest, newest])
-      .range([px, px + weeks * cellX]);
-    const xAxis = d3
-      .axisBottom(xScale)
-      .tickSize(0)
-      .tickValues(monthTicks)
-      .tickFormat(d3.timeFormat("%b"));
-    svg
-      .append("g")
-      .attr("transform", `translate(0, ${h - py})`)
-      .call(xAxis);
-
-    const yScale = d3
-      .scaleBand()
-      .domain(d3.range(weekLength))
-      .range([h - py, h - py - weekLength * cellY]);
-    const yAxis = d3
-      .axisLeft(yScale)
-      .tickSize(0)
-      .tickValues([1, 3, 5]) // monday, wednesday, friday
-      .tickFormat((d) => weekDays[d]);
-    svg.append("g").attr("transform", `translate(${px}, 0)`).call(yAxis);
-
-    const colorScale = d3
-      .scaleLinear()
-      .domain(d3.extent(data, getValue))
-      .range(["#c0ecfc", "#00b9fc"]);
-
-    svg
-      .selectAll("rect")
-      .data(data)
-      .join("rect")
-      .attr(
-        "x",
-        (d) => px + d3.timeWeek.count(d3.timeWeek.floor(oldest), getDate(d)) * cellX,
-      )
-      .attr("width", cellX)
-      .attr("y", (d) => yScale(getDate(d).getDay()))
-      .attr("height", cellY)
-      .attr("fill", (d) => colorScale(getValue(d)))
-      .attr("cursor", "pointer")
-      .on("mousemove", (event: MouseEvent, d) =>
-        handleMouseMove(
-          event, d, undefined, undefined, getDate,
-          getValue, setDate, setValue, setTooltipStyle),
-      )
-      .on("mouseleave", (event: MouseEvent) => handleMouseLeave(event, setTooltipStyle));
-  }, [windowSize, update, h, value, getDate, data, py, getValue, newest, oldest, monthTicks, weeks]);
+    setDateMap(_prev => {
+      let m: Record<string, number> = {};
+      for (let i = 0; i < data.length; i++)
+        m[formatDate(data[i].date)] = i;
+      return m;
+    });
+  }, [width, data, getValue]);
 
   return (
-    <View>
-      <View style={tooltipStyle}>
-        <Text className="text-default-background font-bold text-center">
-          {value} {tooltipLabel} - {date}
-        </Text>
-      </View>
-      <svg ref={ref} width="100%" height={h} />
-    </View>
-  );
-  */
-  return (
-    <View>
+    <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
       <Svg>
+        {[...Array(yearLength).keys()].map((i) => {
+          const tileSize = width / 52;
+          const x = paddingX + (i % 52) * tileSize;
+          const y = (height - paddingY) + (i % 7) * tileSize;
 
+          const day = new Date(year, 0, i);
+          const pointIndex = dateMap[formatDate(day)];
+
+          let color = "transparent";
+          if (pointIndex) {
+            const percent = (getValue(data[pointIndex]) - minY) / (maxY - minY);
+            color = tileColor(percent);
+          }
+
+          return (
+            <Rect x={x} y={y} width={tileSize} height={tileSize} key={i} fill={color} />
+          );
+        })}
       </Svg>
     </View>
   );

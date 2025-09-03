@@ -114,6 +114,8 @@ const createAppStore: StateCreator<AppStore> = (set, _get) => ({
         tags[t.id] = t;
       }
 
+      // TODO: templates aren't loaded on login...
+
       return {
         jwt,
         workouts,

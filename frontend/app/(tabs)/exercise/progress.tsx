@@ -133,10 +133,10 @@ function ResistancePlot({ name, group }: { name: string; group: PlotGroup }) {
 
   return (
     <Card>
-      <View className="flex-row justify-between items-center">
+      <View className="flex-column">
         <Text className="text-xl">{name}</Text>
 
-        <View className="flex-row gap-2">
+        <View className="flex-column gap-2 flex-1">
           <Dropdown
             options={views}
             current={view}
@@ -145,7 +145,7 @@ function ResistancePlot({ name, group }: { name: string; group: PlotGroup }) {
               setView(index);
             }}
             currentElement={
-              <Text className="text-surface-color px-3">{views[view]}</Text>
+              <Text className="text-xs text-surface-color px-3">{views[view]}</Text>
             }
             optionElement={(index: number) =>
               <Text>{views[index]}</Text>}
@@ -159,10 +159,14 @@ function ResistancePlot({ name, group }: { name: string; group: PlotGroup }) {
               changeViewRange(viewRanges[index].value);
             }}
             currentElement={
-              <Text className="text-surface-color px-3">{viewRanges[viewRange].label}</Text>
+              <Text className="text-xs text-surface-color px-3">
+                {viewRanges[viewRange].label}
+              </Text>
             }
             optionElement={(index: number) =>
-              <Text>{viewRanges[index].label}</Text>
+              <Text className="text-xs px-3">
+                {viewRanges[index].label}
+              </Text>
             }
           />
         </View>
@@ -221,39 +225,41 @@ function CardioPlot({ name, group }: { name: string; group: PlotGroup }) {
 
   return (
     <Card>
-      <View className="flex-row justify-between items-center">
+      <View className="flex-column">
         <Text className="text-xl">{name}</Text>
 
-        <View className="flex-row gap-4">
-          <Dropdown
-            options={dropdownOptions}
-            current={dropdownOption}
-            setCurrent={(index: number) => {
-              setDropdownOption(index);
-              setShowDistance(index === 0);
-            }}
-            currentElement={
-              <Text className="text-surface-color px-3">{dropdownOptions[dropdownOption]}</Text>
-            }
-            optionElement={(index: number) =>
-              <Text>{dropdownOptions[index]}</Text>
-            }
-          />
-
-          <View className="flex-row gap-2 items-center">
-            <Pressable onPress={() => changeYear(-1)} disabled={prevDisabled}>
-              <Ionicons
-                name="arrow-back" size={18}
-                color={prevDisabled ? "neutral" : "black"} />
-            </Pressable>
-            <Text className="text-base"> {year} </Text>
-            <Pressable onPress={() => changeYear(1)} disabled={nextDisabled}>
-              <Ionicons
-                name="arrow-forward" size={18}
-                color={nextDisabled ? "neutral" : "black"} />
-            </Pressable>
-          </View>
+        <View className="flex-row gap-2 items-center w-[100%]">
+          <Pressable onPress={() => changeYear(-1)} disabled={prevDisabled}>
+            <Ionicons
+              name="arrow-back" size={18}
+              color={prevDisabled ? "neutral" : "black"} />
+          </Pressable>
+          <Text className="text-base"> {year} </Text>
+          <Pressable onPress={() => changeYear(1)} disabled={nextDisabled}>
+            <Ionicons
+              name="arrow-forward" size={18}
+              color={nextDisabled ? "neutral" : "black"} />
+          </Pressable>
         </View>
+
+        <Dropdown
+          options={dropdownOptions}
+          current={dropdownOption}
+          setCurrent={(index: number) => {
+            setDropdownOption(index);
+            setShowDistance(index === 0);
+          }}
+          currentElement={
+            <Text className="text-xs text-surface-color px-3">
+              {dropdownOptions[dropdownOption]}
+            </Text>
+          }
+          optionElement={(index: number) =>
+            <Text className="text-xs px-3">
+              {dropdownOptions[index]}
+            </Text>
+          }
+        />
       </View>
 
       <Heatmap
@@ -311,7 +317,7 @@ export default function ProgressPage() {
   let exercises: Record<string, PlotGroup> = {};
   for (let j = 0; j < 2; j++) {
     const name = `Dummy exercise #${j + 1}`;
-    const etype = [ExerciseType.Resistance, ExerciseType.Cardio][j];
+    const etype = [ExerciseType.Cardio, ExerciseType.Resistance][j];
 
     const now = new Date();
     const start = new Date(new Date().setFullYear(new Date().getFullYear() - 2));

@@ -83,7 +83,7 @@ export default function Index() {
               <Text className="text-center text-error text-base">{errMsg}</Text>
             )}
 
-            <Input text={email} placeholder="Email"
+            <Input text={email} placeholder="Email" className="flex-1"
               setText={(txt: string) => setEmail(txt.trim())} />
 
             <Input text={password} placeholder="Password" password
