@@ -22,7 +22,7 @@ export default function TabLayout() {
             const icons = {
               index: "barbell-outline", exercise: "barbell-outline",
               food: "fast-food-outline", tags: "calendar-clear-outline",
-              settings: "settings-outline", // weight: "scale-outline",
+              settings: "settings-outline", weight: "scale-outline",
             };
             return <Ionicons name={icons[route.name]} color={color} size={24} />;
           },
@@ -32,16 +32,11 @@ export default function TabLayout() {
         name="index"
         options={{ headerShown: false, tabBarItemStyle: { display: "none" } }} />
       <Tabs.Protected guard={authenticated}>
-        <Tabs.Screen
-          name="exercise"
-          options={{ title: "Exercise", headerShown: false }} />
-        <Tabs.Screen
-          name="food"
-          options={{ title: "Food", headerShown: false }} />
+        <Tabs.Screen name="food" options={{ title: "Food", headerShown: false }} />
+        <Tabs.Screen name="exercise" options={{ title: "Exercise", headerShown: false }} />
+        <Tabs.Screen name="weight" options={{ title: "Weight", headerShown: false }} />
         <Tabs.Screen name="tags" options={{ title: "Tags", headerShown: false }} />
-        <Tabs.Screen
-          name="settings"
-          options={{ title: "Settings", headerShown: false }} />
+        <Tabs.Screen name="settings" options={{ title: "Settings", headerShown: false }} />
       </Tabs.Protected>
     </Tabs>
   );

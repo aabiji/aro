@@ -1,38 +1,33 @@
 import { useEffect, useState } from "react";
 import { formatDate } from "@/lib/utils";
+import * as plot from "@/lib/plot";
 
 import { Text, View } from "react-native";
 import { Line, Rect, Path, Svg, Text as SvgText } from "react-native-svg";
-
-export interface PlotPoint {
-  date: Date;
-  weight: number;
-  averageReps: number;
-  distance: number;
-  duration: number;
-}
+import { Card } from "@/components/container";
+import { Dropdown } from "@/components/elements";
 
 interface PlotProps {
-  data: PlotPoint[];
+  data: plot.PlotPoint[];
   height: number;
   tooltipLabel: string;
-  getValue: (v: PlotPoint) => number;
+  getValue: (v: plot.PlotPoint) => number;
 }
 
 interface TooltipProps {
-  data: PlotPoint[];
+  data: plot.PlotPoint[];
   tooltipX: number;
   minX: number;
   maxX: number;
   width: number;
   paddingX: number;
   tooltipLabel: string;
-  getValue: (v: PlotPoint) => number;
+  getValue: (v: plot.PlotPoint) => number;
 }
 
 function Tooltip({ data, tooltipX, minX, maxX, width,
   paddingX, tooltipLabel, getValue }: TooltipProps) {
-  if (tooltipX == -1) return null;
+  if (tooltipX === -1) return null;
 
   // get the data point closest to the hovered point
   let xPercent = (tooltipX - paddingX * 2) / (width - paddingX * 2);
@@ -66,7 +61,7 @@ function Tooltip({ data, tooltipX, minX, maxX, width,
 }
 
 
-export function LineGraph({ data, height, getValue, tooltipLabel }: PlotProps) {
+function LineGraph({ data, height, getValue, tooltipLabel }: PlotProps) {
   const [paddingX, paddingY, fontSize] = [25, 25, 12];
   const [tickColor, lineColor, textColor] = ["#e8e8e8", "#046DF9", "#000000"];
 
@@ -83,15 +78,15 @@ export function LineGraph({ data, height, getValue, tooltipLabel }: PlotProps) {
   const [pathData, setPathData] = useState("");
 
   useEffect(() => {
-    if (data.length == 0) return;
+    if (data.length === 0) return;
 
-    const minX = Math.min(...data.map((p: PlotPoint) => p.date.getTime()));
-    const maxX = Math.max(...data.map((p: PlotPoint) => p.date.getTime()));
+    const minX = Math.min(...data.map((p: p) => p.date.getTime()));
+    const maxX = Math.max(...data.map((p: plot.PlotPoint) => p.date.getTime()));
 
-    const minY = Math.min(...data.map((p: PlotPoint) => getValue(p)));
-    const maxY = Math.max(...data.map((p: PlotPoint) => getValue(p)));
+    const minY = Math.min(...data.map((p: plot.PlotPoint) => getValue(p)));
+    const maxY = Math.max(...data.map((p: plot.PlotPoint) => getValue(p)));
 
-    const pathStr = data.map((p: PlotPoint, i: number) => {
+    const pathStr = data.map((p: plot.PlotPoint, i: number) => {
       const xPercent = (p.date.getTime() - minX) / (maxX - minX);
       const x = paddingX + (xPercent * (width - paddingX * 2));
 
@@ -165,6 +160,81 @@ export function LineGraph({ data, height, getValue, tooltipLabel }: PlotProps) {
   );
 }
 
+interface TimeSeriesChartProps {
+  name: string;
+  data: plot.PlotPoint[];
+  months: plot.MonthInterval[];
+  tooltipLabel: string;
+  toVec2: (p: plot.PlotPoint) => Vec2;
+  getValue: (p: plot.PlotPoint) => number;
+  children: React.ReactNode;
+}
+
+export function TimeSeriesChart(
+  { name, data, months, toVec2, getValue, tooltipLabel, children }: TimeSeriesChartProps) {
+  const viewRanges = [
+    { label: "This month", value: 1 },
+    { label: "Last 6 months", value: 6 },
+    { label: "This year", value: 12 },
+    { label: "Last 5 years", value: 60 },
+    {
+      label: "All time",
+      value: plot.monthDiff(data[0].date, data[data.length - 1].date),
+    },
+  ];
+  const [viewRange, setViewRange] = useState(0);
+
+  const [startIndex, setStartIndex] = useState(plot.getMonthIndex(months, 1));
+  const [simplifiedGraph, setSimplifiedGraph] = useState([] as plot.PlotPoint[]);
+
+  useEffect(() => {
+    const targetPoints = 100;
+    const points: plot.PlotPoint[] = data.slice(startIndex, data.length);
+    plot.simplifyGraph(points, targetPoints, toVec2).then((simplified) => setSimplifiedGraph(simplified));
+  }, [startIndex, data, toVec2]);
+
+  const changeViewRange = (numMonths: number) => {
+    // the dates are in ascending order, so by changing the index at which
+    // we slice the plot points, we change what the oldest plot point will be (change range)
+    setStartIndex(plot.getMonthIndex(months, numMonths));
+  };
+
+  return (
+    <Card>
+      <View className="flex-column">
+        <Text className="text-xl">{name}</Text>
+
+        <View className="flex-column gap-2 flex-1">
+          {children}
+          <Dropdown
+            options={viewRanges}
+            current={viewRange}
+            setCurrent={(index: number) => {
+              setViewRange(index);
+              changeViewRange(viewRanges[index].value);
+            }}
+            currentElement={
+              <Text className="text-xs text-surface-color px-3">
+                {viewRanges[viewRange].label}
+              </Text>
+            }
+            optionElement={(index: number) =>
+              <Text className="text-xs px-3">
+                {viewRanges[index].label}
+              </Text>
+            }
+          />
+        </View>
+      </View>
+
+      <LineGraph
+        data={simplifiedGraph}
+        tooltipLabel={tooltipLabel}
+        height={400} getValue={getValue} />
+    </Card>
+  );
+}
+
 export function Heatmap({ data, height, getValue, tooltipLabel }: PlotProps) {
   const [width, setWidth] = useState(0);
   const [paddingX, paddingY, fontSize] = [25, 25, 12];
@@ -192,8 +262,8 @@ export function Heatmap({ data, height, getValue, tooltipLabel }: PlotProps) {
     setYearLength(((year % 4 === 0 && year % 100 > 0) || year % 400 == 0) ? 366 : 365);
     setYear(year);
 
-    const minY = Math.min(...data.map((p: PlotPoint) => getValue(p)));
-    const maxY = Math.max(...data.map((p: PlotPoint) => getValue(p)));
+    const minY = Math.min(...data.map((p: plot.PlotPoint) => getValue(p)));
+    const maxY = Math.max(...data.map((p: plot.PlotPoint) => getValue(p)));
     setMinY(minY);
     setMaxY(maxY);
 
