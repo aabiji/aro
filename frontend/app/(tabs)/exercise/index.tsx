@@ -12,7 +12,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 export default function Index() {
   const router = useRouter();
-  const today = formatDate(new Date());
+  const today = formatDate(new Date(), "long");
   const store = useStore();
 
   const sortedWorkouts = useMemo(() => {

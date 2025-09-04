@@ -96,20 +96,22 @@ function CardioPlot({ name, group }: { name: string; group: Group }) {
   return (
     <Card>
       <View className="flex-column">
-        <Text className="text-xl">{name}</Text>
+        <View className="flex-row justify-between w-[100%]">
+          <Text className="text-xl">{name}</Text>
 
-        <View className="flex-row gap-2 items-center w-[100%]">
-          <Pressable onPress={() => changeYear(-1)} disabled={prevDisabled}>
-            <Ionicons
-              name="arrow-back" size={18}
-              color={prevDisabled ? "neutral" : "black"} />
-          </Pressable>
-          <Text className="text-base"> {year} </Text>
-          <Pressable onPress={() => changeYear(1)} disabled={nextDisabled}>
-            <Ionicons
-              name="arrow-forward" size={18}
-              color={nextDisabled ? "neutral" : "black"} />
-          </Pressable>
+          <View className="flex-row gap-2 items-center">
+            <Pressable onPress={() => changeYear(-1)} disabled={prevDisabled}>
+              <Ionicons
+                name="arrow-back" size={18}
+                color={prevDisabled ? "neutral" : "black"} />
+            </Pressable>
+            <Text className="text-base"> {year} </Text>
+            <Pressable onPress={() => changeYear(1)} disabled={nextDisabled}>
+              <Ionicons
+                name="arrow-forward" size={18}
+                color={nextDisabled ? "neutral" : "black"} />
+            </Pressable>
+          </View>
         </View>
 
         <Dropdown

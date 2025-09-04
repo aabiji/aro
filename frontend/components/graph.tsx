@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { formatDate } from "@/lib/utils";
+import { formatDate, weekIndex } from "@/lib/utils";
 import * as plot from "@/lib/plot";
 
 import { Text, View } from "react-native";
@@ -54,7 +54,7 @@ function Tooltip({ data, tooltipX, minX, maxX, width,
         {getValue(data[closestPoint])} {tooltipLabel}
       </Text>
       <Text className="text-center text-[8px] text-surface-color">
-        {formatDate(data[closestPoint].date)}
+        {formatDate(data[closestPoint].date, "short")}
       </Text>
     </View>
   );
@@ -66,7 +66,7 @@ function LineGraph({ data, height, getValue, tooltipLabel }: PlotProps) {
   const [tickColor, lineColor, textColor] = ["#e8e8e8", "#046DF9", "#000000"];
 
   const [width, setWidth] = useState(0);
-  const [numTicksX, numTicksY] = [3, 10];
+  const [numTicksX, numTicksY] = [6, 10];
   const [xSpacing, setXSpacing] = useState(0);
   const [ySpacing, setYSpacing] = useState(0);
 
@@ -130,8 +130,9 @@ function LineGraph({ data, height, getValue, tooltipLabel }: PlotProps) {
         })}
 
         {[...Array(numTicksX + 1).keys()].map((i) => {
+          if (i == 0) return null;
           const xValue = minX + i * ((maxX - minX) / numTicksX);
-          const str = formatDate(new Date(xValue));
+          const str = formatDate(new Date(xValue), "short");
           return (
             <SvgText
               fill={textColor} fontWeight="normal" key={i}
@@ -165,7 +166,7 @@ interface TimeSeriesChartProps {
   data: plot.PlotPoint[];
   months: plot.MonthInterval[];
   tooltipLabel: string;
-  toVec2: (p: plot.PlotPoint) => Vec2;
+  toVec2: (p: plot.PlotPoint) => plot.Vec2;
   getValue: (p: plot.PlotPoint) => number;
   children: React.ReactNode;
 }
@@ -194,7 +195,7 @@ export function TimeSeriesChart(
   }, [startIndex, data, toVec2]);
 
   const changeViewRange = (numMonths: number) => {
-    // the dates are in ascending order, so by changing the index at which
+    // the dates are in ascending order (oldest, newest), so by changing the index at which
     // we slice the plot points, we change what the oldest plot point will be (change range)
     setStartIndex(plot.getMonthIndex(months, numMonths));
   };
@@ -237,16 +238,20 @@ export function TimeSeriesChart(
 
 export function Heatmap({ data, height, getValue, tooltipLabel }: PlotProps) {
   const [width, setWidth] = useState(0);
-  const [paddingX, paddingY, fontSize] = [25, 25, 12];
+  const [paddingX, paddingY, fontSize] = [20, 20, 12];
+
+  const tileWidth = (width - paddingX * 2) / 52;
+  const tileHeight = (height - paddingY * 2) / 7;
+
+  const shortenedMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const shortenedWeekdays = ["Mon", "Wed", "Fri"];
 
   // map dates (string) to indexes inside `data`
-  const [dateMap, setDateMap] = useState<Record<string, number>>({});
-  const [year, setYear] = useState(0);
-  const [yearLength, setYearLength] = useState(0);
   const [minY, setMinY] = useState(0);
   const [maxY, setMaxY] = useState(0);
 
-  const tileColor = (percentage: number) => {
+  const interpolateColor = (percentage: number) => {
     const min = [200, 100, 49];
     const max = [214, 97, 50];
     const color = [
@@ -258,44 +263,55 @@ export function Heatmap({ data, height, getValue, tooltipLabel }: PlotProps) {
   }
 
   useEffect(() => {
-    const year = data[0].date.getFullYear();
-    setYearLength(((year % 4 === 0 && year % 100 > 0) || year % 400 == 0) ? 366 : 365);
-    setYear(year);
-
     const minY = Math.min(...data.map((p: plot.PlotPoint) => getValue(p)));
     const maxY = Math.max(...data.map((p: plot.PlotPoint) => getValue(p)));
     setMinY(minY);
     setMaxY(maxY);
-
-    setDateMap(_prev => {
-      let m: Record<string, number> = {};
-      for (let i = 0; i < data.length; i++)
-        m[formatDate(data[i].date)] = i;
-      return m;
-    });
   }, [width, data, getValue]);
 
   return (
     <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
       <Svg>
-        {[...Array(yearLength).keys()].map((i) => {
-          const tileSize = width / 52;
-          const x = paddingX + (i % 52) * tileSize;
-          const y = (height - paddingY) + (i % 7) * tileSize;
+        {[...Array(53).keys()].map((i) => (
+          <Line
+            x1={paddingX + tileWidth * i}
+            x2={paddingX + tileWidth * i}
+            y1={paddingY} y2={height - paddingY}
+            stroke="#dbdbdb" key={i} />
+        ))}
 
-          const day = new Date(year, 0, i);
-          const pointIndex = dateMap[formatDate(day)];
+        {[...Array(8).keys()].map((i) => (
+          <Line
+            x1={paddingX} x2={width - paddingX}
+            y1={paddingY + tileHeight * i}
+            y2={paddingY + tileHeight * i}
+            stroke="#dbdbdb" key={i} />
+        ))}
 
-          let color = "transparent";
-          if (pointIndex) {
-            const percent = (getValue(data[pointIndex]) - minY) / (maxY - minY);
-            color = tileColor(percent);
-          }
+        {shortenedWeekdays.map((w, i) => (
+          <SvgText
+            fill="black" fontWeight="normal" key={i}
+            textAnchor="middle" fontSize={fontSize}
+            y={paddingY + ((i + 1) * (tileHeight * 2)) - (fontSize / 2)}
+            x={(paddingX / 1.5)}> {w} </SvgText>
+        ))}
 
-          return (
-            <Rect x={x} y={y} width={tileSize} height={tileSize} key={i} fill={color} />
-          );
-        })}
+        {shortenedMonths.map((m, i) => (
+          <SvgText
+            fill="black" fontWeight="normal" key={i}
+            textAnchor="middle" fontSize={fontSize}
+            x={paddingX + (i * (tileWidth * (52 / 12)) + (tileWidth * 2))}
+            y={height - (fontSize / 2)}> {m} </SvgText>
+        ))}
+
+        {data.map((p, i) => (
+          <Rect
+            key={i}
+            x={paddingX + weekIndex(p.date) * tileWidth}
+            y={paddingY + p.date.getDay() * tileHeight}
+            width={tileWidth} height={tileHeight}
+            fill={interpolateColor((getValue(p) - minY) / (maxY - minY))} />
+        ))}
       </Svg>
     </View>
   );

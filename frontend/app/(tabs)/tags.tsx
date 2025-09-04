@@ -17,7 +17,7 @@ interface CalendarTileProps {
 
 function CalendarTile({ date, disabled, toggle, borderTop, borderLeft }: CalendarTileProps) {
   const store = useStore();
-  const tagIds = store.taggedDates[formatDate(date!)] ?? [];
+  const tagIds = store.taggedDates[formatDate(date!, "long")] ?? [];
   const colors = tagIds.map((id: number) => store.tags[id].color);
   const empty = date === undefined || toggle === undefined;
   const style =
@@ -74,7 +74,7 @@ export default function TagsPage() {
   // add/remove tag to a calendar date
   const tagDay = (date: Date) => {
     if (selectedTag == -1) return;
-    store.toggleTaggedDate(formatDate(date), selectedTag);
+    store.toggleTaggedDate(formatDate(date, "long"), selectedTag);
   };
 
   return (
@@ -91,7 +91,7 @@ export default function TagsPage() {
 
         <View className="flex-row justify-between items-center mb-2">
           <Button onPress={() => changeMonth(-1)} icon="arrow-back" transparent iconColor="black" iconSize={20} />
-          <Text className="text-base"> {formatDate(date, true)}, {date.getFullYear()} </Text>
+          <Text className="text-base"> {formatDate(date, "long")}, {date.getFullYear()} </Text>
           <Button onPress={() => changeMonth(1)} icon="arrow-forward" transparent iconColor="black" iconSize={20} />
         </View>
 
