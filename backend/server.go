@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -34,7 +33,7 @@ func NewServer() (Server, error) {
 	}
 
 	err = server.db.AutoMigrate(&User{}, &Workout{}, &Exercise{},
-		&Settings{}, &Tag{}, &TaggedDate{}, &Food{}, &Nutrient{})
+		&Settings{}, &PeriodDate{}, &Food{}, &Nutrient{})
 	if err != nil {
 		return Server{}, err
 	}
@@ -149,8 +148,7 @@ type UserInfoOptions struct {
 	IncludeSettings    bool `json:"includeSettings,omitempty"`
 	IncludeWorkouts    bool `json:"includeWorkouts,omitempty"`
 	IncludeTemplates   bool `json:"includeTemplates,omitempty"`
-	IncludeTags        bool `json:"includeTags,omitempty"`
-	IncludeTaggedDates bool `json:"includeTaggedDates,omitempty"`
+	IncludePeriodDates bool `json:"includePeriodDates,omitempty"`
 }
 
 func (s *Server) GetUserInfo(c *gin.Context) {
@@ -178,12 +176,9 @@ func (s *Server) GetUserInfo(c *gin.Context) {
 	if req.IncludeSettings {
 		query = query.Preload("Settings")
 	}
-	if req.IncludeTags {
-		query = query.Preload("Tags")
-	}
-	if req.IncludeTaggedDates {
-		query = query.Preload("TaggedDates", func(db *gorm.DB) *gorm.DB {
-			return db.Offset(req.Page * limit).Limit(limit + 1).Order("tagged_dates.created_at DESC")
+	if req.IncludePeriodDates {
+		query = query.Preload("PeriodDates", func(db *gorm.DB) *gorm.DB {
+			return db.Offset(req.Page * limit).Limit(limit + 1).Order("period_dates.created_at DESC")
 		})
 	}
 
@@ -207,7 +202,7 @@ func (s *Server) GetUserInfo(c *gin.Context) {
 		"user":            fullUser,
 		"moreTemplates":   templatesCount > limit,
 		"moreWorkouts":    workoutsCount > limit,
-		"moreTaggedDates": len(fullUser.TaggedDates) > limit,
+		"moreTaggedDates": len(fullUser.PeriodDates) > limit,
 	})
 }
 
@@ -377,103 +372,29 @@ func (s *Server) DeleteWorkout(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{})
 }
 
-type TagInfo struct {
-	Id    int    `json:"id,omitempty"`
-	Name  string `json:"name"`
-	Color string `json:"color"`
-}
-
-type BatchedTagInfo struct {
-	Tags []TagInfo `json:"tags"`
-}
-
-func (s *Server) SetTag(c *gin.Context) {
-	var req BatchedTagInfo
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+func (s *Server) TogglePeriodDate(c *gin.Context) {
+	user := c.MustGet("user").(*User)
+	date, exists := c.GetQuery("date")
+	if !exists {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
 
-	arr := []Tag{}
-	user := c.MustGet("user").(*User)
+	row := &PeriodDate{UserID: user.ID, Date: date}
+	var existing PeriodDate
 
-	err := s.db.Transaction(func(tx *gorm.DB) error {
-		for _, t := range req.Tags {
-			tag := Tag{
-				BaseModel: BaseModel{ID: uint(t.Id)},
-				UserID:    user.ID, Name: t.Name, Color: t.Color}
-
-			if result := tx.Save(&tag); result.Error != nil {
-				return fmt.Errorf("Error creating/updating tag")
-			}
-			arr = append(arr, tag)
+	if err := s.db.Where(row).First(&existing).Error; err != nil {
+		// not found → insert
+		if err := s.db.Create(row).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "couldn't insert period date"})
+			return
 		}
-		return nil
-	})
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"tags": arr})
-}
-
-func (s *Server) DeleteTag(c *gin.Context) {
-	idInt, err := strconv.ParseUint(c.Query("id"), 10, strconv.IntSize)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tag id"})
-		return
-	}
-	id := uint(idInt)
-	user := c.MustGet("user").(*User)
-
-	var tag Tag
-	if err := s.db.Where("id = ? AND user_id = ?", id, user.ID).First(&tag).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Tag not found"})
-		return
-	}
-
-	if err := s.db.Delete(&tag).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error deleting tag"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{})
-}
-
-type TaggedDatesInfo struct {
-	Dates map[string][]int `json:"taggedDates"`
-}
-
-func (s *Server) UpdateTaggedDates(c *gin.Context) {
-	var req TaggedDatesInfo
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	user := c.MustGet("user").(*User)
-
-	err := s.db.Transaction(func(tx *gorm.DB) error {
-		for date, tags := range req.Dates {
-			// insert/update the row or remove it when the date no longer has any corresponding tags
-			if len(tags) == 0 {
-				clause := &TaggedDate{UserID: user.ID, Date: date}
-				if err := tx.Where(clause).Delete(&TaggedDate{}).Error; err != nil {
-					return fmt.Errorf("Failed to delete tagged date")
-				}
-			} else {
-				row := TaggedDate{UserID: user.ID, Date: date, Tags: datatypes.NewJSONSlice(tags)}
-				if result := tx.Save(&row); result.Error != nil {
-					return fmt.Errorf("Error creating/updating tagged date")
-				}
-			}
+	} else {
+		if err := s.db.Delete(&existing).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "couldn't delete period date"})
+			return
 		}
-		return nil
-	})
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
 	}
+
 	c.JSON(http.StatusOK, gin.H{})
 }

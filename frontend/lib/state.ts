@@ -21,35 +21,21 @@ export interface WorkoutInfo {
   tag: string;
 }
 
-export interface TagInfo {
-  id: number;
-  name: string;
-  color: string;
-}
-
-export interface TaggedDate {
-  date: string;
-  tagIds: number[];
-}
-
 interface AppStore {
   jwt: string;
   useImperial: boolean;
   workouts: Record<number, WorkoutInfo>;
-  tags: Record<number, TagInfo>;
-  taggedDates: Record<string, number[]>;
+  periodDates: Record<string, boolean>;
 
   changedWorkoutIds: Set<number>;
-  changedTaggedDates: Set<string>;
-  changedTagIds: Set<number>;
   settingsChanged: boolean;
 
   workoutsPage: number;
   moreWorkouts: boolean;
   templatesPage: number;
   moreTemplates: boolean;
-  taggedDatesPage: number;
-  moreTaggedDates: boolean;
+  periodDatesPage: number;
+  morePeriodDates: boolean;
 
   updateUserData: (userDate: object, settingsChanged?: boolean) => void;
   upsertWorkout: (w: WorkoutInfo, ignoreChange?: boolean) => void;
@@ -61,9 +47,7 @@ interface AppStore {
     exercise: ExerciseInfo,
   ) => void;
   removeExercise: (workoutId: number, exerciseIndex: number) => void;
-  upsertTag: (tag: TagInfo, ignoreChange?: boolean) => void;
-  removeTag: (id: number) => void;
-  toggleTaggedDate: (date: string, tagId: number) => void;
+  togglePeriodDate: (date: string) => void;
   clearChangeSets: () => void;
   setAllData: (jwt: string, json: any) => void;
 }
@@ -72,21 +56,18 @@ interface AppStore {
 const createAppStore: StateCreator<AppStore> = (set, _get) => ({
   jwt: "",
   useImperial: true,
-  tags: {},
   workouts: {},
-  taggedDates: {},
+  periodDates: {},
 
   changedWorkoutIds: new Set(),
-  changedTaggedDates: new Set(),
-  changedTagIds: new Set(),
   settingsChanged: false,
 
   workoutsPage: 1,
   moreWorkouts: false,
   templatesPage: 1,
   moreTemplates: false,
-  taggedDatesPage: 1,
-  moreTaggedDates: false,
+  periodDatesPage: 1,
+  morePeriodDates: false,
 
   updateUserData: (userData, settingsChanged) =>
     set((state: AppStore) => {
@@ -104,14 +85,9 @@ const createAppStore: StateCreator<AppStore> = (set, _get) => ({
         workouts[w.id] = w;
       }
 
-      let taggedDates = {} as Record<string, number[]>;
-      for (const td of json.user.taggedDates) {
-        taggedDates[td.date] = td.tagIds;
-      }
-
-      let tags = {} as Record<number, TagInfo>;
-      for (const t of json.user.tags) {
-        tags[t.id] = t;
+      let periodDates = {} as Record<string, boolean>;
+      for (const pd of json.user.periodDates) {
+        periodDates[pd.date] = true;
       }
 
       // TODO: templates aren't loaded on login...
@@ -119,8 +95,7 @@ const createAppStore: StateCreator<AppStore> = (set, _get) => ({
       return {
         jwt,
         workouts,
-        tags,
-        taggedDates,
+        periodDates,
         useImperial: json.user.settings.useImperial,
         moreTaggedDates: json.moreTaggedDates,
         moreWorkouts: json.moreWorkouts,
@@ -196,39 +171,12 @@ const createAppStore: StateCreator<AppStore> = (set, _get) => ({
       };
     }),
 
-  upsertTag: (tag, ignoreChange) =>
-    set((state: AppStore) => ({
-      changedTagIds:
-        ignoreChange === undefined
-          ? new Set([...state.changedTagIds, tag.id])
-          : state.changedTagIds,
-      tags: {
-        ...state.tags,
-        [tag.id]: {
-          ...state.tags[tag.id],
-          ...tag,
-        },
-      },
-    })),
-
-  removeTag: (id) =>
-    set((state: AppStore) => {
-      let tags = { ...state.tags };
-      delete tags[id];
-      return { tags };
-    }),
-
-  toggleTaggedDate: (date, tagId) =>
-    set((state: AppStore) => {
-      let tagIds =
-        state.taggedDates[date] !== undefined ? [...state.taggedDates[date]] : [];
-      const index = tagIds.findIndex((id) => id == tagId);
-      if (index != -1) tagIds.splice(index, 1);
-      else tagIds.push(tagId);
-      return {
-        changedTaggedDates: new Set([...state.changedTaggedDates, date]),
-        taggedDates: { ...state.taggedDates, [date]: tagIds },
-      };
+  togglePeriodDate: (date) =>
+    set((state) => {
+      let dates = { ...state.periodDates };
+      if (dates[date]) delete dates[date];
+      else dates[date] = true;
+      return { periodDates: dates };
     }),
 });
 
@@ -244,18 +192,13 @@ const storageBackend: StateStorage = {
   },
 };
 
-const excludedFields = [
-  "changedWorkoutIds",
-  "changedTaggedDates",
-  "changedTagIds",
-  "settingsChanged",
-];
 
 export const useStore = create<AppStore>()(
   persist(createAppStore, {
     name: "app-data",
     storage: createJSONStorage(() => storageBackend),
     partialize: (state) => {
+      const excludedFields = ["changedWorkoutIds", "settingsChanged"];
       let clone = { ...state } as Record<string, any>;
       for (const key of excludedFields) delete clone[key];
       return clone;

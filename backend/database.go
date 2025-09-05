@@ -20,8 +20,7 @@ type User struct {
 	Password    string       `json:"-"`
 	Settings    Settings     `json:"settings" gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
 	Workouts    []Workout    `json:"workouts" gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
-	TaggedDates []TaggedDate `json:"taggedDates" gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
-	Tags        []Tag        `json:"tags" gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
+	PeriodDates []PeriodDate `json:"periodDates" gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
 }
 
 type Workout struct {
@@ -43,18 +42,10 @@ type Exercise struct {
 	Distance     int                      `json:"distance"`
 }
 
-type Tag struct {
+type PeriodDate struct {
 	BaseModel
 	UserID uint   `json:"-"`
-	Name   string `json:"name"`
-	Color  string `json:"color"`
-}
-
-type TaggedDate struct {
-	BaseModel
-	UserID uint                     `json:"-"`
-	Date   string                   `json:"date"`
-	Tags   datatypes.JSONSlice[int] `gorm:"type:json" json:"tagIds"`
+	Date   string `json:"date"`
 }
 
 type Settings struct {

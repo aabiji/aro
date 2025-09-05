@@ -66,7 +66,7 @@ function LineGraph({ data, height, getValue, tooltipLabel }: PlotProps) {
   const [tickColor, lineColor, textColor] = ["#e8e8e8", "#046DF9", "#000000"];
 
   const [width, setWidth] = useState(0);
-  const [numTicksX, numTicksY] = [6, 10];
+  const [numTicksX, numTicksY] = [3, 10];
   const [xSpacing, setXSpacing] = useState(0);
   const [ySpacing, setYSpacing] = useState(0);
 
@@ -304,14 +304,14 @@ export function Heatmap({ data, height, getValue, tooltipLabel }: PlotProps) {
             y={height - (fontSize / 2)}> {m} </SvgText>
         ))}
 
-        {data.map((p, i) => (
-          <Rect
+        {data.map((p, i) => {
+          return <Rect
             key={i}
             x={paddingX + weekIndex(p.date) * tileWidth}
             y={paddingY + p.date.getDay() * tileHeight}
             width={tileWidth} height={tileHeight}
-            fill={interpolateColor((getValue(p) - minY) / (maxY - minY))} />
-        ))}
+            fill={interpolateColor((getValue(p) - minY) / (maxY - minY))} />;
+        })}
       </Svg>
     </View>
   );

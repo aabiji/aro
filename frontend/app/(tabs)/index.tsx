@@ -58,8 +58,9 @@ export default function Index() {
       const jwtJson = await request("POST", endpoint, body);
       const payload = {
         page: 0, includeSettings: true,
-        includeTemplates: true, includeWorkouts: true,
-        includeTags: true, includeTaggedDates: true,
+        includeTemplates: true,
+        includeWorkouts: true,
+        includePeriodDates: true,
       };
       const dataJson = await request("POST", "/auth/userInfo", payload, jwtJson.jwt);
       store.setAllData(jwtJson.jwt, dataJson);

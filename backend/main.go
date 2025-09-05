@@ -94,9 +94,7 @@ func main() {
 	auth.POST("/workout", server.CreateWorkout)
 	auth.DELETE("/workout", server.DeleteWorkout)
 
-	auth.POST("/tag", server.SetTag)
-	auth.DELETE("/tag", server.DeleteTag)
-	auth.POST("/taggedDates", server.UpdateTaggedDates)
+	auth.POST("/period", server.TogglePeriodDate)
 
 	gin.SetMode(gin.DebugMode)
 	r.Run("0.0.0.0:8080")

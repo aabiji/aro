@@ -21,7 +21,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => {
             const icons = {
               index: "barbell-outline", exercise: "barbell-outline",
-              food: "fast-food-outline", tags: "calendar-clear-outline",
+              food: "fast-food-outline", period: "water",
               settings: "settings-outline", weight: "scale-outline",
             };
             return <Ionicons name={icons[route.name]} color={color} size={24} />;
@@ -35,7 +35,7 @@ export default function TabLayout() {
         <Tabs.Screen name="food" options={{ title: "Food", headerShown: false }} />
         <Tabs.Screen name="exercise" options={{ title: "Exercise", headerShown: false }} />
         <Tabs.Screen name="weight" options={{ title: "Weight", headerShown: false }} />
-        <Tabs.Screen name="tags" options={{ title: "Tags", headerShown: false }} />
+        <Tabs.Screen name="period" options={{ title: "Period", headerShown: false }} />
         <Tabs.Screen name="settings" options={{ title: "Settings", headerShown: false }} />
       </Tabs.Protected>
     </Tabs>

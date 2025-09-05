@@ -4,8 +4,7 @@ import { useStore } from "@/lib/state";
 import { request } from "@/lib/utils";
 
 import {
-  AppState, Modal, NativeEventSubscription, Platform,
-  Pressable, View, useWindowDimensions
+  AppState, NativeEventSubscription, Platform, View, useWindowDimensions
 } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -19,22 +18,6 @@ export function Card({ children, className }:
     <View style={{ width: width < 400 ? "92%" : "50%" }} className={style}>
       {children}
     </View>
-  );
-}
-
-export function Popup({ visible, close, children }:
-  { visible: boolean, close: () => void; children: React.ReactNode }) {
-  return (
-    <Modal transparent animationType="fade" visible={visible} onRequestClose={close}>
-      <Pressable onPress={close} className="flex-1"
-        style={{ backgroundColor: "rgba(0, 0, 0, 0.3)", cursor: "default" }}>
-        <Pressable
-          onPress={(e) => e.stopPropagation()}
-          className="w-full h-[50%] absolute bottom-0 bg-neutral-50 shadow-md py-2 cursor-default">
-          {children}
-        </Pressable>
-      </Pressable>
-    </Modal>
   );
 }
 
@@ -56,24 +39,6 @@ export function Container({ children, syncState }:
         const json1 = await request("POST", "/auth/workout", payload1, store.jwt);
         for (const w of json1.workouts) store.upsertWorkout(w, false);
         for (const id of changed1) store.removeWorkout(id);
-      }
-
-      // update the tags
-      if (store.changedTagIds.size > 0) {
-        const changed2 = [...store.changedTagIds].filter((id) => store.tags[id] !== undefined);
-        const payload2 = { tags: changed2.map((id) => store.tags[id]) };
-        await request("POST", "/auth/tag", payload2, store.jwt);
-      }
-
-      // update the tagged dates
-      if (store.changedTaggedDates.size > 0) {
-        const dates = [...store.changedTaggedDates].filter((date) => store.taggedDates[date] !== undefined);
-        const data = dates.reduce(
-          (acc, date) => {
-            acc[date] = store.taggedDates[date];
-            return acc;
-          }, {} as Record<string, number[]>);
-        await request("POST", "/auth/taggedDates", { taggedDates: data }, store.jwt);
       }
 
       // update user settings
