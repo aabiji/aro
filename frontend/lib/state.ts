@@ -25,17 +25,21 @@ interface AppStore {
   jwt: string;
   useImperial: boolean;
   workouts: Record<number, WorkoutInfo>;
-  periodDates: Record<string, boolean>;
+  periodDays: Record<string, boolean>;
+  weightEntries: Record<string, number>;
 
   changedWorkoutIds: Set<number>;
   settingsChanged: boolean;
 
+  // TODO: refactor
   workoutsPage: number;
   moreWorkouts: boolean;
   templatesPage: number;
   moreTemplates: boolean;
-  periodDatesPage: number;
-  morePeriodDates: boolean;
+  periodDaysPage: number;
+  morePeriodDays: boolean;
+  weightEntriesPage: number;
+  moreWeightEntries: boolean;
 
   updateUserData: (userDate: object, settingsChanged?: boolean) => void;
   upsertWorkout: (w: WorkoutInfo, ignoreChange?: boolean) => void;
@@ -57,7 +61,8 @@ const createAppStore: StateCreator<AppStore> = (set, _get) => ({
   jwt: "",
   useImperial: true,
   workouts: {},
-  periodDates: {},
+  periodDays: {},
+  weightEntries: {},
 
   changedWorkoutIds: new Set(),
   settingsChanged: false,
@@ -66,8 +71,10 @@ const createAppStore: StateCreator<AppStore> = (set, _get) => ({
   moreWorkouts: false,
   templatesPage: 1,
   moreTemplates: false,
-  periodDatesPage: 1,
-  morePeriodDates: false,
+  periodDaysPage: 1,
+  morePeriodDays: false,
+  weightEntriesPage: 0,
+  moreWeightEntries: false,
 
   updateUserData: (userData, settingsChanged) =>
     set((state: AppStore) => {
@@ -81,25 +88,29 @@ const createAppStore: StateCreator<AppStore> = (set, _get) => ({
   setAllData: (jwt, json) =>
     set((_state: AppStore) => {
       let workouts = {} as Record<number, WorkoutInfo>;
-      for (const w of json.user.workouts) {
+      for (const w of json.user.workouts)
         workouts[w.id] = w;
-      }
 
-      let periodDates = {} as Record<string, boolean>;
-      for (const pd of json.user.periodDates) {
-        periodDates[pd.date] = true;
-      }
+      let periodDays = {} as Record<string, boolean>;
+      for (const pd of json.user.periodDays)
+        periodDays[pd.date] = true;
+
+      let weightEntries = {} as Record<string, number>;
+      for (const w of json.user.weightEntries)
+        weightEntries[w.date] = w.value;
 
       // TODO: templates aren't loaded on login...
 
       return {
         jwt,
         workouts,
-        periodDates,
-        useImperial: json.user.settings.useImperial,
-        moreTaggedDates: json.moreTaggedDates,
+        periodDays,
+        weightEntries,
         moreWorkouts: json.moreWorkouts,
         moreTemplates: json.moreTemplates,
+        morePeriodDays: json.morePeriodDays,
+        moreWeightEntries: json.moreWeightEntries,
+        useImperial: json.user.settings.useImperial,
       };
     }),
 
@@ -107,8 +118,6 @@ const createAppStore: StateCreator<AppStore> = (set, _get) => ({
     set((_state: AppStore) => ({
       settingsChanged: false,
       changedWorkoutIds: new Set(),
-      changedTagIds: new Set(),
-      changedTaggedDates: new Set(),
     })),
 
   upsertWorkout: (w, ignoreChange) =>
@@ -173,10 +182,10 @@ const createAppStore: StateCreator<AppStore> = (set, _get) => ({
 
   togglePeriodDate: (date) =>
     set((state) => {
-      let dates = { ...state.periodDates };
+      let dates = { ...state.periodDays };
       if (dates[date]) delete dates[date];
       else dates[date] = true;
-      return { periodDates: dates };
+      return { periodDays: dates };
     }),
 });
 

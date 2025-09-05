@@ -43,7 +43,7 @@ export function Container({ children, syncState }:
 
       // update user settings
       if (store.settingsChanged)
-        await request("POST", "/auth/user", { useImperial: store.useImperial }, store.jwt);
+        await request("POST", "/auth/settings", { useImperial: store.useImperial }, store.jwt);
       store.clearChangeSets();
     } catch (error: any) {
       console.log("ERROR!", error.message);

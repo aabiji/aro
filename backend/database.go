@@ -16,11 +16,12 @@ type BaseModel struct {
 // database models
 type User struct {
 	BaseModel
-	Email       string       `gorm:"uniqueIndex" json:"-"`
-	Password    string       `json:"-"`
-	Settings    Settings     `json:"settings" gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
-	Workouts    []Workout    `json:"workouts" gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
-	PeriodDates []PeriodDate `json:"periodDates" gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
+	Email         string    `gorm:"uniqueIndex" json:"-"`
+	Password      string    `json:"-"`
+	Settings      Settings  `json:"settings" gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
+	Workouts      []Workout `json:"workouts" gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
+	PeriodDays    []Record  `json:"periodDays" gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
+	WeightEntries []Record  `json:"weightEntries" gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
 }
 
 type Workout struct {
@@ -42,10 +43,12 @@ type Exercise struct {
 	Distance     int                      `json:"distance"`
 }
 
-type PeriodDate struct {
+type Record struct {
 	BaseModel
 	UserID uint   `json:"-"`
-	Date   string `json:"date"`
+	Type   string `gorm:"uniqueIndex:idx_user_type_date" json:"-"`
+	Date   string `gorm:"uniqueIndex:idx_user_type_date" json:"date"`
+	Value  uint64 `gorm:"uniqueIndex:idx_user_type_date" json:"value"`
 }
 
 type Settings struct {

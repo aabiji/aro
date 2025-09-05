@@ -87,14 +87,15 @@ func main() {
 
 	r.GET("/food", server.SearchFood)
 
-	auth.POST("/userInfo", server.GetUserInfo)
-	auth.POST("/user", server.UpdateUserSettings)
+	auth.POST("/user", server.GetUserInfo)
 	auth.DELETE("/user", server.DeleteUser)
 
 	auth.POST("/workout", server.CreateWorkout)
 	auth.DELETE("/workout", server.DeleteWorkout)
 
 	auth.POST("/period", server.TogglePeriodDate)
+	auth.POST("/weight", server.SetCurrentWeight)
+	auth.POST("/settings", server.UpdateUserSettings)
 
 	gin.SetMode(gin.DebugMode)
 	r.Run("0.0.0.0:8080")

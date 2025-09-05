@@ -1,15 +1,18 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/datatypes"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // server and routes
@@ -33,7 +36,7 @@ func NewServer() (Server, error) {
 	}
 
 	err = server.db.AutoMigrate(&User{}, &Workout{}, &Exercise{},
-		&Settings{}, &PeriodDate{}, &Food{}, &Nutrient{})
+		&Settings{}, &Record{}, &Food{}, &Nutrient{})
 	if err != nil {
 		return Server{}, err
 	}
@@ -144,11 +147,12 @@ func (s *Server) Signup(c *gin.Context) {
 }
 
 type UserInfoOptions struct {
-	Page               int  `json:"page"`
-	IncludeSettings    bool `json:"includeSettings,omitempty"`
-	IncludeWorkouts    bool `json:"includeWorkouts,omitempty"`
-	IncludeTemplates   bool `json:"includeTemplates,omitempty"`
-	IncludePeriodDates bool `json:"includePeriodDates,omitempty"`
+	Page             int  `json:"page"`
+	GetSettings      bool `json:"getSettings,omitempty"`
+	GetWorkouts      bool `json:"getWorkouts,omitempty"`
+	GetTemplates     bool `json:"getTemplates,omitempty"`
+	GetPeriodDays    bool `json:"getPeriodDays,omitempty"`
+	GetWeightEntries bool `json:"getWeightEntries,omitempty"`
 }
 
 func (s *Server) GetUserInfo(c *gin.Context) {
@@ -163,7 +167,7 @@ func (s *Server) GetUserInfo(c *gin.Context) {
 
 	limit := 10
 	query := s.db
-	for i, value := range []bool{req.IncludeTemplates, req.IncludeWorkouts} {
+	for i, value := range []bool{req.GetTemplates, req.GetWorkouts} {
 		if value {
 			query = query.Preload("Workouts", func(db *gorm.DB) *gorm.DB {
 				return db.Where("workouts.template = ?", i == 0).
@@ -173,12 +177,17 @@ func (s *Server) GetUserInfo(c *gin.Context) {
 			}).Preload("Workouts.Exercises")
 		}
 	}
-	if req.IncludeSettings {
+	if req.GetSettings {
 		query = query.Preload("Settings")
 	}
-	if req.IncludePeriodDates {
-		query = query.Preload("PeriodDates", func(db *gorm.DB) *gorm.DB {
-			return db.Offset(req.Page * limit).Limit(limit + 1).Order("period_dates.created_at DESC")
+	if req.GetPeriodDays {
+		query = query.Preload("PeriodDays", func(db *gorm.DB) *gorm.DB {
+			return db.Offset(req.Page * limit).Limit(limit + 1).Order("period_days.created_at DESC")
+		})
+	}
+	if req.GetWeightEntries {
+		query = query.Preload("WeightEntries", func(db *gorm.DB) *gorm.DB {
+			return db.Offset(req.Page * limit).Limit(limit + 1).Order("weight_entries.created_at DESC")
 		})
 	}
 
@@ -199,10 +208,11 @@ func (s *Server) GetUserInfo(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"user":            fullUser,
-		"moreTemplates":   templatesCount > limit,
-		"moreWorkouts":    workoutsCount > limit,
-		"moreTaggedDates": len(fullUser.PeriodDates) > limit,
+		"user":              fullUser,
+		"moreTemplates":     templatesCount > limit,
+		"moreWorkouts":      workoutsCount > limit,
+		"morePeriodDays":    len(fullUser.PeriodDays) > limit,
+		"moreWeightEntries": len(fullUser.WeightEntries) > limit,
 	})
 }
 
@@ -250,6 +260,10 @@ func (s *Server) DeleteUser(c *gin.Context) {
 
 		if err := tx.Where(&Settings{UserID: user.ID}).Delete(&Settings{}).Error; err != nil {
 			return fmt.Errorf("Failed to delete settings")
+		}
+
+		if err := tx.Where(&Record{UserID: user.ID}).Delete(&Record{}).Error; err != nil {
+			return fmt.Errorf("Failed to delete records")
 		}
 
 		if err := tx.Delete(&User{}, user.ID).Error; err != nil {
@@ -380,21 +394,55 @@ func (s *Server) TogglePeriodDate(c *gin.Context) {
 		return
 	}
 
-	row := &PeriodDate{UserID: user.ID, Date: date}
-	var existing PeriodDate
+	row := &Record{UserID: user.ID, Type: "period", Date: date}
+	var existing Record
 
-	if err := s.db.Where(row).First(&existing).Error; err != nil {
-		// not found → insert
+	// insert/delete the row
+	result := s.db.Where(row).First(&existing)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		if err := s.db.Create(row).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "couldn't insert period date"})
 			return
 		}
-	} else {
+	} else if result.Error == nil {
 		if err := s.db.Delete(&existing).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "couldn't delete period date"})
 			return
 		}
+	} else {
+		if err := s.db.Delete(&existing).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "couldn't query database"})
+			return
+		}
 	}
+
+	c.JSON(http.StatusOK, gin.H{})
+}
+
+func (s *Server) SetCurrentWeight(c *gin.Context) {
+	user := c.MustGet("user").(*User)
+
+	// asking for the date current for the user
+	// (and not just formatting on our side),
+	// because they might have a difference locale
+	date, dateExists := c.GetQuery("date")
+	weightStr, weightExists := c.GetQuery("weight")
+	if !dateExists || !weightExists {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+	weight, err := strconv.ParseUint(weightStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	// upsert the row
+	row := Record{UserID: user.ID, Type: "weight", Date: date, Value: weight}
+	s.db.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "user_id"}, {Name: "type"}, {Name: "date"}},
+		DoUpdates: clause.AssignmentColumns([]string{"value"}),
+	}).Create(&row)
 
 	c.JSON(http.StatusOK, gin.H{})
 }

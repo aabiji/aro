@@ -26,7 +26,7 @@ export default function TemplatesPage() {
     if (!store.moreTemplates) return;
     try {
       const payload = { page: store.templatesPage, includeTemplates: true };
-      const json = await request("POST", "/auth/userInfo", payload, store.jwt);
+      const json = await request("POST", "/auth/user", payload, store.jwt);
       for (const w of json.user.workouts) store.upsertWorkout(w, true);
       store.updateUserData({
         moreTemplates: json.moreTemplates,

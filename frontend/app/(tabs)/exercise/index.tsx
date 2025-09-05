@@ -56,7 +56,7 @@ export default function Index() {
     if (!store.moreWorkouts) return;
     try {
       const payload = { page: store.workoutsPage, includeWorkouts: true };
-      const json = await request("POST", "/auth/userInfo", payload, store.jwt);
+      const json = await request("POST", "/auth/user", payload, store.jwt);
       for (const w of json.user.workouts) store.upsertWorkout(w, true);
       store.updateUserData({
         moreWorkouts: json.moreWorkouts,
