@@ -1,3 +1,4 @@
+import Constants from "expo-constants";
 import { MMKV } from "react-native-mmkv";
 import { createJSONStorage, persist, StateStorage } from "zustand/middleware";
 import { create, StateCreator } from "zustand";
@@ -204,7 +205,7 @@ const storageBackend: StateStorage = {
 
 export const useStore = create<AppStore>()(
   persist(createAppStore, {
-    name: "app-data",
+    name: `aro-app-${Constants.installationId}`,
     storage: createJSONStorage(() => storageBackend),
     partialize: (state) => {
       const excludedFields = ["changedWorkoutIds", "settingsChanged"];

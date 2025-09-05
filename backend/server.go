@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/argon2"
 	"gorm.io/datatypes"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -96,9 +97,16 @@ func (s *Server) Login(c *gin.Context) {
 	}
 
 	var user User
-	result := s.db.Where(&User{Email: req.Email, Password: req.Password}).First(&user)
+	result := s.db.Where(&User{Email: req.Email}).First(&user)
 	if result.Error != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Account not found"})
+		return
+	}
+
+	salt := []byte(os.Getenv("PASSWORD_SALT"))
+	hash := argon2.IDKey([]byte(req.Password), salt, 1, 64*1024, 4, 64)
+	if string(hash) != user.Password {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Wrong password"})
 		return
 	}
 
@@ -125,7 +133,10 @@ func (s *Server) Signup(c *gin.Context) {
 		return
 	}
 
-	user := User{Email: req.Email, Password: req.Password}
+	salt := []byte(os.Getenv("PASSWORD_SALT"))
+	hash := argon2.IDKey([]byte(req.Password), salt, 1, 64*1024, 4, 64)
+	user := User{Email: req.Email, Password: string(hash)}
+
 	if result := s.db.Create(&user); result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating user"})
 		return

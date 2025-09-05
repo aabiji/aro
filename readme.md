@@ -21,7 +21,8 @@ Fill out these values in a .env file in the root directory:
 POSTGRES_USER=TODO!
 POSTGRES_PASSWORD=TODO!
 POSTGRES_DB=db # same as docker service
-JWT_SECRET=TODO!
+JWT_SECRET=super duper secret
+PASSWORD_SALT=super duper secret
 POSTGRES_HOSTNAME=localhost
 APP_PORT=8080
 DB_PORT=5432
