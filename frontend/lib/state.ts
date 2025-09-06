@@ -22,15 +22,12 @@ export interface WorkoutInfo {
   tag: string;
 }
 
-interface AppStore {
+export interface AppStore {
   jwt: string;
   useImperial: boolean;
   workouts: Record<number, WorkoutInfo>;
   periodDays: Record<string, boolean>;
   weightEntries: Record<string, number>;
-
-  changedWorkoutIds: Set<number>;
-  settingsChanged: boolean;
 
   // TODO: refactor
   workoutsPage: number;
@@ -42,8 +39,8 @@ interface AppStore {
   weightEntriesPage: number;
   moreWeightEntries: boolean;
 
-  updateUserData: (userDate: object, settingsChanged?: boolean) => void;
-  upsertWorkout: (w: WorkoutInfo, ignoreChange?: boolean) => void;
+  updateUserData: (userDate: object) => void;
+  upsertWorkout: (w: WorkoutInfo) => void;
   removeWorkout: (id: number) => void;
   addExercise: (workoutId: number, exercise: ExerciseInfo) => void;
   updateExercise: (
@@ -53,7 +50,6 @@ interface AppStore {
   ) => void;
   removeExercise: (workoutId: number, exerciseIndex: number) => void;
   togglePeriodDate: (date: string) => void;
-  clearChangeSets: () => void;
   setAllData: (jwt: string, json: any) => void;
 }
 
@@ -65,9 +61,6 @@ const createAppStore: StateCreator<AppStore> = (set, _get) => ({
   periodDays: {},
   weightEntries: {},
 
-  changedWorkoutIds: new Set(),
-  settingsChanged: false,
-
   workoutsPage: 1,
   moreWorkouts: false,
   templatesPage: 1,
@@ -77,14 +70,8 @@ const createAppStore: StateCreator<AppStore> = (set, _get) => ({
   weightEntriesPage: 0,
   moreWeightEntries: false,
 
-  updateUserData: (userData, settingsChanged) =>
-    set((state: AppStore) => {
-      return {
-        ...state,
-        ...userData,
-        settingsChanged: settingsChanged ?? false,
-      };
-    }),
+  updateUserData: (userData) =>
+    set((state: AppStore) => ({ ...state, ...userData })),
 
   setAllData: (jwt, json) =>
     set((_state: AppStore) => {
@@ -115,18 +102,8 @@ const createAppStore: StateCreator<AppStore> = (set, _get) => ({
       };
     }),
 
-  clearChangeSets: () =>
-    set((_state: AppStore) => ({
-      settingsChanged: false,
-      changedWorkoutIds: new Set(),
-    })),
-
-  upsertWorkout: (w, ignoreChange) =>
+  upsertWorkout: (w) =>
     set((state: AppStore) => ({
-      changedWorkoutIds:
-        ignoreChange === undefined
-          ? new Set([...state.changedWorkoutIds, w.id])
-          : state.changedWorkoutIds,
       workouts: {
         ...state.workouts,
         [w.id]: {
@@ -145,7 +122,6 @@ const createAppStore: StateCreator<AppStore> = (set, _get) => ({
 
   addExercise: (workoutId, exercise) =>
     set((state: AppStore) => ({
-      changedWorkoutIds: new Set([...state.changedWorkoutIds, workoutId]),
       workouts: {
         ...state.workouts,
         [workoutId]: {
@@ -160,7 +136,6 @@ const createAppStore: StateCreator<AppStore> = (set, _get) => ({
       let exercises = [...state.workouts[workoutId].exercises];
       Object.assign(exercises[exerciseIndex], exercise);
       return {
-        changedWorkoutIds: new Set([...state.changedWorkoutIds, workoutId]),
         workouts: {
           ...state.workouts,
           [workoutId]: { ...state.workouts[workoutId], exercises },
@@ -173,7 +148,6 @@ const createAppStore: StateCreator<AppStore> = (set, _get) => ({
       let exercises = [...state.workouts[workoutId].exercises];
       exercises.splice(exerciseIndex, 1);
       return {
-        changedWorkoutIds: new Set([...state.changedWorkoutIds, workoutId]),
         workouts: {
           ...state.workouts,
           [workoutId]: { ...state.workouts[workoutId], exercises },
@@ -207,12 +181,6 @@ export const useStore = create<AppStore>()(
   persist(createAppStore, {
     name: `aro-app-${Constants.installationId}`,
     storage: createJSONStorage(() => storageBackend),
-    partialize: (state) => {
-      const excludedFields = ["changedWorkoutIds", "settingsChanged"];
-      let clone = { ...state } as Record<string, any>;
-      for (const key of excludedFields) delete clone[key];
-      return clone;
-    },
   }),
 );
 

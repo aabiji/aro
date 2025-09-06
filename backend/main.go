@@ -76,25 +76,21 @@ func main() {
 	}
 
 	r := gin.Default()
-	r.MaxMultipartMemory = 8 << 20 // max form size = 8 megabytes
 	r.Use(CORSMiddleware())
+
+	r.POST("/login", server.Login)
+	r.POST("/signup", server.Signup)
+	r.GET("/food", server.SearchFood)
 
 	auth := r.Group("/auth")
 	auth.Use(AuthMiddleware(&server))
 
-	r.POST("/login", server.Login)
-	r.POST("/signup", server.Signup)
-
-	r.GET("/food", server.SearchFood)
-
 	auth.POST("/user", server.GetUserInfo)
 	auth.DELETE("/user", server.DeleteUser)
-
 	auth.POST("/workout", server.CreateWorkout)
 	auth.DELETE("/workout", server.DeleteWorkout)
-
 	auth.POST("/period", server.TogglePeriodDate)
-	auth.POST("/weight", server.SetCurrentWeight)
+	auth.POST("/weight", server.SetWeightEntry)
 	auth.POST("/settings", server.UpdateUserSettings)
 
 	gin.SetMode(gin.DebugMode)

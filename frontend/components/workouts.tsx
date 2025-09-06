@@ -1,14 +1,34 @@
 import React, { useState } from "react";
 
 import { ExerciseInfo, ExerciseType, useStore, WorkoutInfo } from "@/lib/state";
+import { AppStore } from "@/lib/state";
 import { request } from "@/lib/utils";
+import useDelayedAction from "@/lib/action";
 
 import { Text, View } from "react-native";
-import { Input, Button, Dropdown } from "@/components/elements";
-import { Card } from "@/components/container";
+import { Card, Input, Button, Dropdown } from "@/components/elements";
+
+const updateWorkout = async (workout: WorkoutInfo, store: AppStore) => {
+  try {
+    // update = delete then create again
+    await request("DELETE", `/auth/workout?id=${workout.id}`, undefined, store.jwt);
+    store.removeWorkout(workout.id!);
+
+    // remove existing ids
+    delete workout.id;
+    for (let exercise of workout.exercises)
+      delete exercise.id;
+
+    const json = await request("POST", "/auth/workout", workout, store.jwt);
+    store.upsertWorkout(json.workout);
+  } catch (err: any) {
+    console.log("ERROR!", err);
+  }
+}
 
 function WorkoutTemplate({ workout }: { workout: WorkoutInfo }) {
   const store = useStore();
+  const trigger = useDelayedAction();
 
   const buttonChoices = [
     { label: "Strength", value: ExerciseType.Resistance },
@@ -39,14 +59,20 @@ function WorkoutTemplate({ workout }: { workout: WorkoutInfo }) {
     }
   };
 
+  const update = (fn: () => void) => {
+    fn();
+    trigger(() => updateWorkout(workout, store));
+  }
+
   return (
     <Card>
       <View className="flex-row items-center">
         <Input
           placeholder="Template name" className="w-[90%]"
-          text={workout.tag} setText={(value: string) =>
+          text={workout.tag}
+          setText={(value: string) => update(() =>
             store.upsertWorkout({ id: workout.id, name: value })
-          } />
+          )} />
         <Button
           icon="trash-outline" transparent iconColor="red"
           onPress={() => deleteTemplate()} />
@@ -55,18 +81,19 @@ function WorkoutTemplate({ workout }: { workout: WorkoutInfo }) {
       {workout.exercises.map((e: ExerciseInfo, i: number) => (
         <View key={i} className="flex-row w-[100%] justify-between border-t border-neutral-100 p-2">
           <Input text={e.name} placeholder="Exercise name"
-            setText={(name: string) => store.updateExercise(workout.id, i, { name })} />
+            setText={(name: string) =>
+              update(() => store.updateExercise(workout.id, i, { name }))} />
 
           {e.exerciseType == ExerciseType.Resistance && (
             <Input text={`${e.weight}`} label="lbs" placeholder="0"
-              setText={(txt: string) =>
-                store.updateExercise(workout.id, i, { weight: Number(txt) })
+              setText={(txt: string) => update(() =>
+                store.updateExercise(workout.id, i, { weight: Number(txt) }))
               } />
           )}
 
           <Button
             icon="trash-outline" transparent iconColor="red" iconSize={18}
-            onPress={() => store.removeExercise(workout.id, i)} />
+            onPress={() => update(() => store.removeExercise(workout.id, i))} />
         </View>
       ))}
 
@@ -75,7 +102,7 @@ function WorkoutTemplate({ workout }: { workout: WorkoutInfo }) {
         current={currentChoice} setCurrent={setCurrentChoice}
         currentElement={
           <Button
-            onPress={() => insertExercise(buttonChoices[currentChoice].value)}
+            onPress={() => update(() => insertExercise(buttonChoices[currentChoice].value))}
             text={`Add ${buttonChoices[currentChoice].label}`} />
         }
         optionElement={(index: number) =>
@@ -87,6 +114,12 @@ function WorkoutTemplate({ workout }: { workout: WorkoutInfo }) {
 
 function WorkoutRecord({ workout, disabled }: { workout: WorkoutInfo; disabled: boolean; }) {
   const store = useStore();
+  const trigger = useDelayedAction();
+
+  const update = (fn: () => void) => {
+    fn();
+    trigger(() => updateWorkout(workout, store));
+  }
 
   const changeRep = (n: number, i: number, eIndex: number) => {
     let reps = [...workout.exercises[eIndex].reps!];
@@ -110,17 +143,17 @@ function WorkoutRecord({ workout, disabled }: { workout: WorkoutInfo; disabled: 
               <View className="flex-row flex-wrap max-w-[100px] gap-x-2">
                 {e.reps!.map((r: number, i: number) => (
                   <Input key={i} text={`${r}`} disabled={disabled} placeholder="0" numeric
-                    setText={(str: string) => changeRep(Number(str), i, eIndex)} />
+                    setText={(str: string) => update(() => changeRep(Number(str), i, eIndex))} />
                 ))}
               </View>
 
               {!disabled && (
                 <Button
                   icon="add" transparent iconColor="grey" iconSize={20}
-                  onPress={() =>
+                  onPress={() => update(() =>
                     store.updateExercise(workout.id, eIndex, {
                       reps: [...workout.exercises[eIndex].reps!, 0],
-                    })
+                    }))
                   } />
               )}
             </View>

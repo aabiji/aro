@@ -4,8 +4,7 @@ import * as plot from "@/lib/plot";
 
 import { FlatList, Pressable, Text, View } from "react-native";
 import { Heatmap, TimeSeriesChart } from "@/components/graph";
-import { Container, Card } from "@/components/container";
-import { Dropdown } from "@/components/elements";
+import { Container, Card, Dropdown } from "@/components/elements";
 import { BackHeader } from "@/components/header";
 
 import Ionicons from "@expo/vector-icons/Ionicons";

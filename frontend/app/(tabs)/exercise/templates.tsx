@@ -4,19 +4,19 @@ import { request } from "@/lib/utils";
 
 import { FlatList, Text, View } from "react-native";
 import { WorkoutTemplateMemo } from "@/components/workouts";
-import { Container } from "@/components/container";
-import { Input, Button } from "@/components/elements";
+import { Container, Input, Button } from "@/components/elements";
 import { BackHeader } from "@/components/header";
 
 export default function TemplatesPage() {
   const store = useStore();
-  const [templateName, setWorkoutName] = useState("");
+  const [templateName, setTemplateName] = useState("");
 
   const createTemplate = async () => {
     try {
       const data = { isTemplate: true, tag: templateName, exercises: [] };
-      const json = await request("POST", "/auth/workout", { workouts: [data] }, store.jwt);
-      store.upsertWorkout(json.workouts[0]);
+      const json = await request("POST", "/auth/workout", data, store.jwt);
+      store.upsertWorkout(json.workout);
+      setTemplateName("");
     } catch (err: any) {
       console.log("ERROR!", err.message);
     }
@@ -27,7 +27,7 @@ export default function TemplatesPage() {
     try {
       const payload = { page: store.templatesPage, includeTemplates: true };
       const json = await request("POST", "/auth/user", payload, store.jwt);
-      for (const w of json.user.workouts) store.upsertWorkout(w, true);
+      for (const w of json.user.workouts) store.upsertWorkout(w);
       store.updateUserData({
         moreTemplates: json.moreTemplates,
         templatesPage: store.templatesPage + 1,
@@ -38,18 +38,18 @@ export default function TemplatesPage() {
   };
 
   return (
-    <Container syncState>
+    <Container>
       <BackHeader title={"Workout templates"} />
 
       <View className="flex-row w-[90%] mx-auto mb-2">
         <Input
           className="w-[90%] bg-surface-color"
-          text={templateName} setText={setWorkoutName}
+          text={templateName} setText={setTemplateName}
           placeholder="New template name" />
         <Button
           icon="add"
           disabled={templateName.trim().length === 0}
-          onPress={() => createTemplate()} />
+          onPress={createTemplate} />
       </View>
 
       {!Object.values(store.workouts).some((w: WorkoutInfo) => w.isTemplate) && (

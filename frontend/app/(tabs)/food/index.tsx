@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { BarcodeScanningResult, CameraView, useCameraPermissions } from "expo-camera";
 import { request } from "@/lib/utils";
 
-import { Card, Container } from "@/components/container";
-import { Button } from "@/components/elements";
+import { Card, Container, Button } from "@/components/elements";
 import { Platform, Pressable, Text, View } from "react-native";
 import { Svg, Polygon } from "react-native-svg";
 

@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/argon2"
 	"gorm.io/datatypes"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -75,11 +74,6 @@ func (s *Server) SearchFood(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"results": results})
 }
 
-type AuthInfo struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
 func (s *Server) GetUser(id uint64) *User {
 	var user User
 	result := s.db.First(&user, id)
@@ -87,6 +81,11 @@ func (s *Server) GetUser(id uint64) *User {
 		return nil
 	}
 	return &user
+}
+
+type AuthInfo struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 func (s *Server) Login(c *gin.Context) {
@@ -103,9 +102,13 @@ func (s *Server) Login(c *gin.Context) {
 		return
 	}
 
-	salt := []byte(os.Getenv("PASSWORD_SALT"))
-	hash := argon2.IDKey([]byte(req.Password), salt, 1, 64*1024, 4, 64)
-	if string(hash) != user.Password {
+	correctPassword, err := verifyPassword(req.Password, user.Password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Coudln't verify password"})
+		return
+	}
+
+	if !correctPassword {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Wrong password"})
 		return
 	}
@@ -133,9 +136,12 @@ func (s *Server) Signup(c *gin.Context) {
 		return
 	}
 
-	salt := []byte(os.Getenv("PASSWORD_SALT"))
-	hash := argon2.IDKey([]byte(req.Password), salt, 1, 64*1024, 4, 64)
-	user := User{Email: req.Email, Password: string(hash)}
+	password, err := hashPassword(req.Password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error hashing password"})
+		return
+	}
+	user := User{Email: req.Email, Password: password}
 
 	if result := s.db.Create(&user); result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating user"})
@@ -193,12 +199,12 @@ func (s *Server) GetUserInfo(c *gin.Context) {
 	}
 	if req.GetPeriodDays {
 		query = query.Preload("PeriodDays", func(db *gorm.DB) *gorm.DB {
-			return db.Offset(req.Page * limit).Limit(limit + 1).Order("period_days.created_at DESC")
+			return db.Offset(req.Page * limit).Limit(limit + 1).Order("records.created_at DESC")
 		})
 	}
 	if req.GetWeightEntries {
 		query = query.Preload("WeightEntries", func(db *gorm.DB) *gorm.DB {
-			return db.Offset(req.Page * limit).Limit(limit + 1).Order("weight_entries.created_at DESC")
+			return db.Offset(req.Page * limit).Limit(limit + 1).Order("records.created_at DESC")
 		})
 	}
 
@@ -227,17 +233,7 @@ func (s *Server) GetUserInfo(c *gin.Context) {
 	})
 }
 
-type SettingsInfo struct {
-	ImperialUnits bool `json:"useImperial"`
-}
-
 func (s *Server) UpdateUserSettings(c *gin.Context) {
-	var req SettingsInfo
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
 	var fullUser User
 	user := c.MustGet("user").(*User)
 	if s.db.Preload("Settings").First(&fullUser, user.ID).Error != nil {
@@ -245,7 +241,11 @@ func (s *Server) UpdateUserSettings(c *gin.Context) {
 		return
 	}
 
-	fullUser.Settings.ImperialUnits = req.ImperialUnits
+	imperial := c.Query("imperial")
+	if imperial == "true" || imperial == "false" {
+		fullUser.Settings.ImperialUnits = imperial == "true"
+	}
+
 	if err := s.db.Save(&fullUser.Settings).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update settings"})
 		return
@@ -308,92 +308,73 @@ type WorkoutInfo struct {
 	Tag       string         `json:"tag"`
 }
 
-type BatchedWorkoutInfo struct {
-	Workouts []Workout `json:"workouts"`
-}
-
 func (s *Server) CreateWorkout(c *gin.Context) {
-	var req BatchedWorkoutInfo
+	var req WorkoutInfo
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
 	user := c.MustGet("user").(*User)
-	arr := []Workout{}
-	err := s.db.Transaction(func(tx *gorm.DB) error {
-		for _, w := range req.Workouts {
-			workout := Workout{UserID: user.ID, Template: w.Template, Tag: w.Tag}
 
-			for _, exercise := range w.Exercises {
-				workout.Exercises = append(workout.Exercises, Exercise{
-					Name:         exercise.Name,
-					ExerciseType: exercise.ExerciseType,
-					Weight:       exercise.Weight,
-					Duration:     exercise.Duration,
-					Distance:     exercise.Distance,
-					Reps:         datatypes.NewJSONSlice(exercise.Reps),
-				})
-			}
+	workout := Workout{UserID: user.ID, Template: req.Template, Tag: req.Tag}
+	for _, e := range req.Exercises {
+		workout.Exercises = append(workout.Exercises, Exercise{
+			Name:         e.Name,
+			ExerciseType: e.ExerciseType,
+			Weight:       e.Weight,
+			Duration:     e.Duration,
+			Distance:     e.Distance,
+			Reps:         datatypes.NewJSONSlice(e.Reps),
+		})
+	}
 
-			if result := tx.Create(&workout); result.Error != nil {
-				return fmt.Errorf("Error creating workout")
-			}
-
-			var full Workout
-			if err := tx.Preload("Exercises").First(&full, workout.ID).Error; err != nil {
-				return fmt.Errorf("Failed to load workout")
-			}
-			arr = append(arr, full)
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := s.db.Create(&workout).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create workout"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"workouts": arr})
-}
 
-type DeleteWorkoutInfo struct {
-	Ids []int `json:"ids"`
+	var full Workout
+	if err := s.db.Preload("Exercises").First(&full, workout.ID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load workout"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"workout": full})
 }
 
 func (s *Server) DeleteWorkout(c *gin.Context) {
-	var req DeleteWorkoutInfo
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	idStr, exists := c.GetQuery("id")
+	if !exists {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
 
-	user := c.MustGet("user").(*User)
-	err := s.db.Transaction(func(tx *gorm.DB) error {
-		for _, id := range req.Ids {
-			// verify workout exists and belongs to the user
-			var workout Workout
-			if err := tx.Where("id = ? AND user_id = ?", id, user.ID).First(&workout).Error; err != nil {
-				return fmt.Errorf("Workout not found")
-			}
-
-			// delete exercises
-			if err := tx.Where("workout_id = ?", workout.ID).Delete(&Exercise{}).Error; err != nil {
-				return fmt.Errorf("Error deleting exercises")
-			}
-
-			// delete workout
-			if err := tx.Delete(&workout).Error; err != nil {
-				return fmt.Errorf("Error deleting workout")
-			}
-		}
-		return nil
-	})
-
+	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
+	user := c.MustGet("user").(*User)
+
+	// verify workout exists and belongs to the user
+	var workout Workout
+	if err := s.db.Where("id = ? AND user_id = ?", id, user.ID).First(&workout).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Workout not found"})
+		return
+	}
+
+	// delete exercises
+	if err := s.db.Where("workout_id = ?", workout.ID).Delete(&Exercise{}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error deleting exercises"})
+		return
+	}
+
+	// delete workout
+	if err := s.db.Delete(&workout).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error deleting workout"})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{})
 }
 
@@ -430,7 +411,7 @@ func (s *Server) TogglePeriodDate(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{})
 }
 
-func (s *Server) SetCurrentWeight(c *gin.Context) {
+func (s *Server) SetWeightEntry(c *gin.Context) {
 	user := c.MustGet("user").(*User)
 
 	// asking for the date current for the user

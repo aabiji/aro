@@ -4,8 +4,7 @@ import * as plot from "@/lib/plot";
 
 import { Text, View } from "react-native";
 import { Line, Rect, Path, Svg, Text as SvgText } from "react-native-svg";
-import { Card } from "@/components/container";
-import { Dropdown } from "@/components/elements";
+import { Card, Dropdown } from "@/components/elements";
 
 interface PlotProps {
   data: plot.PlotPoint[];

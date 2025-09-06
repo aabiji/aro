@@ -4,12 +4,21 @@ import { resetStore, useStore } from "@/lib/state";
 import { request } from "@/lib/utils";
 
 import { Text, View } from "react-native";
-import { Container, Card } from "@/components/container";
-import { Button, Checkbox } from "@/components/elements";
+import { Container, Card, Button, Checkbox } from "@/components/elements";
 
 export default function Settings() {
   const store = useStore();
   const router = useRouter();
+
+  const toggleUnits = async () => {
+    store.updateUserData({ useImperial: !store.useImperial });
+    const url = `/auth/settings?imperial=${store.useImperial}`;
+    try {
+      await request("POST", url, undefined, store.jwt);
+    } catch (err: any) {
+      console.log(err)
+    }
+  }
 
   const logout = async (deleteAccount: boolean) => {
     await resetStore();
@@ -31,12 +40,9 @@ export default function Settings() {
   };
 
   return (
-    <Container syncState>
+    <Container>
       <Card>
-        <Checkbox
-          label="Use imperial units" value={store.useImperial}
-          handleToggle={() => store.updateUserData({ useImperial: !store.useImperial }, true)}
-        />
+        <Checkbox label="Use imperial units" value={store.useImperial} handleToggle={toggleUnits} />
 
         <Button text="Give feedback" onPress={sendFeedback} className="mb-2" />
 

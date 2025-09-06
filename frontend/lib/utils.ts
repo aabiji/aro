@@ -13,7 +13,7 @@ export async function request(method: string, endpoint: string, body?: object, j
   return data;
 }
 
-export function formatDate(date: Date, length: "string") {
+export function formatDate(date: Date, length: string) {
   const opts = { year: "numeric", month: length, day: "numeric" };
   return new Intl.DateTimeFormat("en-US", opts).format(date);
 }

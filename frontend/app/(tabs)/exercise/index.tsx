@@ -4,9 +4,8 @@ import { ExerciseInfo, useStore, WorkoutInfo } from "@/lib/state";
 import { formatDate, request } from "@/lib/utils";
 
 import { FlatList, Pressable, Text, View } from "react-native";
-import { Card, Container } from "@/components/container";
 import { WorkoutRecordMemo } from "@/components/workouts";
-import { Button, Dropdown } from "@/components/elements";
+import { Card, Container, Button, Dropdown } from "@/components/elements";
 
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
@@ -32,6 +31,7 @@ export default function Index() {
   const [currentChoice, setCurrentChoice] = useState(0);
 
   const addWorkout = async (templateName: string) => {
+    // create a workout based off of a template of what it should contain
     const template: WorkoutInfo = Object.values(store.workouts).find(
       (w: WorkoutInfo) => w.tag == templateName)!;
     let data = { isTemplate: false, tag: today, exercises: [] as ExerciseInfo[] };
@@ -45,8 +45,8 @@ export default function Index() {
     }
 
     try {
-      const json = await request("POST", "/auth/workout", { workouts: [data] }, store.jwt);
-      store.upsertWorkout(json.workouts[0], true);
+      const json = await request("POST", "/auth/workout", data, store.jwt);
+      store.upsertWorkout(json.workout);
     } catch (err: any) {
       console.log("ERROR!", err.message);
     }
@@ -57,7 +57,7 @@ export default function Index() {
     try {
       const payload = { page: store.workoutsPage, includeWorkouts: true };
       const json = await request("POST", "/auth/user", payload, store.jwt);
-      for (const w of json.user.workouts) store.upsertWorkout(w, true);
+      for (const w of json.user.workouts) store.upsertWorkout(w);
       store.updateUserData({
         moreWorkouts: json.moreWorkouts,
         workoutsPage: store.workoutsPage + 1,
@@ -68,7 +68,7 @@ export default function Index() {
   };
 
   return (
-    <Container syncState>
+    <Container>
       <FlatList
         data={sortedWorkouts} onEndReached={fetchMore}
         keyExtractor={(item: WorkoutInfo) => String(item.id)}

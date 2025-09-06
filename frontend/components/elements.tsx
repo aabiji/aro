@@ -1,9 +1,33 @@
 import { useState } from "react";
 
-import { Pressable, Text, TextInput, View } from "react-native";
+import { Pressable, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import Ionicons from "@expo/vector-icons/Ionicons";
 
+export function Card({ children, className }:
+  { children: React.ReactNode; className?: string }) {
+  const { width } = useWindowDimensions();
+  const style = `mx-auto p-2 bg-surface-color mb-5 ${className ?? ""} rounded-xl`;
+
+  return (
+    <View style={{ width: width < 400 ? "92%" : "50%" }} className={style}>
+      {children}
+    </View>
+  );
+}
+
+export function Container({ children }: { children: React.ReactNode }) {
+  const { width, height } = useWindowDimensions();
+
+  return (
+    <SafeAreaView style={{ height, flex: 1 }} edges={["top", "bottom", "left", "right"]}>
+      <View style={{ width, height }} className="bg-background-color">
+        {children}
+      </View>
+    </SafeAreaView>
+  );
+}
 interface ButtonProps {
   text?: string;
   icon?: string;

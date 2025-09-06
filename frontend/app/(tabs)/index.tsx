@@ -6,8 +6,7 @@ import { request } from "@/lib/utils";
 import { Redirect } from "expo-router";
 import { Image } from "expo-image";
 import { Text, View } from "react-native";
-import { Container, Card } from "@/components/container";
-import { Button, Input } from "@/components/elements";
+import { Container, Card, Button, Input } from "@/components/elements";
 
 export default function Index() {
   // TODO: what to do when the jwt expires?

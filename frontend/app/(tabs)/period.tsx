@@ -3,8 +3,7 @@ import { useStore } from "@/lib/state";
 import { formatDate, request } from "@/lib/utils";
 
 import { Pressable, Text, View } from "react-native";
-import { Container, Card } from "@/components/container";
-import { Button } from "@/components/elements";
+import { Container, Card, Button } from "@/components/elements";
 
 export default function PeriodPage() {
   const store = useStore();
@@ -47,7 +46,7 @@ export default function PeriodPage() {
   }
 
   return (
-    <Container syncState>
+    <Container>
       <Card className="mb-0">
         <Text className="text-center text-xl">Mark period days</Text>
 

@@ -5,7 +5,6 @@ TODO:
 [  ] Store food info in the database (creating + searching)
 [  ] Improve food search api: All results from OpenFoodFacts and manually inserted results should go into our database...
 [  ] Add frontend page for food -> list foods, add food, see summary (so weekly view of calorie/nutrient consumption, see if you're hitting/over your goals)
-[  ] Add weight page (add entry, graph weight values (daily -- past month, weekly view, monthly view...))
 [  ] Add theme toggling and revamp the ui
 [  ] Look into Stripe integration. 1 week free trial, then 5$ a month (find my card number)
 [  ] Read: https://h4x0r.org/futex/, watch https://www.youtube.com/c/BranchEducation
@@ -22,7 +21,6 @@ POSTGRES_USER=TODO!
 POSTGRES_PASSWORD=TODO!
 POSTGRES_DB=db # same as docker service
 JWT_SECRET=super duper secret
-PASSWORD_SALT=super duper secret
 POSTGRES_HOSTNAME=localhost
 APP_PORT=8080
 DB_PORT=5432
