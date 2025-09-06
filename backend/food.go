@@ -22,7 +22,6 @@ func GetProducts(value, mobileOS string, valueIsBarcode bool) ([]map[string]any,
 	if err != nil {
 		return nil, err
 	}
-	//request.Header.Add("Content-Type", "application/json")
 	request.Header.Add("User-Agent", fmt.Sprintf("aro - %s - Version 2.1 - https://aro.com - scan", mobileOS))
 
 	client := &http.Client{}

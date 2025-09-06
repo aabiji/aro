@@ -36,7 +36,7 @@ export default function PeriodPage() {
 
   const toggleDate = async (dateStr: string) => {
     try {
-      store.togglePeriodDate(dateStr);
+      store.togglePeriodDay(dateStr);
       const params = new URLSearchParams();
       params.append("date", dateStr);
       await request("POST", `/auth/period?${params.toString()}`, undefined, store.jwt);
@@ -72,7 +72,7 @@ export default function PeriodPage() {
               <Pressable onPress={() => toggleDate(str)} className={style} key={i}>
                 {!empty && (
                   <View className="flex-1">
-                    {store.periodDates[str] &&
+                    {store.data.periodDays.values[str] &&
                       <View style={{ flex: 1, backgroundColor: "red", opacity: 0.5 }} />}
                     <Text className="absolute right-[10px] top-[10px]">{d.getDate()}</Text>
                   </View>

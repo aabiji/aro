@@ -15,25 +15,22 @@ export default function Index() {
   const store = useStore();
 
   const sortedWorkouts = useMemo(() => {
-    return Object.values(store.workouts)
-      .filter((w: WorkoutInfo) => !w.isTemplate)
-      .sort(
-        (a: WorkoutInfo, b: WorkoutInfo) =>
+    return Object.values(store.data.workouts.values)
+      .sort((a: WorkoutInfo, b: WorkoutInfo) =>
           new Date(b.tag).getTime() - new Date(a.tag).getTime(),
       );
-  }, [store.workouts]);
+  }, [store.data.workouts.values]);
 
   const choices = useMemo(() => {
-    return Object.values(store.workouts)
-      .filter((w: WorkoutInfo) => w.isTemplate && w.exercises.length > 0)
-      .map((w: WorkoutInfo) => w.tag);
-  }, [store.workouts]);
+    return Object.values(store.data.templates.values).map(w => w.tag);
+  }, [store.data.templates.values]);
+
   const [currentChoice, setCurrentChoice] = useState(0);
 
   const addWorkout = async (templateName: string) => {
     // create a workout based off of a template of what it should contain
-    const template: WorkoutInfo = Object.values(store.workouts).find(
-      (w: WorkoutInfo) => w.tag == templateName)!;
+    const template = Object.values(store.data.templates.values)
+      .find(t => t.tag == templateName)!;
     let data = { isTemplate: false, tag: today, exercises: [] as ExerciseInfo[] };
 
     for (const e of template.exercises) {
@@ -53,15 +50,13 @@ export default function Index() {
   };
 
   const fetchMore = async () => {
-    if (!store.moreWorkouts) return;
+    if (!store.data.workouts.more) return;
     try {
-      const payload = { page: store.workoutsPage, includeWorkouts: true };
+      const payload = { page: store.data.workouts.page, includeWorkouts: true };
       const json = await request("POST", "/auth/user", payload, store.jwt);
-      for (const w of json.user.workouts) store.upsertWorkout(w);
-      store.updateUserData({
-        moreWorkouts: json.moreWorkouts,
-        workoutsPage: store.workoutsPage + 1,
-      });
+      for (const w of json.user.workouts)
+        store.upsertWorkout(w);
+      store.paginate("workouts", json.moreWorkouts);
     } catch (err: any) {
       console.log("ERROR!", err);
     }

@@ -22,145 +22,167 @@ export interface WorkoutInfo {
   tag: string;
 }
 
-export interface AppStore {
+interface PaginatedData<T> {
+  page: number;
+  more: boolean;
+  values: Record<string, T>;
+}
+
+type DataKey = "workouts" | "templates" | "periodDays" | "weightEntries";
+const keys = ["workouts", "templates", "periodDays", "weightEntries"];
+
+type Data = {
+  [K in DataKey]: PaginatedData<
+    K extends "workouts" | "templates"
+    ? WorkoutInfo
+    : K extends "periodDays" ? boolean : number>
+}
+
+export interface AppState {
   jwt: string;
   useImperial: boolean;
-  workouts: Record<number, WorkoutInfo>;
-  periodDays: Record<string, boolean>;
-  weightEntries: Record<string, number>;
+  data: Data;
 
-  // TODO: refactor
-  workoutsPage: number;
-  moreWorkouts: boolean;
-  templatesPage: number;
-  moreTemplates: boolean;
-  periodDaysPage: number;
-  morePeriodDays: boolean;
-  weightEntriesPage: number;
-  moreWeightEntries: boolean;
+  setAllData: (jwt: string, json: any) => void;
+  updateUserData: (userData: object) => void;
+  paginate: (dataType: DataKey, more: boolean) => void;
 
-  updateUserData: (userDate: object) => void;
   upsertWorkout: (w: WorkoutInfo) => void;
   removeWorkout: (id: number) => void;
+
   addExercise: (workoutId: number, exercise: ExerciseInfo) => void;
-  updateExercise: (
-    workoutId: number,
-    exerciseIndex: number,
-    exercise: ExerciseInfo,
-  ) => void;
+  updateExercise: (workoutId: number, exerciseIndex: number, exercise: ExerciseInfo) => void;
   removeExercise: (workoutId: number, exerciseIndex: number) => void;
-  togglePeriodDate: (date: string) => void;
-  setAllData: (jwt: string, json: any) => void;
+
+  togglePeriodDay: (day: string) => void;
+}
+
+function updateExercises(state: AppState, workoutId: number,
+  exercises: ExerciseInfo[]): Partial<AppState> {
+  const key = workoutId in state.data.workouts.values ? "workouts" : "templates";
+  return {
+    data: {
+      ...state.data,
+      [key]: {
+        ...state.data[key],
+        values: {
+          ...state.data[key].values,
+          [workoutId]: { ...state.data[key].values[workoutId], exercises }
+        }
+      }
+    }
+  };
 }
 
 // remember, set() *merges* state
-const createAppStore: StateCreator<AppStore> = (set, _get) => ({
+const createAppStore: StateCreator<AppState> = (set, _get) => ({
   jwt: "",
   useImperial: true,
-  workouts: {},
-  periodDays: {},
-  weightEntries: {},
-
-  workoutsPage: 1,
-  moreWorkouts: false,
-  templatesPage: 1,
-  moreTemplates: false,
-  periodDaysPage: 1,
-  morePeriodDays: false,
-  weightEntriesPage: 0,
-  moreWeightEntries: false,
+  data: Object.fromEntries(keys.map(k =>
+    [k, { page: 1, more: false, values: {} }])) as Data,
 
   updateUserData: (userData) =>
-    set((state: AppStore) => ({ ...state, ...userData })),
+    set((state: AppState) => ({ ...state, ...userData })),
 
   setAllData: (jwt, json) =>
-    set((_state: AppStore) => {
-      let workouts = {} as Record<number, WorkoutInfo>;
-      for (const w of json.user.workouts)
-        workouts[w.id] = w;
+    set((_state: AppState) => {
+      let data = Object.fromEntries(keys.map(k =>
+        [k, { page: 1, more: false, values: {} }])) as Data;
 
-      let periodDays = {} as Record<string, boolean>;
+      for (const w of json.user.workouts) {
+        if (w.isTemplate)
+          data.templates.values[w.id] = w;
+        else
+          data.workouts.values[w.id] = w;
+      }
+
       for (const pd of json.user.periodDays)
-        periodDays[pd.date] = true;
+        data.periodDays.values[pd.date] = true;
 
-      let weightEntries = {} as Record<string, number>;
       for (const w of json.user.weightEntries)
-        weightEntries[w.date] = w.value;
-
-      // TODO: templates aren't loaded on login...
+        data.weightEntries.values[w.date] = w.value;
 
       return {
-        jwt,
-        workouts,
-        periodDays,
-        weightEntries,
-        moreWorkouts: json.moreWorkouts,
-        moreTemplates: json.moreTemplates,
-        morePeriodDays: json.morePeriodDays,
-        moreWeightEntries: json.moreWeightEntries,
+        jwt, ressources: data,
         useImperial: json.user.settings.useImperial,
       };
     }),
 
-  upsertWorkout: (w) =>
-    set((state: AppStore) => ({
-      workouts: {
-        ...state.workouts,
-        [w.id]: {
-          ...state.workouts[w.id],
-          ...w,
-        },
-      },
+  paginate: (dataType, more) =>
+    set((state: AppState) => ({
+      data: {
+        ...state.data,
+        [dataType]: {
+          ...state.data[dataType],
+          page: state.data[dataType].page + 1,
+          more,
+        }
+      }
     })),
 
+  upsertWorkout: (w) =>
+    set((state: AppState) => {
+      const key = w.isTemplate ? "templates" : "workouts";
+      return {
+        data: {
+          ...state.data,
+          [key]: {
+            ...state.data[key],
+            values: {
+              ...state.data[key].values,
+              [w.id]: { ...state.data[key].values[w.id], ...w }
+            },
+          }
+        },
+    }}),
+
   removeWorkout: (id) =>
-    set((state: AppStore) => {
-      let workouts = { ...state.workouts };
-      delete workouts[id];
-      return { workouts };
+    set((state: AppState) => {
+      const key = id in state.data.workouts.values ? "workouts" : "templates";
+      let values = { ...state.data[key].values };
+      delete values[id];
+      return {
+        data: {
+          ...state.data,
+          [key]: { ...state.data[key], values }
+        }
+      };
     }),
 
   addExercise: (workoutId, exercise) =>
-    set((state: AppStore) => ({
-      workouts: {
-        ...state.workouts,
-        [workoutId]: {
-          ...state.workouts[workoutId],
-          exercises: [...state.workouts[workoutId].exercises, exercise],
-        },
-      },
-    })),
+    set((state: AppState) => {
+      const key = workoutId in state.data.workouts.values ? "workouts" : "templates";
+      const exercises = [...state.data[key].values[workoutId].exercises, exercise];
+      return updateExercises(state, workoutId, exercises);
+    }),
 
   updateExercise: (workoutId, exerciseIndex, exercise) =>
-    set((state: AppStore) => {
-      let exercises = [...state.workouts[workoutId].exercises];
+    set((state: AppState) => {
+      const key = workoutId in state.data.workouts.values ? "workouts" : "templates";
+      let exercises = [...state.data[key].values[workoutId].exercises];
       Object.assign(exercises[exerciseIndex], exercise);
-      return {
-        workouts: {
-          ...state.workouts,
-          [workoutId]: { ...state.workouts[workoutId], exercises },
-        },
-      };
+      return updateExercises(state, workoutId, exercises);
     }),
 
   removeExercise: (workoutId, exerciseIndex) =>
-    set((state: AppStore) => {
-      let exercises = [...state.workouts[workoutId].exercises];
+    set((state: AppState) => {
+      const key = workoutId in state.data.workouts.values ? "workouts" : "templates";
+      let exercises = [...state.data[key].values[workoutId].exercises];
       exercises.splice(exerciseIndex, 1);
-      return {
-        workouts: {
-          ...state.workouts,
-          [workoutId]: { ...state.workouts[workoutId], exercises },
-        },
-      };
+      return updateExercises(state, workoutId, exercises);
     }),
 
-  togglePeriodDate: (date) =>
-    set((state) => {
-      let dates = { ...state.periodDays };
-      if (dates[date]) delete dates[date];
-      else dates[date] = true;
-      return { periodDays: dates };
+  togglePeriodDay: (day) =>
+    set((state: AppState) => {
+      let days = { ...state.data.periodDays.values };
+      if (days[day]) delete days[day];
+      else days[day] = true;
+      return {
+        data: {
+          ...state.data,
+          periodDays: { ...state.data.periodDays, values: days }
+        }
+      };
     }),
 });
 
@@ -176,15 +198,14 @@ const storageBackend: StateStorage = {
   },
 };
 
-
-export const useStore = create<AppStore>()(
+export const useStore = create<AppState>()(
   persist(createAppStore, {
-    name: `aro-app-${Constants.installationId}`,
+    name: `aro-${Constants.installationId}`,
     storage: createJSONStorage(() => storageBackend),
   }),
 );
 
 export const resetStore = async () => {
   useStore.setState(useStore.getInitialState());
-  await storageBackend.removeItem("app-data");
+  await storageBackend.removeItem(`aro-${Constants.installationId}`);
 };

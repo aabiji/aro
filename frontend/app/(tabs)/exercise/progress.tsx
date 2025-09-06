@@ -146,8 +146,8 @@ export default function ProgressPage() {
 
   /*
   // map the data into a set of plot points, and group by exercise
-  let exercises: Record<string, PlotGroup> = {};
-  for (const w of Object.values(store.workouts)) {
+  let exercises: Record<string, Group> = {};
+  for (const w of Object.values(store.data.workouts.values)) {
     if (w.isTemplate) continue;
     for (const e of w.exercises) {
       const point = {

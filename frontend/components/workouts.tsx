@@ -1,14 +1,14 @@
 import React, { useState } from "react";
 
 import { ExerciseInfo, ExerciseType, useStore, WorkoutInfo } from "@/lib/state";
-import { AppStore } from "@/lib/state";
+import { AppState } from "@/lib/state";
 import { request } from "@/lib/utils";
 import useDelayedAction from "@/lib/action";
 
 import { Text, View } from "react-native";
 import { Card, Input, Button, Dropdown } from "@/components/elements";
 
-const updateWorkout = async (workout: WorkoutInfo, store: AppStore) => {
+const updateWorkout = async (workout: WorkoutInfo, store: AppState) => {
   try {
     // update = delete then create again
     await request("DELETE", `/auth/workout?id=${workout.id}`, undefined, store.jwt);

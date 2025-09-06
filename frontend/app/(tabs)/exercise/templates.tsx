@@ -23,15 +23,13 @@ export default function TemplatesPage() {
   };
 
   const fetchMore = async () => {
-    if (!store.moreTemplates) return;
+    if (!store.data.templates.more) return;
     try {
-      const payload = { page: store.templatesPage, includeTemplates: true };
+      const payload = { page: store.data.templates.page, includeTemplates: true };
       const json = await request("POST", "/auth/user", payload, store.jwt);
-      for (const w of json.user.workouts) store.upsertWorkout(w);
-      store.updateUserData({
-        moreTemplates: json.moreTemplates,
-        templatesPage: store.templatesPage + 1,
-      });
+      for (const w of json.user.workouts)
+        store.upsertWorkout(w);
+      store.paginate("templates", json.moreTemplates);
     } catch (err: any) {
       console.log("ERROR!", err);
     }
@@ -52,12 +50,11 @@ export default function TemplatesPage() {
           onPress={createTemplate} />
       </View>
 
-      {!Object.values(store.workouts).some((w: WorkoutInfo) => w.isTemplate) && (
-        <Text className="text-center text-sm text-grey-400">No workout templates</Text>
-      )}
-
       <FlatList
-        data={Object.values(store.workouts).filter((w: WorkoutInfo) => w.isTemplate)}
+        data={Object.values(store.data.templates.values)}
+        ListEmptyComponent={
+          <Text className="text-center text-sm text-grey-400">No workout templates</Text>
+        }
         keyExtractor={(w: WorkoutInfo) => String(w.id)}
         className="w-[100%]" onEndReached={fetchMore}
         renderItem={({ item }) => <WorkoutTemplateMemo workout={item} />} />
