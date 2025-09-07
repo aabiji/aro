@@ -58,8 +58,8 @@ func AuthMiddleware(s *Server) gin.HandlerFunc {
 			return
 		}
 
-		user := s.GetUser(id)
-		if user == nil {
+		user, err := s.db.GetUser("ID", id)
+		if user == nil || err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid user id"})
 			return
 		}
@@ -95,4 +95,5 @@ func main() {
 
 	gin.SetMode(gin.DebugMode)
 	r.Run("0.0.0.0:8080")
+	server.Cleanup()
 }
