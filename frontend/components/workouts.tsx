@@ -71,7 +71,7 @@ function WorkoutTemplate({ workout }: { workout: WorkoutInfo }) {
           placeholder="Template name" className="w-[90%]"
           text={workout.tag}
           setText={(value: string) => update(() =>
-            store.upsertWorkout({ id: workout.id, name: value })
+            store.upsertWorkout({ id: workout.id, tag: value })
           )} />
         <Button
           icon="trash-outline" transparent iconColor="red"

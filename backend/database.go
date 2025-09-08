@@ -23,23 +23,25 @@ type User struct {
 
 type Workout struct {
 	ID        uint       `json:"id,omitempty"`
+	Deleted   bool       `json:"deleted,omitempty"`
 	Template  bool       `json:"isTemplate"`
 	Tag       string     `json:"tag"` // name or date
 	Exercises []Exercise `json:"exercises"`
 }
 
 type Exercise struct {
-	Name         string `json:"name"`
-	ExerciseType int    `json:"exerciseType"`
-	Reps         []int  `json:"reps"`
-	Weight       int    `json:"weight"`
-	Duration     int    `json:"duration"`
-	Distance     int    `json:"distance"`
+	Name         string  `json:"name"`
+	ExerciseType int     `json:"exerciseType"`
+	Reps         []int32 `json:"reps"`
+	Weight       int     `json:"weight"`
+	Duration     int     `json:"duration"`
+	Distance     int     `json:"distance"`
 }
 
 type Record struct {
-	Date  string `json:"date"`
-	Value uint64 `json:"value"`
+	Deleted bool   `json:"deleted,omitempty"`
+	Date    string `json:"date"`
+	Value   int    `json:"value"`
 }
 
 type Settings struct {
@@ -102,14 +104,22 @@ func (d *Database) CreateUser(email string, password string) (uint, error) {
 	defer tx.Rollback(d.ctx)
 
 	var userId uint
-	sql1 := "insert into Users (Email, Password) values ($1, $2) returning ID;"
-	err = tx.QueryRow(d.ctx, sql1, email, password).Scan(&userId)
+	sql1 := `
+		insert into Users
+		(LastModified, Deleted, Email, Password)
+		values ($1, $2, $3, $4) returning ID;
+	`
+	err = tx.QueryRow(d.ctx, sql1, time.Now(), false, email, password).Scan(&userId)
 	if err != nil {
 		return 0, err
 	}
 
-	sql2 := "insert into Settings (UserID, UseImperial) values ($1, $2);"
-	_, err = tx.Exec(d.ctx, sql2, userId, true)
+	sql2 := `
+		insert into Settings
+		(LastModified, Deleted, UserID, UseImperial)
+		values ($1, $2, $3, $4);
+	`
+	_, err = tx.Exec(d.ctx, sql2, time.Now(), false, userId, true)
 	if err != nil {
 		return 0, err
 	}
@@ -119,7 +129,9 @@ func (d *Database) CreateUser(email string, password string) (uint, error) {
 }
 
 func (d *Database) GetUser(valueName string, value any) (*User, error) {
-	sql := fmt.Sprintf("select ID, Email, Password from Users where %s = $1", valueName)
+	sql := fmt.Sprintf(
+		"select ID, Email, Password from Users where %s = $1 and Deleted = false",
+		valueName)
 
 	var user User
 	err := d.pool.QueryRow(d.ctx, sql, value).Scan(&user.ID, &user.Email, &user.Password)
@@ -133,7 +145,57 @@ func (d *Database) GetUser(valueName string, value any) (*User, error) {
 }
 
 func (d *Database) DeleteUser(id uint) error {
-	_, err := d.pool.Exec(d.ctx, "delete from Users where ID = $1;", id)
+	tx, err := d.pool.Begin(d.ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(d.ctx)
+
+	sql := "update Users set Deleted = true where ID = $1;"
+	_, err = tx.Exec(d.ctx, sql, id)
+	if err != nil {
+		return err
+	}
+
+	sql = "update Settings set Deleted = true, LastModified = $1 where UserID = $2;"
+	_, err = tx.Exec(d.ctx, sql, time.Now(), id)
+	if err != nil {
+		return err
+	}
+
+	sql = "update Records set Deleted = true, LastModified = $1 where UserID = $2;"
+	_, err = tx.Exec(d.ctx, sql, time.Now(), id)
+	if err != nil {
+		return err
+	}
+
+	sql = `
+		update Workouts set Deleted = true, LastModified = $1
+		where UserID = $2 returning ID;`
+	rows, err := tx.Query(d.ctx, sql, time.Now(), id)
+	if err != nil {
+		return err
+	}
+
+	for rows.Next() {
+		var workoutID uint
+		if err := rows.Scan(&workoutID); err != nil {
+			return err
+		}
+
+		sql = `update Exercises set Deleted = true, LastModified = $1 where WorkoutID = $2;`
+		_, err := tx.Exec(d.ctx, sql, time.Now(), workoutID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit(d.ctx)
+}
+
+func (d *Database) UpdateSettings(id uint, useImperial bool) error {
+	sql := "update Settings set UseImperial = $1 where UserID = $2;"
+	_, err := d.pool.Exec(d.ctx, sql, useImperial, id)
 	return err
 }
 
@@ -141,13 +203,13 @@ func fetchRows[T any](
 	d *Database, sql string,
 	scanRow func(pgx.Rows) (T, error),
 	args ...any) ([]T, error) {
-	rows, err := d.pool.Query(d.ctx, sql, args)
+	rows, err := d.pool.Query(d.ctx, sql, args...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var values []T
+	values := []T{}
 	for rows.Next() {
 		value, err := scanRow(rows)
 		if err != nil {
@@ -155,14 +217,15 @@ func fetchRows[T any](
 		}
 		values = append(values, value)
 	}
-
 	return values, nil
 }
 
-func (d *Database) GetUserInfo(id uint, limit int, options UserInfoOptions) (User, error) {
+func (d *Database) GetUserInfo(id uint, limit int, options InfoRequest) (User, error) {
+	timestamp := time.Unix(options.LastUpdateTime, 0)
+
 	scanWorkout := func(rows pgx.Rows) (Workout, error) {
 		var w Workout
-		err := rows.Scan(&w.ID, &w.Template, &w.Tag)
+		err := rows.Scan(&w.ID, &w.Deleted, &w.Template, &w.Tag)
 		return w, err
 	}
 
@@ -174,17 +237,17 @@ func (d *Database) GetUserInfo(id uint, limit int, options UserInfoOptions) (Use
 
 	scanRecord := func(rows pgx.Rows) (Record, error) {
 		var r Record
-		err := rows.Scan(&r.Date, &r.Value)
+		err := rows.Scan(&r.Deleted, &r.Date, &r.Value)
 		return r, err
 	}
 
-	var user User
+	user := User{Workouts: []Workout{}}
 
 	sql := `
-		select ID, Template, Tag from Workouts
-		where UserID = $1 and Workouts.IsTemplate = $2
-		order by Workouts.CreatedAt desc
-		limit $3 offset $4;
+		select ID, Deleted, IsTemplate, Tag from Workouts
+		where UserID = $1 and Workouts.IsTemplate = $2 and LastModified >= $3
+		order by Workouts.LastModified desc
+		limit $4 offset $5;
 	`
 	bools := []bool{options.GetTemplates, options.GetWorkouts}
 	for i, get := range bools {
@@ -192,13 +255,15 @@ func (d *Database) GetUserInfo(id uint, limit int, options UserInfoOptions) (Use
 			continue
 		}
 
-		workouts, err := fetchRows(d, sql, scanWorkout, id, i == 0, limit, options.Page)
+		workouts, err := fetchRows(d, sql, scanWorkout, id, i == 0, timestamp, limit, options.Page)
 		if err != nil {
 			return User{}, err
 		}
 
 		for j := range workouts {
-			sql := "select Name, ExerciseType, Reps, Weight, Duration, Distance from Exercises where WorkoutID = $1;"
+			sql := `
+				select Name, ExerciseType, Reps, Weight, Duration, Distance from Exercises
+				where WorkoutID = $1;`
 			exercises, err := fetchRows(d, sql, scanExercise, workouts[j].ID)
 			if err != nil {
 				return User{}, err
@@ -217,8 +282,11 @@ func (d *Database) GetUserInfo(id uint, limit int, options UserInfoOptions) (Use
 	}
 
 	if options.GetPeriodDays {
-		sql = `select Date, Value from Records where UserID = $1 and Type = $2 limit $3 offset $4;`
-		records, err := fetchRows(d, sql, scanRecord, id, "period", limit, options.Page)
+		sql = `
+			select Deleted, Date, Value from Records
+			where UserID = $1 and Type = $2 and LastModified >= $3
+			limit $4 offset $5;`
+		records, err := fetchRows(d, sql, scanRecord, id, "period", timestamp, limit, options.Page)
 		if err != nil {
 			return User{}, err
 		}
@@ -226,8 +294,11 @@ func (d *Database) GetUserInfo(id uint, limit int, options UserInfoOptions) (Use
 	}
 
 	if options.GetWeightEntries {
-		sql = `select * from Records where UserID = $1 and Type = $2 limit $3 offset $4;`
-		records, err := fetchRows(d, sql, scanRecord, id, "weight", limit, options.Page)
+		sql = `
+			select Deleted, Date, Value from Records
+			where UserID = $1 and Type = $2 and LastModified >= $3
+			limit $4 offset $5;`
+		records, err := fetchRows(d, sql, scanRecord, id, "weight", timestamp, limit, options.Page)
 		if err != nil {
 			return User{}, err
 		}
@@ -235,19 +306,6 @@ func (d *Database) GetUserInfo(id uint, limit int, options UserInfoOptions) (Use
 	}
 
 	return user, nil
-}
-
-func (d *Database) UpdateSettings(id uint, useImperial bool) error {
-	sql := "update Settings set UseImperial = $1 where UserID = $2;"
-	_, err := d.pool.Exec(d.ctx, sql, useImperial, id)
-	return err
-}
-
-func (d *Database) DeleteWorkout(userId uint, workoutId uint) error {
-	sql := "delete from Workouts where UserID = $1 and ID = $2;"
-	_, err := d.pool.Exec(d.ctx, sql, userId, workoutId)
-	return err
-
 }
 
 func (d *Database) CreateWorkout(userId uint, workout Workout) (uint, error) {
@@ -258,22 +316,24 @@ func (d *Database) CreateWorkout(userId uint, workout Workout) (uint, error) {
 	defer tx.Rollback(d.ctx)
 
 	sql := `
-		insert into Workouts (CreatedAt, UserID, IsTemplate, Tag)
-		values ($1, $2, $3, $4)
+		insert into Workouts (LastModified, Deleted, UserID, IsTemplate, Tag)
+		values ($1, $2, $3, $4, $5)
 		returning ID;
 	`
-	now := time.Now().Unix()
 	var workoutId uint
-	if err := tx.QueryRow(d.ctx, sql, now, userId, workout.Template, workout.Tag).Scan(&workoutId); err != nil {
+	if err := tx.QueryRow(d.ctx, sql, time.Now(), false, userId,
+		workout.Template, workout.Tag).Scan(&workoutId); err != nil {
 		return 0, err
 	}
 
 	sql = `
-		insert into Exercises (WorkoutID, Name, ExerciseType, Reps, Weight, Duration, Distance)
-		values ($1, $2, $3, $4, $5, $6, $7);
+		insert into Exercises
+		(LastModified, Deleted, WorkoutID, Name, ExerciseType, Reps,
+		Weight, Duration, Distance)
+		values ($1, $2, $3, $4, $5, $6, $7, $8, $9);
 	`
 	for _, e := range workout.Exercises {
-		if _, err := tx.Exec(d.ctx, sql, workoutId, e.Name,
+		if _, err := tx.Exec(d.ctx, sql, time.Now(), false, workoutId, e.Name,
 			e.ExerciseType, e.Reps, e.Weight, e.Duration, e.Distance); err != nil {
 			return 0, err
 		}
@@ -283,37 +343,62 @@ func (d *Database) CreateWorkout(userId uint, workout Workout) (uint, error) {
 	return workoutId, err
 }
 
+func (d *Database) DeleteWorkout(userId uint, workoutId uint) error {
+	tx, err := d.pool.Begin(d.ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(d.ctx)
+
+	sql := `
+		update Workouts
+		set Deleted = true, LastModified = $1
+		where UserID = $2 and ID = $3;`
+	_, err = tx.Exec(d.ctx, sql, time.Now(), userId, workoutId)
+	if err != nil {
+		return err
+	}
+
+	sql = `update Exercises set Deleted = true, LastModified = $1 where ID = $2;`
+	_, err = tx.Exec(d.ctx, sql, time.Now(), workoutId)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(d.ctx)
+}
+
 func (d *Database) UpsertRecord(userId uint, recordType string, date string, value int) error {
 	sql := `
-		insert into Records (UserID, Type, Date, Value)
-		values ($1, $2, $3, $4)
+		insert into Records (LastModified, Deleted, UserID, Type, Date, Value)
+		values ($1, $2, $3, $4, $5, $6)
 		on conflict(UserID, Type, Date)
-		do update set Value = excluded.Value;
+		do update set Value = excluded.Value, LastModified = excluded.LastModified;
 	`
-	_, err := d.pool.Exec(d.ctx, sql, userId, recordType, date, value)
+	_, err := d.pool.Exec(d.ctx, sql, time.Now(), false, userId, recordType, date, value)
 	return err
 }
 
 func (d *Database) ToggleRecord(userId uint, recordType, date string) error {
 	sql := `
-		select exists (
-			select 1 from Records
-			where UserID = $1 and Type = $2 and Date = $3
-		);
-	`
-	exists := false
-	err := d.pool.QueryRow(d.ctx, sql, userId, recordType, date).Scan(&exists)
-	if err != nil {
+		select Deleted from Records
+		where Deleted = false and UserID = $1 and Type = $2 and Date = $3`
+	deleted := true
+	err := d.pool.QueryRow(d.ctx, sql, userId, recordType, date).Scan(&deleted)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return err
 	}
 
-	if exists {
-		sql := "delete from Records where UserID = $1 and Type = $2 and Date = $3;"
-		if _, err := d.pool.Exec(d.ctx, sql, userId, recordType, date); err != nil {
+	if errors.Is(err, pgx.ErrNoRows) {
+		if err := d.UpsertRecord(userId, recordType, date, 0); err != nil {
 			return err
 		}
 	} else {
-		if err := d.UpsertRecord(userId, recordType, date, 0); err != nil {
+		sql = `
+			update Records set Deleted = $1, LastModified = $2
+			where UserID = $3 and Type = $4 and Date = $5;`
+		if _, err := d.pool.Exec(d.ctx, sql, !deleted, time.Now(),
+			userId, recordType, date); err != nil {
 			return err
 		}
 	}

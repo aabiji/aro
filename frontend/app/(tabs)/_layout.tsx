@@ -4,10 +4,7 @@ import { useStore } from "@/lib/state";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 export default function TabLayout() {
-  // TODO: more secure check, see (tabs)/index.tsx also
   const store = useStore();
-  const authenticated = store.jwt.length > 0;
-
   return (
     <Tabs
       screenOptions={({ route }) => {
@@ -19,7 +16,7 @@ export default function TabLayout() {
           tabBarActiveTintColor: "#60a5fa",
           tabBarInactiveTintColor: "#6b7280",
           tabBarIcon: ({ color }) => {
-            const icons = {
+            const icons: Record<string, string> = {
               index: "barbell-outline", exercise: "barbell-outline",
               food: "fast-food-outline", period: "water",
               settings: "settings-outline", weight: "scale-outline",
@@ -31,7 +28,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{ headerShown: false, tabBarItemStyle: { display: "none" } }} />
-      <Tabs.Protected guard={authenticated}>
+      <Tabs.Protected guard={store.jwt.length > 0}>
         <Tabs.Screen name="food" options={{ title: "Food", headerShown: false }} />
         <Tabs.Screen name="exercise" options={{ title: "Exercise", headerShown: false }} />
         <Tabs.Screen name="weight" options={{ title: "Weight", headerShown: false }} />

@@ -41,10 +41,10 @@ type Data = {
 export interface AppState {
   jwt: string;
   useImperial: boolean;
+  lastUpdateTime: number;
   data: Data;
 
-  setAllData: (jwt: string, json: any) => void;
-  updateUserData: (userData: object) => void;
+  updateUserData: (jwt: string, json: any) => void;
   paginate: (dataType: DataKey, more: boolean) => void;
 
   upsertWorkout: (w: WorkoutInfo) => void;
@@ -55,6 +55,7 @@ export interface AppState {
   removeExercise: (workoutId: number, exerciseIndex: number) => void;
 
   togglePeriodDay: (day: string) => void;
+  updateSettings: (userData: object) => void;
 }
 
 function updateExercises(state: AppState, workoutId: number,
@@ -78,32 +79,39 @@ function updateExercises(state: AppState, workoutId: number,
 const createAppStore: StateCreator<AppState> = (set, _get) => ({
   jwt: "",
   useImperial: true,
+  lastUpdateTime: 0,
   data: Object.fromEntries(keys.map(k =>
     [k, { page: 1, more: false, values: {} }])) as Data,
 
-  updateUserData: (userData) =>
+  updateSettings: (userData) =>
     set((state: AppState) => ({ ...state, ...userData })),
 
-  setAllData: (jwt, json) =>
-    set((_state: AppState) => {
-      let data = Object.fromEntries(keys.map(k =>
-        [k, { page: 1, more: false, values: {} }])) as Data;
+  updateUserData: (jwt, json) =>
+    set((state: AppState) => {
+      let data = structuredClone(state.data);
 
       for (const w of json.user.workouts) {
-        if (w.isTemplate)
-          data.templates.values[w.id] = w;
-        else
-          data.workouts.values[w.id] = w;
+        if (w.deleted) {
+          if (w.isTemplate) delete data.templates.values[w.id];
+          else delete data.workouts.values[w.id];
+        } else {
+          if (w.isTemplate) data.templates.values[w.id] = w;
+          else data.workouts.values[w.id] = w;
+        }
+     }
+
+      for (const pd of json.user.periodDays) {
+        if (pd.deleted) delete data.periodDays.values[pd.date];
+        else data.periodDays.values[pd.date] = true;
       }
 
-      for (const pd of json.user.periodDays)
-        data.periodDays.values[pd.date] = true;
-
-      for (const w of json.user.weightEntries)
+      for (const w of json.user.weightEntries) {
+        if (w.deleted) delete data.weightEntries.values[w.date];
         data.weightEntries.values[w.date] = w.value;
+      }
 
       return {
-        jwt, ressources: data,
+        jwt, ressources: data, lastUpdateTime: Date.now(),
         useImperial: json.user.settings.useImperial,
       };
     }),

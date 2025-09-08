@@ -57,13 +57,13 @@ func (s *Server) SearchFood(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"results": results})
 }
 
-type AuthInfo struct {
+type AuthRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
 func (s *Server) Login(c *gin.Context) {
-	var req AuthInfo
+	var req AuthRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -101,7 +101,7 @@ func (s *Server) Login(c *gin.Context) {
 }
 
 func (s *Server) Signup(c *gin.Context) {
-	var req AuthInfo
+	var req AuthRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -139,17 +139,18 @@ func (s *Server) Signup(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"jwt": token})
 }
 
-type UserInfoOptions struct {
-	Page             int  `json:"page"`
-	GetSettings      bool `json:"getSettings,omitempty"`
-	GetWorkouts      bool `json:"getWorkouts,omitempty"`
-	GetTemplates     bool `json:"getTemplates,omitempty"`
-	GetPeriodDays    bool `json:"getPeriodDays,omitempty"`
-	GetWeightEntries bool `json:"getWeightEntries,omitempty"`
+type InfoRequest struct {
+	Page             int   `json:"page"`
+	LastUpdateTime   int64 `json:"unixTimestamp"`
+	GetSettings      bool  `json:"getSettings,omitempty"`
+	GetWorkouts      bool  `json:"getWorkouts,omitempty"`
+	GetTemplates     bool  `json:"getTemplates,omitempty"`
+	GetPeriodDays    bool  `json:"getPeriodDays,omitempty"`
+	GetWeightEntries bool  `json:"getWeightEntries,omitempty"`
 }
 
 func (s *Server) GetUserInfo(c *gin.Context) {
-	var req UserInfoOptions
+	var req InfoRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

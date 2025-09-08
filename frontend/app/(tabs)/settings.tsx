@@ -11,7 +11,7 @@ export default function Settings() {
   const router = useRouter();
 
   const toggleUnits = async () => {
-    store.updateUserData({ useImperial: !store.useImperial });
+    store.updateSettings({ useImperial: !store.useImperial });
     const url = `/auth/settings?imperial=${store.useImperial}`;
     try {
       await request("POST", url, undefined, store.jwt);

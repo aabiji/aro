@@ -1,22 +1,50 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import * as Crypto from "expo-crypto";
+import { useRouter } from "expo-router";
 import { useStore } from "@/lib/state";
 import { request } from "@/lib/utils";
 
-import { Redirect } from "expo-router";
 import { Image } from "expo-image";
 import { Text, View } from "react-native";
 import { Container, Card, Button, Input } from "@/components/elements";
 
 export default function Index() {
-  // TODO: what to do when the jwt expires?
   const store = useStore();
-  const authenticated = store.jwt.length > 0;
+  const router = useRouter();
 
   const [isLogin, setIsLogin] = useState(true);
   const [errMsg, setErrMsg] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  const syncUserData = async (jwt: string) => {
+    const payload = {
+      page: 0,
+      getSettings: true,
+      getTemplates: true,
+      getWorkouts: true,
+      getPeriodDays: true,
+      getWeightEntries: true,
+      unixTimestamp: store.lastUpdateTime,
+    };
+    try {
+      const json = await request("POST", "/auth/user", payload, jwt);
+      console.log(json);
+      store.updateUserData(jwt, json);
+      router.replace("/exercise");
+    } catch (err: any) {
+      console.log("ERROR!", err);
+      // do nothing, since failing this request
+      // (because of an invalid jwt or something)
+      // should prompt the user to reauthenticate anyways
+      // TODO: redirect to network error page in case of that
+    }
+  };
+
+  useEffect(() => {
+    if (store.jwt.length > 0)
+      syncUserData(store.jwt);
+  }, []);
 
   const toggle = () => {
     setIsLogin(!isLogin);
@@ -54,23 +82,12 @@ export default function Index() {
     const endpoint = isLogin ? "/login" : "/signup";
 
     try {
-      const jwtJson = await request("POST", endpoint, body);
-      const payload = {
-        page: 0,
-        getSettings: true,
-        getTemplates: true,
-        getWorkouts: true,
-        getPeriodDays: true,
-        getWeightEntries: true,
-      };
-      const dataJson = await request("POST", "/auth/user", payload, jwtJson.jwt);
-      store.setAllData(jwtJson.jwt, dataJson);
+      const json = await request("POST", endpoint, body);
+      syncUserData(json.jwt);
     } catch (err: any) {
       setErrMsg(err.message);
     }
   };
-
-  if (authenticated) return <Redirect href="/exercise" />;
 
   return (
     <Container>

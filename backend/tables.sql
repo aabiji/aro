@@ -1,15 +1,19 @@
 
 create table if not exists Users (
 	ID serial primary key,
+	LastModified timestamp not null,
+	Deleted boolean not null,
+
 	Email text not null,
 	Password text not null
 );
 
 create table if not exists Workouts (
 	ID serial primary key,
-	UserID int not null,
+	LastModified timestamp not null,
+	Deleted boolean not null,
 
-    CreatedAt int not null,
+	UserID int not null,
 	IsTemplate boolean not null,
 	Tag text not null,
 
@@ -18,8 +22,10 @@ create table if not exists Workouts (
 
 create table if not exists Exercises (
 	ID serial primary key,
-	WorkoutID int not null,
+	LastModified timestamp not null,
+	Deleted boolean not null,
 
+	WorkoutID int not null,
 	Name text not null,
 	ExerciseType int not null,
 	Reps int[] not null,
@@ -32,8 +38,10 @@ create table if not exists Exercises (
 
 create table if not exists Records (
 	ID serial primary key,
-	UserID int not null,
+	LastModified timestamp not null,
+	Deleted boolean not null,
 
+	UserID int not null,
 	Type text not null,
 	Date text not null,
 	Value int,
@@ -44,8 +52,10 @@ create table if not exists Records (
 
 create table if not exists Settings (
 	ID serial primary key,
-	UserID int not null,
+	LastModified timestamp not null,
+	Deleted boolean not null,
 
+	UserID int not null,
 	UseImperial boolean not null,
 
     CONSTRAINT fk_settings_user FOREIGN KEY(UserID) REFERENCES Users(ID) ON DELETE CASCADE
@@ -53,6 +63,8 @@ create table if not exists Settings (
 
 create table if not exists Foods (
 	ID serial primary key,
+	LastModified timestamp not null,
+	Deleted boolean not null,
 
 	Name text not null unique,
 	ServingSize int not null,
@@ -61,8 +73,10 @@ create table if not exists Foods (
 
 create table if not exists Nutrients (
 	ID serial primary key,
-	FoodID int not null,
+	LastModified timestamp not null,
+	Deleted boolean not null,
 
+	FoodID int not null,
 	Name text not null,
 	Unit text not null,
 	Value float not null,
