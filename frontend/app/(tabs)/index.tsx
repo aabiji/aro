@@ -29,9 +29,8 @@ export default function Index() {
     };
     try {
       const json = await request("POST", "/auth/user", payload, jwt);
-      console.log(json);
-      store.updateUserData(jwt, json);
-      router.replace("/exercise");
+       store.updateUserData(jwt, json);
+      router.replace("/food");
     } catch (err: any) {
       console.log("ERROR!", err);
       // do nothing, since failing this request

@@ -5,7 +5,7 @@ import { request } from "@/lib/utils";
 import { FlatList, Text, View } from "react-native";
 import { WorkoutTemplateMemo } from "@/components/workouts";
 import { Container, Input, Button } from "@/components/elements";
-import { BackHeader } from "@/components/header";
+import { BackHeader } from "@/components/elements";
 
 export default function TemplatesPage() {
   const store = useStore();

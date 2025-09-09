@@ -67,8 +67,8 @@ create table if not exists Foods (
 	Deleted boolean not null,
 
 	Name text not null unique,
-	ServingSize int not null,
-	ServingUnit text not null
+	BaseServingSize int not null,
+	BaseServingUnit text not null
 );
 
 create table if not exists Nutrients (

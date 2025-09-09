@@ -88,7 +88,7 @@ const createAppStore: StateCreator<AppState> = (set, _get) => ({
 
   updateUserData: (jwt, json) =>
     set((state: AppState) => {
-      let data = structuredClone(state.data);
+      let data = JSON.parse(JSON.stringify(state.data)); // clone
 
       for (const w of json.user.workouts) {
         if (w.deleted) {

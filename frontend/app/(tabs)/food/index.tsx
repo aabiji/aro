@@ -1,77 +1,135 @@
-import { useEffect, useRef, useState } from "react";
-import { BarcodeScanningResult, CameraView, useCameraPermissions } from "expo-camera";
-import { request } from "@/lib/utils";
+import { router } from "expo-router";
+import { useState } from "react";
+import { useStore } from "@/lib/state";
+import { formatDate } from "@/lib/utils";
 
-import { Card, Container, Button } from "@/components/elements";
-import { Platform, Pressable, Text, View } from "react-native";
-import { Svg, Polygon } from "react-native-svg";
+import { Pressable, Text, View } from "react-native";
+import { Button, Card, Container } from "@/components/elements";
 
-export default function SearchPage() {
-  const [permission, requestPermission] = useCameraPermissions();
-  const [outlinePoints, setOutlinePoints] = useState([]);
-  const [barcode, setBarcode] = useState("");
-  let timeout = useRef(null);
+import Ionicons from "@expo/vector-icons/Ionicons";
 
-  const handleBarcode = async (result: BarcodeScanningResult) => {
-    setBarcode(result.data);
-    console.log(result.data)
-    setOutlinePoints(result.cornerPoints ?? []);
+// TODO: store this in the database, add crud api endpoints, store in app state
+interface MealNode {
+  name?: string;
+  foodID?: number;
+  servings?: number;
+  children: number[]; // list of meal ids
+};
 
-    if (timeout.current) clearTimeout(timeout.current);
-    timeout.current = setTimeout(() => {
-      setBarcode("");
-      setOutlinePoints([]);
-    }, 1000);
+const foodDB: Record<number, object> = {
+  1: {
+    name: "oatmeal",
+    calories: 140,
+    protein: 5
+  },
+  2: {
+    name: "milk",
+    calories: 160,
+    protein: 18
+  },
+  3: {
+    name: "bread",
+    calories: 180,
+    protein: 8
+  },
+  4: {
+    name: "salad mix",
+    calories: 200,
+    protein: 4,
+  },
+  5: {
+    name: "spagetti",
+    calories: 310,
+    protein: 5
+  },
+  6: {
+    name: "orange",
+    calories: 100,
+    protein: 2
+  },
+}
+
+const rootID = 0;
+const scheduledMeals = ["Breakfast", "Lunch", "Dinner"];
+const meals: Record<number, MealNode> = {
+  0: { name: "Today's date", children: [1, 2, 3] },
+  1: { name: "Breakfast", children: [10] },
+  2: { name: "Lunch", children: [6, 7] },
+  3: { name: "Dinner", children: [8, 9] },
+  4: { servings: 2, foodID: 1, children: [] },
+  5: { servings: 0.5, foodID: 2, children: [] },
+  6: { servings: 1, foodID: 3, children: [] },
+  7: { servings: 1, foodID: 4, children: [] },
+  8: { servings: 1, foodID: 5, children: [] },
+  9: { servings: 1, foodID: 6, children: [] },
+  10: { name: "Porridge", children: [4, 5] },
+};
+
+function Meal({meal}: {meal: MealNode}) {
+  const isParent = meal.children.length > 0;
+  const [showChildren, setShowChildren] = useState(false);
+
+  const name = isParent ? meal.name : foodDB[meal.foodID!].name;
+  const scheduled = scheduledMeals.includes(name);
+
+  const updateItem = () => {
+    if (isParent)
+      setShowChildren(!showChildren);
+    else
+      router.push(`/food/info?foodID=${meal.foodID}&editable=1`);
   }
 
-  useEffect(() => {
-    return () => { if (timeout.current) clearTimeout(timeout.current); }
-  }, []);
+  return (
+    <Card transparent={scheduled} flatten={!scheduled}>
+      <Pressable onPress={updateItem} className="flex-row justify-between">
+        <Text className={`${scheduled ? "font-bold" : ""}`}>{name}</Text>
+        {isParent && <Ionicons
+          name={`${showChildren ? "chevron-up" : "chevron-down"}`}
+          size={25} color="gray" />}
+      </Pressable>
 
-  const searchFood = async () => {
-    try {
-      const url = `/food/barcode?barcode=${barcode}&os=${Platform.OS}`;
-      const json = await request("GET", url, undefined, undefined);
-      console.log(json.food); // TODO: handle the result!
-    } catch (err: any) {
-      if (err.msg === "Food not found")
-        console.log(":(");
-      else
-        console.log("ERROR!", err);
-    }
-  };
+      {showChildren &&
+        <View className="w-[100%] p-0 m-0">
+          {meal.children.map((id, i) => <Meal meal={meals[id]} key={i} />)}
+        </View>
+      }
+    </Card>
+  );
+}
 
-  if (!permission) return <View />;
-  if (!permission.granted) {
-    return (
-      <Container>
-        <Card>
-          <Text className="text-center">We need your permission to use the camera</Text>
-          <Button text="Grant permission" onPress={requestPermission} />
-        </Card>
-      </Container>
-    );
+export default function FoodPage() {
+  const store = useStore();
+
+  const addFood = () => {
+    console.log("adding...");
+  }
+
+  const changeDay = (next: boolean) => {
+    console.log("changing date...");
   }
 
   return (
     <Container>
-      <View style={{ flex: 1 }}>
-        <CameraView style={{ height: "78%" }} onBarcodeScanned={handleBarcode} />
-        <Pressable style={{ height: "20%" }}
-          onPress={() => searchFood()}
-          className="disabled:bg-neutral-500 bg-primary-500 w-[100%] p-2"
-          disabled={outlinePoints.length === 0} >
-          <Text className="text-white text-center">Search barcode</Text>
-        </Pressable>
+      <View className="flex-row justify-between items-center px-3">
+        <Text>{formatDate(new Date(), "long")}</Text>
+
+        {/*make prev/next buttons work, open food search page on click */}
+        <View className="flex-row items-center gap-2">
+          <Button
+            icon="chevron-back" iconSize={24}
+            iconColor="#808080" transparent
+            onPress={() => changeDay(false)} />
+          <Button icon="add" iconSize={26} iconColor="white" onPress={addFood} />
+          <Button
+            icon="chevron-forward" iconSize={24}
+            iconColor="#808080" transparent
+            onPress={() => changeDay(true)} />
+        </View>
       </View>
 
-      {outlinePoints.length > 0 && (
-        <Svg style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
-          <Polygon
-            points={outlinePoints.map(p => `${p.x},${p.y}`).join(" ")}
-            fill="rgba(0, 0, 0, 0)" stroke="lime" strokeWidth="1" />
-        </Svg>
-      )}
+      {/*add how many calories consumed, how much protein consumed, etc... "targets" */}
+
+      {meals[rootID].children.map((id, i) => <Meal meal={meals[id]} key={i} />)}
     </Container>
   );
 }

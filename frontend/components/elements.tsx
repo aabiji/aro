@@ -1,17 +1,26 @@
-import { useState } from "react";
+import React, { useState } from "react";
+import {useRouter} from "expo-router";
 
 import { Pressable, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import Ionicons from "@expo/vector-icons/Ionicons";
 
-export function Card({ children, className }:
-  { children: React.ReactNode; className?: string }) {
+interface CardProps {
+  children: React.ReactNode;
+  className?: string;
+  transparent?: boolean;
+  flatten?: boolean;
+}
+
+export function Card({ children, className, transparent, flatten }: CardProps) {
   const { width } = useWindowDimensions();
-  const style = `mx-auto p-2 bg-surface-color mb-5 ${className ?? ""} rounded-xl`;
+  const style = `
+  mx-auto p-2 ${transparent ? "" : "bg-surface-color"} mb-4 rounded-xl ${className ?? ""}`;
+  const cssWidth = flatten ? "100%" : width < 400 ? "92%" : "50%";
 
   return (
-    <View style={{ width: width < 400 ? "92%" : "50%" }} className={style}>
+    <View style={{ width: cssWidth }} className={style}>
       {children}
     </View>
   );
@@ -28,6 +37,7 @@ export function Container({ children }: { children: React.ReactNode }) {
     </SafeAreaView>
   );
 }
+
 interface ButtonProps {
   text?: string;
   icon?: string;
@@ -157,6 +167,18 @@ export function Checkbox({ label, handleToggle, value }: {
         onPress={() => handleToggle()}>
         {value && <Ionicons name="checkmark-outline" color="white" size={22} />}
       </Pressable>
+    </View>
+  );
+}
+
+export function BackHeader({ title }: { title: string; }) {
+  const router = useRouter();
+  return (
+    <View className="w-full flex-row items-center mb-2">
+      <Pressable onPress={() => router.back()}>
+        <Ionicons name="chevron-back-outline" size={35} color="gray" />
+      </Pressable>
+      <Text className="text-xl ml-2 text-gray-600">{title}</Text>
     </View>
   );
 }
