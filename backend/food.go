@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 )
 
@@ -72,7 +71,6 @@ func GetProducts(value, mobileOS string, valueIsBarcode bool) ([]map[string]any,
 }
 
 func ParseProductInfo(info map[string]any) (Food, error) {
-	var err error
 	food, ok := Food{}, true
 
 	food.Name, ok = info["product_name"].(string)
@@ -80,23 +78,17 @@ func ParseProductInfo(info map[string]any) (Food, error) {
 		return food, fmt.Errorf("couldn't get product name")
 	}
 
-	sizeStr, ok := info["serving_quantity"].(string)
-	if !ok {
-		return food, fmt.Errorf("couldn't get serving size")
-	}
-	food.ServingSize, err = strconv.Atoi(sizeStr)
-	if err != nil {
-		return food, fmt.Errorf("couldn't get serving size")
+	food.TotalSize, _ = info["product_quantity"].(string)
+	food.SizeUnit, _ = info["product_quantity_unit"].(string)
+
+	food.ServingSize, ok = info["serving_quantity"].(string)
+	if !ok { // assume only 1 serving
+		food.ServingSize = food.TotalSize
 	}
 
-	food.ServingUnit, ok = info["serving_quantity_unit"].(string)
+	nutrients, ok := info["nutriments"].(map[string]any)
 	if !ok {
-		return food, fmt.Errorf("couldn't get serving size unit")
-	}
-
-	nutrients, ok := info["nutrients"].(map[string]any)
-	if !ok {
-		return food, fmt.Errorf("couldn't get nutrients")
+		return food, fmt.Errorf("%s couldn't get nutrients", food.Name)
 	}
 
 	for n := range nutrients {

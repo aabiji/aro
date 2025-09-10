@@ -27,17 +27,33 @@ func NewServer() (Server, error) {
 
 func (s *Server) Cleanup() { s.db.Close() }
 
+// Get info from a food by id, text search or barcode number
 func (s *Server) SearchFood(c *gin.Context) {
 	query := strings.TrimSpace(c.Query("query"))
+	queryType := strings.TrimSpace(c.Query("queryType"))
 	os := strings.TrimSpace(c.Query("os"))
-	barcodeFlag := strings.TrimSpace(c.Query("barcode"))
 
-	if len(os) == 0 || len(query) == 0 {
+	if len(os) == 0 || len(query) == 0 || len(queryType) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request params"})
 		return
 	}
 
-	productInfos, err := GetProducts(query, os, barcodeFlag == "1")
+	if queryType == "foodID" {
+		id, err := strconv.ParseUint(query, 10, 64)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request params"})
+			return
+		}
+		food, err := s.db.GetFood(uint(id))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Couldn't get food info"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"results": []any{food}})
+		return
+	}
+
+	productInfos, err := GetProducts(query, os, queryType == "barcode")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Food not found"})
 		return
@@ -52,8 +68,6 @@ func (s *Server) SearchFood(c *gin.Context) {
 		results = append(results, food)
 	}
 
-	// TODO: openfoodfacts pagination when searching by text
-	// search layer = elasticsearch?
 	c.JSON(http.StatusOK, gin.H{"results": results})
 }
 

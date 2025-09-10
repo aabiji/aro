@@ -50,8 +50,9 @@ type Settings struct {
 
 type Food struct {
 	Name        string     `json:"name"`
-	ServingSize int        `json:"serving_size"`
-	ServingUnit string     `json:"serving_unit"`
+	TotalSize   string     `json:"total_size"`
+	ServingSize string     `json:"serving_size"`
+	SizeUnit    string     `json:"size_unit"`
 	Nutrients   []Nutrient `json:"nutrients"`
 }
 
@@ -404,4 +405,53 @@ func (d *Database) ToggleRecord(userId uint, recordType, date string) error {
 	}
 
 	return nil
+}
+
+func (d *Database) InsertFood(food Food) (uint, error) {
+	tx, err := d.pool.Begin(d.ctx)
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback(d.ctx)
+
+	var foodID uint
+	sql := `
+		insert into Food (Name, TotalSize, ServingSize, SizeUnit)
+		values ($1, $2, $3, $4) returning ID;`
+	if err := tx.QueryRow(d.ctx, sql, food.Name, food.TotalSize, food.ServingSize,
+		food.SizeUnit).Scan(&foodID); err != nil {
+		return 0, err
+	}
+
+	for _, n := range food.Nutrients {
+		sql := `insert into Nutrients (FoodID, Name, Value, Unit) values ($1, $2, $3, $4);`
+		if _, err := tx.Exec(d.ctx, sql, foodID, n.Name, n.Value, n.Unit); err != nil {
+			return 0, err
+		}
+	}
+
+	return foodID, tx.Commit(d.ctx)
+}
+
+func (d *Database) GetFood(foodID uint) (Food, error) {
+	var f Food
+	sql := `select Name, TotalSize, Servingsize, SizeUnit from Foods where FoodID = $1;`
+	if err := d.pool.QueryRow(d.ctx, sql, foodID).Scan(&f.Name, &f.TotalSize,
+		&f.ServingSize, &f.SizeUnit); err != nil {
+		return Food{}, err
+	}
+
+	sql = `select Name, Unit, Value where FoodID = $1;`
+	scanNutrient := func(rows pgx.Rows) (Nutrient, error) {
+		var n Nutrient
+		err := rows.Scan(&n.Name, &n.Unit, &n.Value)
+		return n, err
+	}
+	var err error
+	f.Nutrients, err = fetchRows(d, sql, scanNutrient, foodID)
+	if err != nil {
+		return Food{}, err
+	}
+
+	return f, nil
 }

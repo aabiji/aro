@@ -47,6 +47,8 @@ export default function FoodInfo() {
   const store = useStore();
   const [servings, setServings] = useState(1);
 
+  // TODO: make get request to get food info by id
+
   const { foodID, editable } = useLocalSearchParams<RouteParams>();
   const food = foodDB[foodID];
 
@@ -56,7 +58,7 @@ export default function FoodInfo() {
 
   return (
     <Container>
-      <BackHeader title={food.name}/>
+      <BackHeader title={food.name} />
 
       {editable &&
         <View className="border-b-2 border-grey-500 w-[100%] flex-row justify-between px-2">
@@ -67,24 +69,24 @@ export default function FoodInfo() {
           {/*should be in top left, prominnet*/}
           <Button
             iconColor="red" iconSize={24} icon="trash-outline"
-            transparent onPress={removeMeal}/>
+            transparent onPress={removeMeal} />
         </View>
       }
 
       {/*TODO: sort by importance and have style (font size) determined by importance*/}
       <View>
         <Text className="text-lg font-bold">Calories {food.calories}</Text>
-        <Text className="text-base font-bold">Fat {}</Text>
-        <Text className="text-base font-bold">Carboydrate {}</Text>
+        <Text className="text-base font-bold">Fat { }</Text>
+        <Text className="text-base font-bold">Carboydrate { }</Text>
         <Text className="text-base font-bold">Protein {food.protein}</Text>
-        <Text className="text-base font-bold">Cholesterol {}</Text>
-        <Text className="text-base font-bold">Sodium {}</Text>
+        <Text className="text-base font-bold">Cholesterol { }</Text>
+        <Text className="text-base font-bold">Sodium { }</Text>
 
         <View className="border-b-2 border-grey-500 w-[10%]"></View>
 
-        <Text className="text-base font-bold">Potassium {}</Text>
-        <Text className="text-base font-bold">Calcium {}</Text>
-        <Text className="text-base font-bold">Iron {}</Text>
+        <Text className="text-base font-bold">Potassium { }</Text>
+        <Text className="text-base font-bold">Calcium { }</Text>
+        <Text className="text-base font-bold">Iron { }</Text>
       </View>
 
     </Container>

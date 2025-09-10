@@ -65,10 +65,11 @@ const meals: Record<number, MealNode> = {
   10: { name: "Porridge", children: [4, 5] },
 };
 
-function Meal({meal}: {meal: MealNode}) {
+function Meal({ meal }: { meal: MealNode }) {
   const isParent = meal.children.length > 0;
-  const [showChildren, setShowChildren] = useState(false);
+  const [showChildren, setShowChildren] = useState(isParent);
 
+  const food = isParent ? undefined : foodDB[meal.foodID!];
   const name = isParent ? meal.name : foodDB[meal.foodID!].name;
   const scheduled = scheduledMeals.includes(name);
 
@@ -83,9 +84,11 @@ function Meal({meal}: {meal: MealNode}) {
     <Card transparent={scheduled} flatten={!scheduled}>
       <Pressable onPress={updateItem} className="flex-row justify-between">
         <Text className={`${scheduled ? "font-bold" : ""}`}>{name}</Text>
-        {isParent && <Ionicons
-          name={`${showChildren ? "chevron-up" : "chevron-down"}`}
-          size={25} color="gray" />}
+        {isParent
+          ? <Ionicons size={25} color="gray"
+            name={`${showChildren ? "chevron-up" : "chevron-down"}`} />
+          : <Text className="font-grey-500">{food.calories}</Text>
+        }
       </Pressable>
 
       {showChildren &&
@@ -108,6 +111,14 @@ export default function FoodPage() {
     console.log("changing date...");
   }
 
+  const targets = [
+    {
+      name: "calories",
+      value: 1000,
+      target: 2000,
+    }
+  ];
+
   return (
     <Container>
       <View className="flex-row justify-between items-center px-3">
@@ -127,7 +138,24 @@ export default function FoodPage() {
         </View>
       </View>
 
-      {/*add how many calories consumed, how much protein consumed, etc... "targets" */}
+      {targets.map((t, i) => {
+        const percent = t.value / t.target * 100;
+        const hue = Math.round(120 - (t.value / t.target * 120)); // green (120) to red (0)
+        return (
+          <Card key={i} className="relative flex-row justify-between">
+            <Text>{t.name}</Text>
+            <Text>{t.value} / {t.target}</Text>
+            <View
+              style={{
+                position: "absolute", borderRadius: 15,
+                bottom: 0, left: 0, height: 3,
+                backgroundColor: `hsl(${hue}, 100%, 50%)`,
+                width: `${percent}%`,
+              }}>
+            </View>
+          </Card>
+        );
+      })}
 
       {meals[rootID].children.map((id, i) => <Meal meal={meals[id]} key={i} />)}
     </Container>
