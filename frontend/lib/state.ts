@@ -22,6 +22,13 @@ export interface WorkoutInfo {
   tag: string;
 }
 
+export interface MealNode {
+  name?: string;
+  foodID?: number;
+  servings?: number;
+  childMealIDs?: number[];
+}
+
 interface PaginatedData<T> {
   page: number;
   more: boolean;
@@ -43,6 +50,12 @@ export interface AppState {
   useImperial: boolean;
   lastUpdateTime: number;
   data: Data;
+
+  // TODO; refactor this (this is just for prototyping)
+  meals: Record<number, MealNode>;
+  scheduledMeals: string[]; // TODO: this should be a user setting
+  foods: Record<number, object>;
+  macroTargets: object[];
 
   updateUserData: (jwt: string, json: any) => void;
   paginate: (dataType: DataKey, more: boolean) => void;
@@ -83,6 +96,56 @@ const createAppStore: StateCreator<AppState> = (set, _get) => ({
   data: Object.fromEntries(keys.map(k =>
     [k, { page: 1, more: false, values: {} }])) as Data,
 
+
+  macroTargets: [{ name: "calories", value: 1000, target: 2000, }],
+  meals: {
+    0: { name: "Today's date", childMealIDs: [1, 2, 3] },
+    1: { name: "Breakfast", childMealIDs: [10] },
+    2: { name: "Lunch", childMealIDs: [6, 7] },
+    3: { name: "Dinner", childMealIDs: [8, 9] },
+    4: { servings: 2, foodID: 1 },
+    5: { servings: 0.5, foodID: 2 },
+    6: { servings: 1, foodID: 3 },
+    7: { servings: 1, foodID: 4 },
+    8: { servings: 1, foodID: 5 },
+    9: { servings: 1, foodID: 6 },
+    10: { name: "Porridge", childMealIDs: [4, 5] },
+  },
+  scheduledMeals: ["Breakfast", "Lunch", "Dinner"],
+  foods: {
+    1: {
+      name: "oatmeal",
+      calories: 140,
+      protein: 5
+    },
+    2: {
+      name: "milk",
+      calories: 160,
+      protein: 18
+    },
+    3: {
+      name: "bread",
+      calories: 180,
+      protein: 8
+    },
+    4: {
+      name: "salad mix",
+      calories: 200,
+      protein: 4,
+    },
+    5: {
+      name: "spagetti",
+      calories: 310,
+      protein: 5
+    },
+    6: {
+      name: "orange",
+      calories: 100,
+      protein: 2
+    },
+  },
+
+
   updateSettings: (userData) =>
     set((state: AppState) => ({ ...state, ...userData })),
 
@@ -98,7 +161,7 @@ const createAppStore: StateCreator<AppState> = (set, _get) => ({
           if (w.isTemplate) data.templates.values[w.id] = w;
           else data.workouts.values[w.id] = w;
         }
-     }
+      }
 
       for (const pd of json.user.periodDays) {
         if (pd.deleted) delete data.periodDays.values[pd.date];
@@ -142,7 +205,8 @@ const createAppStore: StateCreator<AppState> = (set, _get) => ({
             },
           }
         },
-    }}),
+      }
+    }),
 
   removeWorkout: (id) =>
     set((state: AppState) => {

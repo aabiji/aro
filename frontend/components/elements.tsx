@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import {useRouter} from "expo-router";
+import { useRouter } from "expo-router";
 
 import { Pressable, Text, TextInput, View, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";

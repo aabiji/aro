@@ -115,12 +115,8 @@ func (d *Database) CreateUser(email string, password string) (uint, error) {
 		return 0, err
 	}
 
-	sql2 := `
-		insert into Settings
-		(LastModified, Deleted, UserID, UseImperial)
-		values ($1, $2, $3, $4);
-	`
-	_, err = tx.Exec(d.ctx, sql2, time.Now(), false, userId, true)
+	sql2 := `insert into Settings (Deleted, UserID, UseImperial) values ($1, $2, $3);`
+	_, err = tx.Exec(d.ctx, sql2, false, userId, true)
 	if err != nil {
 		return 0, err
 	}

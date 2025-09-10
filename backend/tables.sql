@@ -52,7 +52,6 @@ create table if not exists Records (
 
 create table if not exists Settings (
     ID serial primary key,
-   
     Deleted boolean not null,
     
     UserID int not null,
@@ -65,8 +64,8 @@ create table if not exists Foods (
     ID serial primary key,
     Name text not null unique,
     TotalSize int not null,
-    ServingSize text not null
-    SizeUnit string not null
+    ServingSize text not null,
+    SizeUnit text not null
 );
 
 create table if not exists Nutrients (
