@@ -5,7 +5,9 @@ create table if not exists Users (
     Deleted boolean not null,
     
     Email text not null,
-    Password text not null
+    Password text not null,
+
+    UseImperial boolean not null
 );
 
 create table if not exists Workouts (
@@ -48,32 +50,4 @@ create table if not exists Records (
 
     CONSTRAINT unique_row UNIQUE (UserID, Type, Date),
     CONSTRAINT fk_records_user FOREIGN KEY(UserID) REFERENCES Users(ID) ON DELETE CASCADE
-);
-
-create table if not exists Settings (
-    ID serial primary key,
-    Deleted boolean not null,
-    
-    UserID int not null,
-    UseImperial boolean not null,
-
-    CONSTRAINT fk_settings_user FOREIGN KEY(UserID) REFERENCES Users(ID) ON DELETE CASCADE
-);
-
-create table if not exists Foods (
-    ID serial primary key,
-    Name text not null unique,
-    TotalSize int not null,
-    ServingSize text not null,
-    SizeUnit text not null
-);
-
-create table if not exists Nutrients (
-    ID serial primary key,
-    FoodID int not null,
-    Name text not null,
-    Unit text not null,
-    Value float not null,
-
-    CONSTRAINT fk_nutrients_food FOREIGN KEY(FoodID) REFERENCES Foods(ID) ON DELETE CASCADE
 );

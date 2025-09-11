@@ -19,9 +19,9 @@ Fill out these values in a .env file in the root directory:
 ```
 POSTGRES_USER=TODO!
 POSTGRES_PASSWORD=TODO!
-POSTGRES_DB=db # same as docker service
+POSTGRES_DB=aro-database
 JWT_SECRET=super duper secret
-POSTGRES_HOSTNAME=localhost
+POSTGRES_HOSTNAME=db # same as docker service
 APP_PORT=8080
 DB_PORT=5432
 ```

@@ -1,73 +1,8 @@
 package main
 
 import (
-	"net/http"
-	"os"
-	"slices"
-	"strconv"
-	"strings"
-
 	"github.com/gin-gonic/gin"
 )
-
-// enable cors for the frontend
-func CORSMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		origin := c.GetHeader("Origin")
-		allowed := []string{"http://localhost:8081"}
-		if slices.Contains(allowed, origin) {
-			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
-		}
-
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization")
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(http.StatusNoContent)
-			return
-		}
-
-		c.Next()
-	}
-}
-
-// verify the json web token in the authorization header
-// pass in the user to all subsequent routes if the user the jwt is refering to exists
-func AuthMiddleware(s *Server) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		parts := strings.Split(c.GetHeader("Authorization"), " ")
-		if len(parts) != 2 && parts[0] != "Bearer" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid auth header"})
-			return
-		}
-
-		token, err := verifyToken(parts[1], os.Getenv("JWT_SECRET"))
-		if err != nil || !token.Valid {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid jwt"})
-			return
-		}
-
-		userId, err := token.Claims.GetSubject()
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid jwt"})
-			return
-		}
-
-		id, err := strconv.ParseUint(userId, 10, strconv.IntSize)
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid user id"})
-			return
-		}
-
-		user, err := s.db.GetUser("ID", id)
-		if user == nil || err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid user id"})
-			return
-		}
-
-		c.Set("user", user)
-		c.Next()
-	}
-}
 
 func main() {
 	server, err := NewServer()
@@ -75,25 +10,26 @@ func main() {
 		panic(err)
 	}
 
+	gin.SetMode(gin.DebugMode)
 	r := gin.Default()
 	r.Use(CORSMiddleware())
-
-	r.POST("/login", server.Login)
-	r.POST("/signup", server.Signup)
-	r.GET("/food", server.SearchFood)
 
 	auth := r.Group("/auth")
 	auth.Use(AuthMiddleware(&server))
 
-	auth.POST("/user", server.GetUserInfo)
-	auth.DELETE("/user", server.DeleteUser)
-	auth.POST("/workout", server.CreateWorkout)
-	auth.DELETE("/workout", server.DeleteWorkout)
-	auth.POST("/period", server.TogglePeriodDate)
-	auth.POST("/weight", server.SetWeightEntry)
-	auth.POST("/settings", server.UpdateUserSettings)
+	r.POST("/login", server.LoginEndpoint)
+	r.POST("/signup", server.SignupEndpoint)
+	auth.POST("/user", server.UserInfoEndpoint)
+	auth.DELETE("/user", server.DeleteUserEndpoint)
+	auth.POST("/settings", server.UpdateSettingsEndpoint)
 
-	gin.SetMode(gin.DebugMode)
+	auth.POST("/workout", server.CreateWorkoutEndpoint)
+	auth.DELETE("/workout", server.DeleteWorkoutEndpoint)
+
+	auth.POST("/period", server.MarkPeriodEndpoint)
+
+	auth.POST("/weight", server.SetWeightEndpoint)
+
 	r.Run("0.0.0.0:8080")
 	server.Cleanup()
 }
