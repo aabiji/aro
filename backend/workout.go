@@ -151,7 +151,7 @@ func getWorkouts(s *Server, isTemplate bool, options FetchOptions) ([]Workout, e
 }
 
 // api endpoints
-func (s *Server) CreateWorkoutEndpoint(c *gin.Context) {
+func (s *Server) CreateWorkout(c *gin.Context) {
 	var req Workout
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(StatusBadRequest, gin.H{"error": err.Error()})
@@ -169,7 +169,7 @@ func (s *Server) CreateWorkoutEndpoint(c *gin.Context) {
 	c.JSON(StatusOK, gin.H{"workout": req})
 }
 
-func (s *Server) DeleteWorkoutEndpoint(c *gin.Context) {
+func (s *Server) DeleteWorkout(c *gin.Context) {
 	idStr, exists := c.GetQuery("id")
 	if !exists {
 		c.JSON(StatusBadRequest, gin.H{"error": "Invalid request"})

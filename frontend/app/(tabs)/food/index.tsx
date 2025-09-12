@@ -1,22 +1,42 @@
 import { useState } from "react";
 import { router } from "expo-router";
 import { useStore } from "@/lib/state";
-import { formatDate } from "@/lib/utils";
+import { formatDate, request } from "@/lib/utils";
 
 import { Text, View } from "react-native";
-import { Button, Card, Container } from "@/components/elements";
+import { Button, Container } from "@/components/elements";
 import { Meal } from "@/components/meal";
 
 export default function FoodPage() {
   const store = useStore();
+  const [currentDate, setCurrentDate] = useState(new Date());
 
-  const addFood = () => {
+  const addMeal = async () => {
     console.log("adding...");
     router.push("/food/search");
   }
 
-  const changeDay = (next: boolean) => {
-    console.log("changing date...");
+  const changeDay = async (next: boolean) => {
+    setCurrentDate(prev => {
+      let date = new Date(prev.getTime());
+      date.setDate(date.getDate() + (next ? 1 : -1));
+      return date;
+    });
+    const day = formatDate(currentDate, "long");
+
+    // for example when creating a log for some future date
+    if (store.dailyMeals[day] === undefined) {
+      try {
+        const params = new URLSearchParams();
+        params.append("date", day);
+
+        const json =
+          await request("POST", `/auth/meal/date?${params.toString()}`, undefined, store.jwt);
+        store.createDailyMeals(day, json.ids);
+      } catch (err: any) {
+        console.log("ERROR!", err);
+      }
+    }
   }
 
   return (
@@ -30,7 +50,7 @@ export default function FoodPage() {
             icon="chevron-back" iconSize={24}
             iconColor="#808080" transparent
             onPress={() => changeDay(false)} />
-          <Button icon="add" iconSize={26} iconColor="white" onPress={addFood} />
+          <Button icon="add" iconSize={26} iconColor="white" onPress={addMeal} />
           <Button
             icon="chevron-forward" iconSize={24}
             iconColor="#808080" transparent
@@ -38,7 +58,7 @@ export default function FoodPage() {
         </View>
       </View>
 
-      {store.macroTargets.map((t, i) => {
+      {/*store.macroTargets.map((t, i) => {
         const percent = t.value / t.target * 100;
         const hue = Math.round(120 - (t.value / t.target * 120)); // green (120) to red (0)
         return (
@@ -55,10 +75,11 @@ export default function FoodPage() {
             </View>
           </Card>
         );
-      })}
+      })*/}
 
-      {store.meals[0].childMealIDs.map((id, i) =>
-        <Meal meal={store.meals[id]} key={i} isResult={false} />)}
+      {store.dailyMeals[formatDate(currentDate, "long")].map((id, i) =>
+        <Meal meal={store.data.meals.values[id]} key={i} isResult={false} />
+      )}
     </Container>
   );
 }

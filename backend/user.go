@@ -16,7 +16,8 @@ type User struct {
 	Email    string `json:"-"`
 	Password string `json:"-"`
 
-	UseImperial bool `json:"useImperial"`
+	ScheuledMeals []string `json:"-"`
+	UseImperial   bool     `json:"useImperial"`
 
 	Workouts   []Workout `json:"workouts"`
 	PeriodDays []Record  `json:"periodDays"`
@@ -25,12 +26,12 @@ type User struct {
 
 func getUser(s *Server, by string, value any) (*User, error) {
 	sql := fmt.Sprintf(`
-		select ID, Email, Password, UseImperial from Users
+		select ID, Email, Password, UseImperial, ScheduledMeals from Users
 		where %s = $1 and Deleted = false`, by)
 
 	var user User
 	err := s.db.QueryRow(s.ctx, sql, value).Scan(&user.ID, &user.Email,
-		&user.Password, &user.UseImperial)
+		&user.Password, &user.UseImperial, &user.ScheuledMeals)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	} else if err != nil {
@@ -61,7 +62,7 @@ type AuthRequest struct {
 	Password string `json:"password"`
 }
 
-func (s *Server) LoginEndpoint(c *gin.Context) {
+func (s *Server) Login(c *gin.Context) {
 	var req AuthRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(StatusBadRequest, gin.H{"error": err.Error()})
@@ -99,7 +100,7 @@ func (s *Server) LoginEndpoint(c *gin.Context) {
 	c.JSON(StatusOK, gin.H{"jwt": token})
 }
 
-func (s *Server) SignupEndpoint(c *gin.Context) {
+func (s *Server) Signup(c *gin.Context) {
 	var req AuthRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(StatusBadRequest, gin.H{"error": err.Error()})
@@ -138,7 +139,7 @@ func (s *Server) SignupEndpoint(c *gin.Context) {
 	c.JSON(StatusOK, gin.H{"jwt": token})
 }
 
-func (s *Server) UpdateSettingsEndpoint(c *gin.Context) {
+func (s *Server) UpdateSettings(c *gin.Context) {
 	user := c.MustGet("user").(*User)
 
 	imperial := c.Query("imperial")
@@ -153,7 +154,7 @@ func (s *Server) UpdateSettingsEndpoint(c *gin.Context) {
 	c.JSON(StatusOK, gin.H{})
 }
 
-func (s *Server) DeleteUserEndpoint(c *gin.Context) {
+func (s *Server) DeleteUser(c *gin.Context) {
 	user := c.MustGet("user").(*User)
 
 	sql := "update Users set Deleted = true where ID = $1;"
@@ -186,7 +187,7 @@ type InfoRequest struct {
 	GetWeighIns    bool  `json:"getWeightEntries,omitempty"`
 }
 
-func (s *Server) UserInfoEndpoint(c *gin.Context) {
+func (s *Server) UserInfo(c *gin.Context) {
 	var req InfoRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(StatusBadRequest, gin.H{"error": err.Error()})

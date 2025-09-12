@@ -22,27 +22,52 @@ export interface WorkoutInfo {
   tag: string;
 }
 
+export interface Food {
+  id: number;
+  name: string
+  servingSizes: number[];
+  servingSizeUnits: string[];
+
+  calories: number;
+  protein: number;
+  carbohydrates: number;
+  fat: number;
+  cholesterol: number;
+  calcium: number;
+  sodium: number;
+  magnesium: number;
+  potassium: number;
+}
+
 export interface MealNode {
+  id?: number;
   name?: string;
+  parentID?: number;
   foodID?: number;
   servings?: number;
-  childMealIDs?: number[];
+  servingIndex?: number;
+  childMeals?: number[];
 }
 
-interface PaginatedData<T> {
+interface PaginatedData<K extends string | number, V> {
   page: number;
   more: boolean;
-  values: Record<string, T>;
+  values: Record<K, V>;
 }
 
-type DataKey = "workouts" | "templates" | "periodDays" | "weightEntries";
-const keys = ["workouts", "templates", "periodDays", "weightEntries"];
+type DataKey = "workouts" | "templates" | "periodDays" | "weightEntries" | "meals" | "foods";
+const keys = ["workouts", "templates", "periodDays", "weightEntries", "meals", "foods"];
 
 type Data = {
-  [K in DataKey]: PaginatedData<
-    K extends "workouts" | "templates"
-    ? WorkoutInfo
-    : K extends "periodDays" ? boolean : number>
+  [K in DataKey]:
+  PaginatedData<
+    K extends "meals" | "foods" ? number : string,
+
+    K extends "workouts" | "templates" ? WorkoutInfo :
+    K extends "meals" ? MealNode :
+    K extends "foods" ? Food :
+    K extends "periodDays" ? boolean : number
+  >
 }
 
 export interface AppState {
@@ -51,11 +76,8 @@ export interface AppState {
   lastUpdateTime: number;
   data: Data;
 
-  // TODO; refactor this (this is just for prototyping)
-  meals: Record<number, MealNode>;
-  scheduledMeals: string[]; // TODO: this should be a user setting
-  foods: Record<number, object>;
-  macroTargets: object[];
+  // TODO: daily meals should be paginated...
+  dailyMeals: Record<string, number[]>; // map date to list of meal ids
 
   updateUserData: (jwt: string, json: any) => void;
   paginate: (dataType: DataKey, more: boolean) => void;
@@ -69,6 +91,10 @@ export interface AppState {
 
   togglePeriodDay: (day: string) => void;
   updateSettings: (userData: object) => void;
+
+  createDailyMeals: (day: string, ids: number[]) => void;
+  upsertMeal: (m: MealNode) => void;
+  upsertFood: (f: Food) => void;
 }
 
 function updateExercises(state: AppState, workoutId: number,
@@ -96,55 +122,7 @@ const createAppStore: StateCreator<AppState> = (set, _get) => ({
   data: Object.fromEntries(keys.map(k =>
     [k, { page: 1, more: false, values: {} }])) as Data,
 
-
-  macroTargets: [{ name: "calories", value: 1000, target: 2000, }],
-  meals: {
-    0: { name: "Today's date", childMealIDs: [1, 2, 3] },
-    1: { name: "Breakfast", childMealIDs: [10] },
-    2: { name: "Lunch", childMealIDs: [6, 7] },
-    3: { name: "Dinner", childMealIDs: [8, 9] },
-    4: { servings: 2, foodID: 1 },
-    5: { servings: 0.5, foodID: 2 },
-    6: { servings: 1, foodID: 3 },
-    7: { servings: 1, foodID: 4 },
-    8: { servings: 1, foodID: 5 },
-    9: { servings: 1, foodID: 6 },
-    10: { name: "Porridge", childMealIDs: [4, 5] },
-  },
-  scheduledMeals: ["Breakfast", "Lunch", "Dinner"],
-  foods: {
-    1: {
-      name: "oatmeal",
-      calories: 140,
-      protein: 5
-    },
-    2: {
-      name: "milk",
-      calories: 160,
-      protein: 18
-    },
-    3: {
-      name: "bread",
-      calories: 180,
-      protein: 8
-    },
-    4: {
-      name: "salad mix",
-      calories: 200,
-      protein: 4,
-    },
-    5: {
-      name: "spagetti",
-      calories: 310,
-      protein: 5
-    },
-    6: {
-      name: "orange",
-      calories: 100,
-      protein: 2
-    },
-  },
-
+  dailyMeals: {},
 
   updateSettings: (userData) =>
     set((state: AppState) => ({ ...state, ...userData })),
@@ -152,6 +130,8 @@ const createAppStore: StateCreator<AppState> = (set, _get) => ({
   updateUserData: (jwt, json) =>
     set((state: AppState) => {
       let data = JSON.parse(JSON.stringify(state.data)); // clone
+
+      // TODO: populate meals, foods, dailyMeals
 
       for (const w of json.user.workouts) {
         if (w.deleted) {
@@ -256,7 +236,47 @@ const createAppStore: StateCreator<AppState> = (set, _get) => ({
         }
       };
     }),
+
+  createDailyMeals: (day, ids) =>
+    set((state: AppState) => ({ dailyMeals: { ...state.dailyMeals, [day]: ids } })),
+
+  upsertMeal: (m) =>
+    set((state: AppState) => {
+      return {
+        data: {
+          ...state.data,
+          meals: {
+            ...state.data.meals,
+            values: {
+              ...state.data.meals.values,
+              [m.id]: { ...state.data.meals.values[m.id], ...m }
+            },
+          }
+        },
+      }
+    }),
+
+  upsertFood: (f) =>
+    set((state: AppState) => {
+      return {
+        data: {
+          ...state.data,
+          meals: {
+            ...state.data.foods,
+            values: {
+              ...state.data.foods.values,
+              [f.id]: { ...state.data.foods.values[f.id], ...f }
+            },
+          }
+        },
+      }
+    }),
 });
+
+export function getFood(state: AppState, foodID: number): Food {
+  // TODO: fetch from backend if we don't have it
+  return state.data.foods.values[foodID]!;
+}
 
 const mmvkStorage = new MMKV();
 

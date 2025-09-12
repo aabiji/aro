@@ -84,7 +84,7 @@ func deleteRecords(s *Server, userID uint) error {
 	return err
 }
 
-func (s *Server) MarkPeriodEndpoint(c *gin.Context) {
+func (s *Server) MarkPeriod(c *gin.Context) {
 	user := c.MustGet("user").(*User)
 	date, exists := c.GetQuery("date")
 	if !exists {
@@ -100,7 +100,7 @@ func (s *Server) MarkPeriodEndpoint(c *gin.Context) {
 	c.JSON(StatusOK, gin.H{})
 }
 
-func (s *Server) SetWeightEndpoint(c *gin.Context) {
+func (s *Server) SetWeight(c *gin.Context) {
 	user := c.MustGet("user").(*User)
 
 	// asking for the date current for the user

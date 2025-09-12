@@ -1,27 +1,37 @@
-import { router } from "expo-router";
 import { useState } from "react";
-import { useStore } from "@/lib/state";
+import { MealNode, useStore } from "@/lib/state";
 import { request } from "@/lib/utils";
 
-import { FlatList, Platform, Text, View } from "react-native";
+import { FlatList, Text, View } from "react-native";
 import { BackHeader, Button, Container, Input } from "@/components/elements";
 import { Meal } from "@/components/meal";
 
 export default function FoodSearchPage() {
   const store = useStore();
   const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]); // list of meals
 
-  const searchFood = () => {
-    console.log("searching for ...", query);
-    const endpoint = `/food?query=${query}&queryType=text&os=${Platform.OS}`;
+  const searchFood = async () => {
+    try {
+      const params = new URLSearchParams();
+      params.append("query", query);
+      const json =
+        await request("GET", `/auth/food?${params.toString()}`, undefined, undefined);
+
+      let results = [] as MealNode[];
+      for (const food of json.results) {
+        store.upsertFood(food);
+        results.push({ foodID: food.id });
+      }
+      setResults(results);
+    } catch (err: any) {
+      console.log("ERROR!", err);
+    }
   };
 
   const fetchMore = () => {
-    console.log("getting more results...");
+    console.log("TODO: getting more results...");
   };
-
-  const results = [{ foodID: 1 }, { foodID: 2 }, { foodID: 3 }, { foodID: 4 }, { foodID: 5 }, { foodID: 6 },
-  ];
 
   return (
     <Container>
