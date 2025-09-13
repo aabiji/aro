@@ -1,14 +1,6 @@
 ![app banner](frontend/assets/banner-readme.png)
 aro helps you *track* your nutrition, exercise, weight, and period
 
-TODO:
-[  ] Store food info in the database (creating + searching)
-[  ] Improve food search api: All results from OpenFoodFacts and manually inserted results should go into our database...
-[  ] Add frontend page for food -> list foods, add food, see summary (so weekly view of calorie/nutrient consumption, see if you're hitting/over your goals)
-[  ] Add theme toggling and revamp the ui
-[  ] Look into Stripe integration. 1 week free trial, then 5$ a month (find my card number)
-[  ] Read: https://h4x0r.org/futex/, watch https://www.youtube.com/c/BranchEducation
-
 Tech stack:
 - Golang + Postgresql backend
 - React Native + Expo frontend, Nativewind for styling

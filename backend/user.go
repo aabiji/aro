@@ -19,9 +19,10 @@ type User struct {
 	ScheuledMeals []string `json:"-"`
 	UseImperial   bool     `json:"useImperial"`
 
-	Workouts   []Workout `json:"workouts"`
-	PeriodDays []Record  `json:"periodDays"`
-	WeightIns  []Record  `json:"weightEntries"`
+	Workouts   []Workout      `json:"workouts"`
+	PeriodDays []Record       `json:"periodDays"`
+	WeightIns  []Record       `json:"weightEntries"`
+	FoodLogs   []DailyFoodLog `json:"dailyFoodLogs"`
 }
 
 func getUser(s *Server, by string, value any) (*User, error) {
@@ -180,11 +181,13 @@ func (s *Server) DeleteUser(c *gin.Context) {
 type InfoRequest struct {
 	Page           int   `json:"page"`
 	LastUpdateTime int64 `json:"unixTimestamp"`
-	GetSettings    bool  `json:"getSettings,omitempty"`
-	GetWorkouts    bool  `json:"getWorkouts,omitempty"`
-	GetTemplates   bool  `json:"getTemplates,omitempty"`
-	GetPeriodDays  bool  `json:"getPeriodDays,omitempty"`
-	GetWeighIns    bool  `json:"getWeightEntries,omitempty"`
+
+	GetSettings   bool `json:"getSettings,omitempty"`
+	GetWorkouts   bool `json:"getWorkouts,omitempty"`
+	GetTemplates  bool `json:"getTemplates,omitempty"`
+	GetPeriodDays bool `json:"getPeriodDays,omitempty"`
+	GetWeighIns   bool `json:"getWeightEntries,omitempty"`
+	GetFoodLogs   bool `json:"getFoodLogs,omitempty"`
 }
 
 func (s *Server) UserInfo(c *gin.Context) {
@@ -206,7 +209,7 @@ func (s *Server) UserInfo(c *gin.Context) {
 	if req.GetWorkouts {
 		workouts, err := getWorkouts(s, false, options)
 		if err != nil {
-			c.JSON(StatusInternalServerError, gin.H{"error": "Couldn't fetch workouts"})
+			c.JSON(StatusInternalServerError, gin.H{"error": "Couldn't get workouts"})
 			return
 		}
 		info.Workouts = append(user.Workouts, workouts...)
@@ -216,7 +219,7 @@ func (s *Server) UserInfo(c *gin.Context) {
 	if req.GetTemplates {
 		templates, err := getWorkouts(s, true, options)
 		if err != nil {
-			c.JSON(StatusInternalServerError, gin.H{"error": "Couldn't fetch templates"})
+			c.JSON(StatusInternalServerError, gin.H{"error": "Couldn't get templates"})
 			return
 		}
 		info.Workouts = append(user.Workouts, templates...)
@@ -226,7 +229,7 @@ func (s *Server) UserInfo(c *gin.Context) {
 	if req.GetPeriodDays {
 		records, err := getRecords(s, "period", options)
 		if err != nil {
-			c.JSON(StatusInternalServerError, gin.H{"error": "Couldn't fetch period days"})
+			c.JSON(StatusInternalServerError, gin.H{"error": "Couldn't get period days"})
 			return
 		}
 		info.PeriodDays = records
@@ -235,10 +238,19 @@ func (s *Server) UserInfo(c *gin.Context) {
 	if req.GetWeighIns {
 		records, err := getRecords(s, "weight", options)
 		if err != nil {
-			c.JSON(StatusInternalServerError, gin.H{"error": "Couldn't fetch weight ins"})
+			c.JSON(StatusInternalServerError, gin.H{"error": "Couldn't get weight ins"})
 			return
 		}
 		info.WeightIns = records
+	}
+
+	if req.GetFoodLogs {
+		logs, err := getFoodLogs(s, options)
+		if err != nil {
+			c.JSON(StatusInternalServerError, gin.H{"error": "Couldn't get daily food logs"})
+			return
+		}
+		info.FoodLogs = logs
 	}
 
 	c.JSON(StatusOK, gin.H{
@@ -247,5 +259,6 @@ func (s *Server) UserInfo(c *gin.Context) {
 		"moreTemplates":     templatesCount > options.limit,
 		"morePeriodDays":    len(info.PeriodDays) > options.limit,
 		"moreWeightEntries": len(info.WeightIns) > options.limit,
+		"moreFoodLogs":      len(info.FoodLogs) > options.limit,
 	})
 }

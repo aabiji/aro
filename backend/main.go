@@ -31,10 +31,12 @@ func main() {
 	auth.POST("/weight", server.SetWeight)
 
 	auth.POST("/food", server.CreateFood)
-	auth.GET("/food", server.SearchForFood)
+	auth.GET("/food/search", server.FindFood)
+	auth.GET("/food/id", server.GetFoodByID)
 
-	auth.POST("/meal/date", server.CreateMealsForDay)
+	auth.POST("/meal/date", server.CreateFoodLog)
 	auth.POST("/meal", server.CreateMeal)
+	auth.DELETE("/meal", server.DeleteMeal)
 
 	r.Run("0.0.0.0:8080")
 	server.Cleanup()

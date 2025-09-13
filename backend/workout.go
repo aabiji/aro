@@ -67,10 +67,7 @@ func deleteWorkout(s *Server, userId uint, workoutId uint) error {
 	}
 	defer tx.Rollback(s.ctx)
 
-	sql := `
-		update Workouts
-		set Deleted = true, LastModified = $1
-		where UserID = $2 and ID = $3;`
+	sql := `update Workouts set Deleted = true, LastModified = $1 where UserID = $2 and ID = $3;`
 	_, err = tx.Exec(s.ctx, sql, time.Now(), userId, workoutId)
 	if err != nil {
 		return err
@@ -86,9 +83,7 @@ func deleteWorkout(s *Server, userId uint, workoutId uint) error {
 }
 
 func deleteWorkouts(s *Server, userID uint) error {
-	sql := `
-		update Workouts set Deleted = true, LastModified = $1
-		where UserID = $2 returning ID;`
+	sql := `update Workouts set Deleted = true, LastModified = $1 where UserID = $2 returning ID;`
 	rows, err := s.db.Query(s.ctx, sql, time.Now(), userID)
 	if err != nil {
 		return err
@@ -137,8 +132,7 @@ func getWorkouts(s *Server, isTemplate bool, options FetchOptions) ([]Workout, e
 	}
 
 	for j := range workouts {
-		sql := `
-				select Name, ExerciseType, Reps, Weight, Duration, Distance from Exercises
+		sql := `select Name, ExerciseType, Reps, Weight, Duration, Distance from Exercises
 				where WorkoutID = $1;`
 		exercises, err := fetchRows(s, sql, scanExercise, workouts[j].ID)
 		if err != nil {

@@ -52,8 +52,9 @@ create table if not exists Records (
     CONSTRAINT fk_records_user FOREIGN KEY(UserID) REFERENCES Users(ID)
 );
 
-create table if not exists Food (
+create table if not exists Foods (
     ID serial primary key,
+    LastModified timestamp not null,
 
     Name text not null,
     ServingSizes float[] not null,
@@ -70,18 +71,32 @@ create table if not exists Food (
     Potassium float not null
 );
 
-create table if not exists Meal (
+create table if not exists Meals (
+    ID serial primary key,
+    LastModified timestamp not null,
+    Deleted boolean not null,
+
+    UserID int not null,
+    ParentID int not null,
+    FoodID int not null,
+
+    Name text not null,
+    Servings int not null,
+    ServingSize  int not null,
+    ServingUnit text not null,
+
+    CONSTRAINT fk_meal_user FOREIGN KEY(UserID) REFERENCES Users(ID)
+);
+
+create table if not exists DailyFoodLogs (
     ID serial primary key,
     LastModified timestamp not null,
     Deleted boolean not null,
     UserID int not null,
 
-    Name text,
-    Date text,
-    ParentID int,
-    FoodID int,
-    Servings int,
-    ServingIndex int,
+    Date text not null,
+    MealIDs int[] not null,
 
-    CONSTRAINT fk_meal_user FOREIGN KEY(UserID) REFERENCES Users(ID)
-)
+    CONSTRAINT unique_row UNIQUE (UserID, Date),
+    CONSTRAINT fk_food_log_uesr FOREIGN KEY(UserID) REFERENCES Users(ID)
+);
